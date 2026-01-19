@@ -118,10 +118,15 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const currentPlayer = players.find(p => p.id === tableData.currentPlayer);
     const myTurn = tableData.currentPlayer === userId;
     
-    // Check if player can hold (must have rolled at least 2 dice)
+    // Game phase tracking
+    const phase = tableData.phase ?? "opening";
+    const isOpeningPhase = phase === "opening";
+    const isBettingPhase = phase === "betting";
+    
+    // Check if player can hold (only in betting phase)
     const myRolls = tableData.rolls?.[userId] ?? [];
-    const canHold = myTurn && myRolls.length >= 2;
-    const rollsRemaining = Math.max(0, 2 - myRolls.length);
+    const canHold = myTurn && isBettingPhase;
+    const openingRollsRemaining = Math.max(0, 2 - myRolls.length);
 
     // Build history entries with formatting
     const history = (state.history ?? []).slice().reverse().map(entry => ({
@@ -150,7 +155,9 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       currentPlayer,
       myTurn,
       canHold,
-      rollsRemaining,
+      isOpeningPhase,
+      isBettingPhase,
+      openingRollsRemaining,
       history,
       dice: [
         { value: 4, label: "d4", icon: "d4-grey" },

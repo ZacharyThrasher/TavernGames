@@ -517,6 +517,31 @@
   margin-bottom: var(--tavern-gap-sm);
 }
 
+.turn-hint.phase-opening {
+  background: rgba(74, 124, 78, 0.2);
+  border: 1px solid var(--tavern-success);
+  border-radius: var(--tavern-radius-sm);
+  padding: 8px;
+  color: var(--tavern-parchment);
+}
+
+.turn-hint.phase-betting {
+  background: rgba(212, 160, 74, 0.2);
+  border: 1px solid var(--tavern-gold-dim);
+  border-radius: var(--tavern-radius-sm);
+  padding: 8px;
+  color: var(--tavern-parchment);
+}
+
+.phase-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--tavern-parchment-dark);
+  margin-top: var(--tavern-gap-sm);
+  text-align: center;
+}
+
 /* Dice buttons */
 .dice-buttons {
   display: grid;

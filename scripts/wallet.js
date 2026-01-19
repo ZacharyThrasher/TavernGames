@@ -54,3 +54,23 @@ export async function payOutWinners(winners, share) {
     await actor.update({ "system.currency.gp": current + share });
   }
 }
+
+/**
+ * Deduct gold from a single player's actor.
+ * Returns true if successful, false if they can't afford it.
+ */
+export async function deductFromActor(userId, amount) {
+  const user = game.users.get(userId);
+  
+  // GM doesn't pay gold
+  if (user?.isGM) return true;
+  
+  const actor = getActorForUser(userId);
+  if (!actor) return false;
+  
+  const current = actor.system?.currency?.gp ?? 0;
+  if (current < amount) return false;
+  
+  await actor.update({ "system.currency.gp": current - amount });
+  return true;
+}

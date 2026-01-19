@@ -31,9 +31,9 @@
     <div class="control-section rules">
       <h3><i class="fa-solid fa-scroll"></i> Rules</h3>
       <ul>
-        <li>Roll dice to reach <strong>21</strong> without going over</li>
-        <li>Choose your risk: d4 is safe, d20 is dangerous</li>
-        <li>Hold when you're satisfied with your total</li>
+        <li>Opening: everyone rolls <strong>2 dice</strong></li>
+        <li>Then take turns: roll (costs {{ante}}gp) or hold</li>
+        <li>Try to reach <strong>21</strong> without busting</li>
         <li>Highest total ≤21 wins the pot!</li>
       </ul>
     </div>
@@ -44,10 +44,15 @@
     {{#if myTurn}}
       <div class="control-section your-turn">
         <h3><i class="fa-solid fa-dice"></i> Your Turn!</h3>
-        {{#if rollsRemaining}}
-          <p class="turn-hint">Choose {{rollsRemaining}} more {{#if (eq rollsRemaining 1)}}die{{else}}dice{{/if}} to roll.</p>
+        
+        {{#if isOpeningPhase}}
+          <p class="turn-hint phase-opening">
+            <strong>Opening Round:</strong> Roll {{openingRollsRemaining}} more {{#if (eq openingRollsRemaining 1)}}die{{else}}dice{{/if}}.
+          </p>
         {{else}}
-          <p class="turn-hint">Roll again or hold to keep your total.</p>
+          <p class="turn-hint phase-betting">
+            <strong>Betting Round:</strong> Roll ({{ante}}gp) or hold.
+          </p>
         {{/if}}
         
         <div class="dice-buttons premium">
@@ -59,9 +64,11 @@
           {{/each}}
         </div>
 
-        <button type="button" class="btn btn-hold" data-action="hold" {{#unless canHold}}disabled{{/unless}}>
-          <i class="fa-solid fa-hand"></i> Hold
-        </button>
+        {{#if isBettingPhase}}
+          <button type="button" class="btn btn-hold" data-action="hold">
+            <i class="fa-solid fa-hand"></i> Hold
+          </button>
+        {{/if}}
       </div>
     {{else}}
       <div class="control-section waiting">
@@ -70,6 +77,11 @@
           <p class="waiting-text">
             <strong>{{currentPlayer.name}}</strong> is rolling...
           </p>
+        {{/if}}
+        {{#if isOpeningPhase}}
+          <p class="phase-label">Opening Round</p>
+        {{else}}
+          <p class="phase-label">Betting Round</p>
         {{/if}}
       </div>
     {{/if}}

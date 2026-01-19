@@ -1,12 +1,12 @@
 import { MODULE_ID, getState, updateState, addHistoryEntry } from "./state.js";
-import { canAffordAnte, deductAnteFromActors, payOutWinners } from "./wallet.js";
+import { canAffordAnte, deductAnteFromActors, deductFromActor, payOutWinners } from "./wallet.js";
 import { createChatCard } from "./ui/chat.js";
 import { showPublicRoll } from "./dice.js";
 import { playSound } from "./sounds.js";
 import { tavernSocket } from "./socket.js";
 
 const VALID_DICE = [20, 12, 10, 8, 6, 4];
-const MIN_ROLLS_BEFORE_HOLD = 2;
+const OPENING_ROLLS_REQUIRED = 2;
 
 function emptyTableData() {
   return {
@@ -15,7 +15,7 @@ function emptyTableData() {
     busts: {},
     rolls: {},
     currentPlayer: null,
-    revealedTotals: {},
+    phase: "opening", // "opening" = everyone rolls 2 dice, "betting" = roll costs ante or hold
   };
 }
 
@@ -40,6 +40,35 @@ function getNextActivePlayer(state, tableData) {
 
 function allPlayersFinished(state, tableData) {
   return state.turnOrder.every((id) => tableData.holds[id] || tableData.busts[id]);
+}
+
+// Check if all players have completed their opening rolls (2 dice each)
+function allPlayersCompletedOpening(state, tableData) {
+  return state.turnOrder.every((id) => {
+    const rolls = tableData.rolls[id] ?? [];
+    return rolls.length >= OPENING_ROLLS_REQUIRED || tableData.busts[id];
+  });
+}
+
+// Get next player who needs to roll in opening phase
+function getNextOpeningPlayer(state, tableData) {
+  const order = state.turnOrder;
+  if (!order.length) return null;
+
+  const currentIndex = tableData.currentPlayer
+    ? order.indexOf(tableData.currentPlayer)
+    : -1;
+
+  // Find next player who hasn't finished opening rolls and hasn't busted
+  for (let i = 1; i <= order.length; i++) {
+    const nextIndex = (currentIndex + i) % order.length;
+    const nextId = order[nextIndex];
+    const rolls = tableData.rolls[nextId] ?? [];
+    if (rolls.length < OPENING_ROLLS_REQUIRED && !tableData.busts[nextId]) {
+      return nextId;
+    }
+  }
+  return null;
 }
 
 export async function startRound() {
@@ -74,6 +103,7 @@ export async function startRound() {
   });
 
   tableData.currentPlayer = state.turnOrder[0];
+  tableData.phase = "opening";
 
   const next = await updateState({
     status: "PLAYING",
@@ -92,7 +122,7 @@ export async function startRound() {
   await createChatCard({
     title: "Twenty-One",
     subtitle: "A new round begins!",
-    message: `Each player antes ${ante}gp. The house matches. Pot: <strong>${pot}gp</strong>`,
+    message: `Each player antes ${ante}gp. The house matches. Pot: <strong>${pot}gp</strong><br><em>Opening round: everyone rolls 2 dice!</em>`,
     icon: "fa-solid fa-coins",
   });
 
@@ -107,6 +137,8 @@ export async function submitRoll(payload, userId) {
   }
 
   const tableData = state.tableData ?? emptyTableData();
+  const ante = game.settings.get(MODULE_ID, "fixedAnte");
+  const isOpeningPhase = tableData.phase === "opening";
 
   if (tableData.currentPlayer !== userId) {
     ui.notifications.warn("It's not your turn.");
@@ -122,6 +154,22 @@ export async function submitRoll(payload, userId) {
   if (!VALID_DICE.includes(die)) {
     ui.notifications.warn("Invalid die selection.");
     return state;
+  }
+
+  // In betting phase, rolling costs the ante (except for GM/house)
+  let newPot = state.pot;
+  if (!isOpeningPhase) {
+    const user = game.users.get(userId);
+    if (!user?.isGM) {
+      // Check if player can afford to roll
+      const canAfford = await deductFromActor(userId, ante);
+      if (!canAfford) {
+        ui.notifications.warn(`You need ${ante}gp to roll another die.`);
+        return state;
+      }
+      newPot = state.pot + ante;
+      await playSound("coins");
+    }
   }
 
   const roll = await new Roll(`1d${die}`).evaluate();
@@ -153,6 +201,7 @@ export async function submitRoll(payload, userId) {
   }
 
   const userName = game.users.get(userId)?.name ?? "Unknown";
+  const rollCostMsg = !isOpeningPhase && !game.users.get(userId)?.isGM ? ` (${ante}gp)` : "";
   await addHistoryEntry({
     type: isBust ? "bust" : "roll",
     player: userName,
@@ -161,7 +210,7 @@ export async function submitRoll(payload, userId) {
     total: totals[userId],
     message: isBust
       ? `${userName} rolled d${die} and BUSTED with ${totals[userId]}!`
-      : `${userName} rolled a d${die}...`,
+      : `${userName} rolled a d${die}${rollCostMsg}...`,
   });
 
   const updatedTable = {
@@ -171,13 +220,42 @@ export async function submitRoll(payload, userId) {
     busts,
   };
 
-  // Only move to next player if this player busted
-  // Otherwise, they continue rolling until they hold or bust
-  if (isBust) {
-    updatedTable.currentPlayer = getNextActivePlayer(state, updatedTable);
+  // Determine next player based on phase
+  if (isOpeningPhase) {
+    const myRolls = rolls[userId] ?? [];
+    // If player has completed opening rolls (2) or busted, move to next
+    if (myRolls.length >= OPENING_ROLLS_REQUIRED || isBust) {
+      // Check if all players done with opening
+      if (allPlayersCompletedOpening(state, updatedTable)) {
+        // Transition to betting phase
+        updatedTable.phase = "betting";
+        updatedTable.currentPlayer = getNextActivePlayer(state, updatedTable);
+        
+        await createChatCard({
+          title: "Betting Round",
+          subtitle: "Opening complete!",
+          message: `All players have their opening hands. Roll to push your luck (costs ${ante}gp) or hold!`,
+          icon: "fa-solid fa-hand-holding-dollar",
+        });
+      } else {
+        updatedTable.currentPlayer = getNextOpeningPlayer(state, updatedTable);
+      }
+    }
+    // Otherwise, player continues rolling their second opening die
+  } else {
+    // Betting phase: turn passes after each roll or bust
+    if (isBust) {
+      updatedTable.currentPlayer = getNextActivePlayer(state, updatedTable);
+    } else {
+      // In betting phase, turn passes after each action (roll or hold)
+      updatedTable.currentPlayer = getNextActivePlayer(state, updatedTable);
+    }
   }
 
-  const next = await updateState({ tableData: updatedTable });
+  const next = await updateState({ 
+    tableData: updatedTable,
+    pot: newPot,
+  });
 
   if (allPlayersFinished(state, updatedTable)) {
     return revealResults();
@@ -205,10 +283,11 @@ export async function hold(userId) {
     return state;
   }
 
-  // Require minimum number of rolls before holding
-  const rollCount = (tableData.rolls[userId] ?? []).length;
-  if (rollCount < MIN_ROLLS_BEFORE_HOLD) {
-    ui.notifications.warn(`You must roll at least ${MIN_ROLLS_BEFORE_HOLD} dice before holding.`);
+  // Can't hold during opening phase
+  if (tableData.phase === "opening") {
+    const rollCount = (tableData.rolls[userId] ?? []).length;
+    const remaining = OPENING_ROLLS_REQUIRED - rollCount;
+    ui.notifications.warn(`Opening round: you must roll ${remaining} more ${remaining === 1 ? "die" : "dice"}.`);
     return state;
   }
 
@@ -221,7 +300,7 @@ export async function hold(userId) {
     type: "hold",
     player: userName,
     total: tableData.totals[userId],
-    message: `${userName} holds.`,
+    message: `${userName} holds at ${tableData.totals[userId]}.`,
   });
 
   const next = await updateState({ tableData: updatedTable });
