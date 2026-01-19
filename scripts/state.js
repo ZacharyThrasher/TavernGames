@@ -55,8 +55,18 @@ export async function ensureStateMacro() {
   const existing = game.macros.getName(STATE_MACRO_NAME);
   if (existing) {
     const current = existing.getFlag(MODULE_ID, "state");
-    if (!current || current.version < 2) {
+    if (!current) {
+      // No state at all, create fresh
       await existing.setFlag(MODULE_ID, "state", defaultState());
+    } else if (current.version < 2) {
+      // Migrate old state - preserve players if any
+      const migrated = {
+        ...defaultState(),
+        players: current.players ?? {},
+        turnOrder: current.turnOrder ?? [],
+        status: "LOBBY",
+      };
+      await existing.setFlag(MODULE_ID, "state", migrated);
     }
     return existing;
   }
