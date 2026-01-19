@@ -96,7 +96,31 @@ export async function updateState(patch) {
     throw new Error("Tavern state macro not found.");
   }
   const current = getState();
-  const next = foundry.utils.mergeObject(current, patch, { inplace: false });
+  
+  // Manual merge to ensure arrays are replaced, not merged by index
+  const next = {
+    ...current,
+    ...patch,
+    // Deep merge tableData if present in patch
+    tableData: patch.tableData !== undefined
+      ? { ...current.tableData, ...patch.tableData }
+      : current.tableData,
+    // Replace players entirely if present in patch (not merge)
+    players: patch.players !== undefined
+      ? { ...patch.players }
+      : current.players,
+    // Replace turnOrder entirely if present in patch (not merge)
+    turnOrder: patch.turnOrder !== undefined
+      ? [...patch.turnOrder]
+      : current.turnOrder,
+  };
+  
+  console.log("Tavern Twenty-One | Updating state:", { current, patch, next });
+  console.log("Tavern Twenty-One | turnOrder after update:", next.turnOrder);
+  
+  // IMPORTANT: Foundry's setFlag uses mergeObject which merges arrays by index.
+  // To ensure clean replacement, unset the flag first, then set the new state.
+  await macro.unsetFlag(MODULE_ID, "state");
   await macro.setFlag(MODULE_ID, "state", next);
   return next;
 }
