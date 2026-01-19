@@ -2,6 +2,20 @@ import { TavernApp } from "./app/tavern-app.js";
 import { MODULE_ID, preloadTemplates, registerSettings, ensureStateMacro } from "./state.js";
 import { setupSockets } from "./socket.js";
 
+const openTavern = () => {
+  if (game.tavernDiceMaster?.open) {
+    game.tavernDiceMaster.open();
+    return;
+  }
+  const app = new TavernApp();
+  game.tavernDiceMaster = {
+    app,
+    open: () => app.render(true),
+    close: () => app.close(),
+  };
+  app.render(true);
+};
+
 Hooks.on("getSceneControlButtons", (controls) => {
   const tool = {
     name: "tavern-dice-master",
@@ -9,19 +23,7 @@ Hooks.on("getSceneControlButtons", (controls) => {
     icon: "fa-solid fa-dice-d20",
     button: true,
     visible: true,
-    onClick: () => {
-      if (game.tavernDiceMaster?.open) {
-        game.tavernDiceMaster.open();
-        return;
-      }
-      const app = new TavernApp();
-      game.tavernDiceMaster = {
-        app,
-        open: () => app.render(true),
-        close: () => app.close(),
-      };
-      app.render(true);
-    },
+    onClick: openTavern,
   };
 
   const tokenControls = controls.find((control) => control.name === "token");
@@ -39,6 +41,21 @@ Hooks.on("getSceneControlButtons", (controls) => {
     activeTool: "tavern-dice-master",
     visible: true,
   });
+});
+
+Hooks.on("renderSidebarTab", (app, html) => {
+  if (app?.options?.id !== "chat") return;
+  const header = html.find(".header-actions");
+  if (!header.length) return;
+  if (header.find(".tavern-sidebar-button").length) return;
+
+  const button = $(
+    `<button type="button" class="tavern-sidebar-button" title="Tavern Dice Master">
+      <i class="fa-solid fa-dice-d20"></i>
+    </button>`
+  );
+  button.on("click", openTavern);
+  header.prepend(button);
 });
 
 Hooks.once("init", async () => {
