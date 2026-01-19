@@ -397,8 +397,8 @@ export async function revealResults() {
       await playSound("reveal");
       await createChatCard({
         title: "Cheater Caught!",
-        subtitle: `${accuserName}'s suspicions were correct!`,
-        message: `<strong>${targetName}</strong> was caught cheating and will forfeit the round!<br><em>"I knew it!" ${accuserName} exclaims.</em>`,
+        subtitle: `${accuserName} was right!`,
+        message: `<strong>${targetName}</strong> was caught cheating and forfeits the round.`,
         icon: "fa-solid fa-gavel",
       });
 
@@ -412,8 +412,8 @@ export async function revealResults() {
       await playSound("lose");
       await createChatCard({
         title: "False Accusation!",
-        subtitle: `${accuserName} was wrong.`,
-        message: `<strong>${targetName}</strong> wasn't cheating! ${accuserName} forfeits their claim to the pot!<br><em>${targetName} is innocent. ${accuserName} jumped to conclusions.</em>`,
+        subtitle: `${targetName} is innocent.`,
+        message: `<strong>${accuserName}</strong> was wrong and forfeits their claim to the pot.`,
         icon: "fa-solid fa-face-frown",
       });
 
@@ -835,9 +835,9 @@ export async function accuse(payload, userId) {
   // Don't reveal the result yet - just show that an accusation was made
   // The GM will trigger the reveal when ready for dramatic effect
   await createChatCard({
-    title: "Accusation Made!",
-    subtitle: `${accuserName} points at ${targetName}`,
-    message: `<strong>"${targetName} is a cheater!"</strong><br><em>The table falls silent... all eyes turn to the accused.</em>`,
+    title: "Accusation!",
+    subtitle: `${accuserName} accuses ${targetName}`,
+    message: `The accusation has been made. Awaiting judgment...`,
     icon: "fa-solid fa-hand-point-right",
   });
 
