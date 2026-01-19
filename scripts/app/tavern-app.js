@@ -171,7 +171,8 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const accuseTargets = isInspection && !accusationMade ? players
       .filter(p => p.id !== userId && !tableData.busts?.[p.id])
       .map(p => ({ id: p.id, name: p.name })) : [];
-    const canAccuse = isInspection && state.players?.[userId] && !accusationMade && accuseTargets.length > 0;
+    const isBusted = tableData.busts?.[userId] ?? false;
+    const canAccuse = isInspection && state.players?.[userId] && !accusationMade && !isBusted && accuseTargets.length > 0;
 
     // Build history entries with formatting
     const history = (state.history ?? []).slice().reverse().map(entry => ({

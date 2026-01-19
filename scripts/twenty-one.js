@@ -686,6 +686,12 @@ export async function accuse(payload, userId) {
     return state;
   }
 
+  // Busted players can't accuse
+  if (tableData.busts?.[userId]) {
+    ui.notifications.warn("You busted - you can't make accusations!");
+    return state;
+  }
+
   // Calculate accusation cost: half the pot
   const accusationCost = Math.floor(state.pot / 2);
   
