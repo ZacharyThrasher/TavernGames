@@ -281,6 +281,21 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         });
       });
     }
+
+    // Handle ante input changes (GM only)
+    const anteInput = this.element.querySelector('#ante-input');
+    if (anteInput) {
+      anteInput.addEventListener('change', async (e) => {
+        const newAnte = parseInt(e.target.value);
+        if (newAnte >= 1 && newAnte <= 1000) {
+          await game.settings.set(MODULE_ID, "fixedAnte", newAnte);
+          ui.notifications.info(`Ante set to ${newAnte}gp`);
+        } else {
+          e.target.value = game.settings.get(MODULE_ID, "fixedAnte");
+          ui.notifications.warn("Ante must be between 1 and 1000 gp");
+        }
+      });
+    }
   }
 
   static async onJoin() {

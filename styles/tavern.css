@@ -742,6 +742,79 @@
 }
 
 /* ============================================
+   House Rules Section (GM Settings)
+   ============================================ */
+
+.control-section.house-rules {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--tavern-wood-highlight);
+  border-radius: var(--tavern-radius-md);
+  padding: var(--tavern-gap-md);
+}
+
+.control-section.house-rules h3 {
+  margin-bottom: var(--tavern-gap-md);
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--tavern-gap-sm);
+  margin-bottom: var(--tavern-gap-sm);
+}
+
+.setting-row label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--tavern-parchment);
+  flex-shrink: 0;
+}
+
+.setting-row label i {
+  color: var(--tavern-gold);
+  font-size: 14px;
+}
+
+.setting-input {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.setting-input input[type="number"] {
+  width: 70px;
+  padding: 6px 8px;
+  background: var(--tavern-wood-dark);
+  border: 1px solid var(--tavern-wood-highlight);
+  border-radius: var(--tavern-radius-sm);
+  color: var(--tavern-gold-bright);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.setting-input input[type="number"]:focus {
+  outline: none;
+  border-color: var(--tavern-gold);
+  box-shadow: 0 0 8px var(--tavern-glow);
+}
+
+.setting-input input[type="number"]::-webkit-inner-spin-button,
+.setting-input input[type="number"]::-webkit-outer-spin-button {
+  opacity: 1;
+}
+
+.setting-suffix {
+  font-size: 12px;
+  color: var(--tavern-parchment-dark);
+  font-weight: 600;
+}
+
+/* ============================================
    Buttons
    ============================================ */
 

@@ -15,6 +15,20 @@
     </div>
 
     {{#if isGM}}
+      <div class="control-section house-rules">
+        <h3><i class="fa-solid fa-scroll"></i> House Rules</h3>
+        <div class="setting-row">
+          <label for="ante-input">
+            <i class="fa-solid fa-coins"></i> Ante
+          </label>
+          <div class="setting-input">
+            <input type="number" id="ante-input" name="ante" min="1" max="1000" value="{{ante}}" data-action="setAnte" />
+            <span class="setting-suffix">gp</span>
+          </div>
+        </div>
+        <p class="hint">Cost to join each round and roll extra dice.</p>
+      </div>
+
       <div class="control-section">
         <h3><i class="fa-solid fa-play"></i> Start Game</h3>
         {{#if hasPlayers}}
