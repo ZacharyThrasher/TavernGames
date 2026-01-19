@@ -1,6 +1,8 @@
 import { MODULE_ID, TAVERN_GAMES, getState } from "../state.js";
 import { tavernSocket } from "../socket.js";
 
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
+
 export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
   static DEFAULT_OPTIONS = {
     id: "tavern-dice-master",
@@ -28,14 +30,8 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
   };
 
   static PARTS = {
-    lobby: {
-      template: "templates/parts/lobby.hbs",
-    },
-    game: {
-      template: "templates/parts/game.hbs",
-    },
-    status: {
-      template: "templates/parts/status.hbs",
+    main: {
+      template: `modules/${MODULE_ID}/templates/tavern-app.hbs`,
     },
   };
 

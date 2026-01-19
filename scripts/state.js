@@ -20,10 +20,10 @@ export function registerSettings() {
 
 export async function preloadTemplates() {
   return loadTemplates([
-    "templates/tavern-app.hbs",
-    "templates/parts/lobby.hbs",
-    "templates/parts/game.hbs",
-    "templates/parts/status.hbs",
+    `modules/${MODULE_ID}/templates/tavern-app.hbs`,
+    `modules/${MODULE_ID}/templates/parts/lobby.hbs`,
+    `modules/${MODULE_ID}/templates/parts/game.hbs`,
+    `modules/${MODULE_ID}/templates/parts/status.hbs`,
   ]);
 }
 

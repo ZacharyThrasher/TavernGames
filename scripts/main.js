@@ -104,7 +104,7 @@ Hooks.once("ready", async () => {
   if (macro) {
     Hooks.on("updateMacro", (updated) => {
       if (updated.id === macro.id) {
-        app.render({ parts: ["game", "lobby", "status"] });
+        app.render();
       }
     });
   }
