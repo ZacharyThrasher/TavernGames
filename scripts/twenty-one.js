@@ -777,8 +777,7 @@ export async function accuse(payload, userId) {
   // Calculate accusation cost: half the pot
   const accusationCost = Math.floor(state.pot / 2);
   
-  // Check if player can afford it (GM doesn't pay)
-  const user = game.users.get(userId);
+  // Check if player can afford it (GM doesn't pay - but GM already blocked above)
   if (!user?.isGM) {
     const canAfford = await deductFromActor(userId, accusationCost);
     if (!canAfford) {
