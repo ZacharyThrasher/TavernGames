@@ -44,7 +44,11 @@
     {{#if myTurn}}
       <div class="control-section your-turn">
         <h3><i class="fa-solid fa-dice"></i> Your Turn!</h3>
-        <p class="turn-hint">Choose a die to roll, or hold to keep your total.</p>
+        {{#if rollsRemaining}}
+          <p class="turn-hint">Choose {{rollsRemaining}} more {{#if (eq rollsRemaining 1)}}die{{else}}dice{{/if}} to roll before you can hold.</p>
+        {{else}}
+          <p class="turn-hint">Roll another die or hold to keep your total.</p>
+        {{/if}}
         
         <div class="dice-buttons">
           {{#each dice}}
@@ -55,7 +59,7 @@
           {{/each}}
         </div>
 
-        <button type="button" class="btn btn-hold" data-action="hold">
+        <button type="button" class="btn btn-hold" data-action="hold" {{#unless canHold}}disabled{{/unless}}>
           <i class="fa-solid fa-hand"></i> Hold
         </button>
       </div>

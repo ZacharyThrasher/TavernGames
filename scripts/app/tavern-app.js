@@ -117,6 +117,11 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     // Determine current player info
     const currentPlayer = players.find(p => p.id === tableData.currentPlayer);
     const myTurn = tableData.currentPlayer === userId;
+    
+    // Check if player can hold (must have rolled at least 2 dice)
+    const myRolls = tableData.rolls?.[userId] ?? [];
+    const canHold = myTurn && myRolls.length >= 2;
+    const rollsRemaining = Math.max(0, 2 - myRolls.length);
 
     // Build history entries with formatting
     const history = (state.history ?? []).slice().reverse().map(entry => ({
@@ -144,6 +149,8 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       hasPlayers: players.length > 0,
       currentPlayer,
       myTurn,
+      canHold,
+      rollsRemaining,
       history,
       dice: [
         { value: 4, label: "d4", risk: "Safe", color: "green" },
@@ -192,9 +199,13 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     await tavernSocket.executeAsGM("startRound");
   }
 
-  static async onRoll(event) {
-    const die = event.currentTarget?.dataset?.die;
-    if (!die) return;
+  static async onRoll(event, target) {
+    const die = target?.dataset?.die;
+    console.log("Tavern Twenty-One | Roll clicked, die:", die, "target:", target);
+    if (!die) {
+      console.warn("Tavern Twenty-One | No die value found on target");
+      return;
+    }
     await tavernSocket.executeAsGM("playerAction", "roll", { die }, game.user.id);
   }
 

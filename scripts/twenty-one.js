@@ -1,10 +1,12 @@
 import { MODULE_ID, getState, updateState, addHistoryEntry } from "./state.js";
 import { canAffordAnte, deductAnteFromActors, payOutWinners } from "./wallet.js";
 import { createChatCard } from "./ui/chat.js";
-import { showSecretRoll, showPublicRoll } from "./dice.js";
+import { showPublicRoll } from "./dice.js";
 import { playSound } from "./sounds.js";
+import { tavernSocket } from "./socket.js";
 
 const VALID_DICE = [20, 12, 10, 8, 6, 4];
+const MIN_ROLLS_BEFORE_HOLD = 2;
 
 function emptyTableData() {
   return {
@@ -120,7 +122,17 @@ export async function submitRoll(payload, userId) {
   const roll = await new Roll(`1d${die}`).evaluate();
   const result = roll.total ?? 0;
 
-  await showSecretRoll(roll, userId);
+  // Send the dice roll display to the player who rolled (via socket)
+  try {
+    await tavernSocket.executeAsUser("showRoll", userId, {
+      formula: `1d${die}`,
+      die: die,
+      result: result
+    });
+  } catch (e) {
+    console.warn("Tavern Twenty-One | Could not show dice to player:", e);
+  }
+  
   await playSound("dice");
 
   const rolls = { ...tableData.rolls };
@@ -182,6 +194,13 @@ export async function hold(userId) {
 
   if (tableData.holds[userId] || tableData.busts[userId]) {
     ui.notifications.warn("You've already finished this round.");
+    return state;
+  }
+
+  // Require minimum number of rolls before holding
+  const rollCount = (tableData.rolls[userId] ?? []).length;
+  if (rollCount < MIN_ROLLS_BEFORE_HOLD) {
+    ui.notifications.warn(`You must roll at least ${MIN_ROLLS_BEFORE_HOLD} dice before holding.`);
     return state;
   }
 

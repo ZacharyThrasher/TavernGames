@@ -1,5 +1,6 @@
 import { MODULE_ID } from "./state.js";
 import { handleJoinTable, handleLeaveTable, handleStartRound, handlePlayerAction, handleResetTable } from "./tavern-actions.js";
+import { showRollToUser } from "./dice.js";
 
 export let tavernSocket;
 
@@ -10,4 +11,7 @@ export function setupSockets() {
   tavernSocket.register("startRound", handleStartRound);
   tavernSocket.register("playerAction", handlePlayerAction);
   tavernSocket.register("resetTable", handleResetTable);
+  
+  // Register client-side function for showing dice rolls
+  tavernSocket.register("showRoll", showRollToUser);
 }
