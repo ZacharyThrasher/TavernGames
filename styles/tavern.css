@@ -185,7 +185,8 @@ button:disabled {
   color: var(--tavern-parchment);
 }
 
-.tavern-sidebar-button {
+.tavern-sidebar-button,
+.tavern-floating-button {
   background: rgba(26, 14, 7, 0.7);
   border: 1px solid var(--tavern-gold);
   color: var(--tavern-parchment);
@@ -194,6 +195,14 @@ button:disabled {
   cursor: pointer;
 }
 
-.tavern-sidebar-button:hover {
+.tavern-sidebar-button:hover,
+.tavern-floating-button:hover {
   box-shadow: 0 0 8px rgba(210, 166, 90, 0.5);
+}
+
+.tavern-floating-button {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 100;
 }
