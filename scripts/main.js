@@ -7,15 +7,38 @@ Hooks.once("init", async () => {
   await preloadTemplates();
 
   Hooks.on("getSceneControlButtons", (controls) => {
-    const tokenControls = controls.find((control) => control.name === "token");
-    if (!tokenControls) return;
-
-    tokenControls.tools.push({
+    const tool = {
       name: "tavern-dice-master",
       title: "Tavern Dice Master",
-      icon: "fas fa-dice-d20",
+      icon: "fa-solid fa-dice-d20",
       button: true,
-      onClick: () => game.tavernDiceMaster?.open(),
+      onClick: () => {
+        if (game.tavernDiceMaster?.open) {
+          game.tavernDiceMaster.open();
+          return;
+        }
+        const app = new TavernApp();
+        game.tavernDiceMaster = {
+          app,
+          open: () => app.render(true),
+          close: () => app.close(),
+        };
+        app.render(true);
+      },
+    };
+
+    const tokenControls = controls.find((control) => control.name === "token");
+    if (tokenControls) {
+      tokenControls.tools.push(tool);
+      return;
+    }
+
+    controls.push({
+      name: "tavern",
+      title: "Tavern",
+      icon: "fa-solid fa-dice-d20",
+      layer: "TokenLayer",
+      tools: [tool],
     });
   });
 });
