@@ -34,7 +34,7 @@ export async function preloadTemplates() {
 export function defaultState() {
   return {
     version: 2,
-    status: "LOBBY", // LOBBY, PLAYING, REVEALING, PAYOUT
+    status: "LOBBY", // LOBBY, PLAYING, INSPECTION, REVEALING, PAYOUT
     pot: 0,
     turnOrder: [],
     turnIndex: 0,
@@ -45,7 +45,10 @@ export function defaultState() {
       busts: {},
       rolls: {},
       currentPlayer: null,
-      revealedTotals: {},
+      phase: "opening", // "opening" or "betting"
+      cheaters: {},     // { [userId]: { deceptionRolls: [...] } }
+      inspected: {},    // { [userId]: true } - who called inspection
+      caught: {},       // { [userId]: true } - caught cheaters
     },
     history: [],
   };

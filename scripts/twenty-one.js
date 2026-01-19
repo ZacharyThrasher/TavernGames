@@ -16,6 +16,13 @@ function emptyTableData() {
     rolls: {},
     currentPlayer: null,
     phase: "opening", // "opening" = everyone rolls 2 dice, "betting" = roll costs ante or hold
+    // Cheating system: track each cheat with its Deception roll
+    // cheaters: { [userId]: { deceptionRolls: [{ dieIndex, oldValue, newValue, deception, isNat1, isNat20 }] } }
+    cheaters: {},
+    // Track who has already called for inspection this round
+    inspected: {},
+    // Track who was caught cheating (forfeits the round)
+    caught: {},
   };
 }
 
@@ -258,7 +265,7 @@ export async function submitRoll(payload, userId) {
   });
 
   if (allPlayersFinished(state, updatedTable)) {
-    return revealResults();
+    return startInspection();
   }
 
   return next;
@@ -306,10 +313,33 @@ export async function hold(userId) {
   const next = await updateState({ tableData: updatedTable });
 
   if (allPlayersFinished(state, updatedTable)) {
-    return revealResults();
+    return startInspection();
   }
 
   return next;
+}
+
+/**
+ * Start the inspection phase - called when all players finish playing
+ */
+export async function startInspection() {
+  const state = getState();
+  const tableData = state.tableData ?? emptyTableData();
+  const ante = game.settings.get(MODULE_ID, "fixedAnte");
+
+  // Check if anyone cheated this round
+  const hasCheaters = Object.keys(tableData.cheaters).length > 0;
+
+  await createChatCard({
+    title: "Showdown",
+    subtitle: hasCheaters ? "Something seems off..." : "Time to reveal!",
+    message: hasCheaters
+      ? `Before the reveal, anyone may <strong>call for inspection</strong> (costs ${ante}gp). Roll Perception to catch cheaters!<br><em>Or skip inspection to proceed to reveal.</em>`
+      : "All hands are in. Preparing to reveal...",
+    icon: "fa-solid fa-eye",
+  });
+
+  return updateState({ status: "INSPECTION" });
 }
 
 export async function revealResults() {
@@ -319,6 +349,29 @@ export async function revealResults() {
   // Mark as revealing
   await updateState({ status: "REVEALING" });
   await playSound("reveal");
+
+  // Check for nat 1 cheaters who weren't caught by inspection - reveal them now
+  const caught = { ...tableData.caught };
+  const nat1CaughtNames = [];
+  for (const [cheaterId, cheaterData] of Object.entries(tableData.cheaters)) {
+    if (caught[cheaterId]) continue; // Already caught
+    for (const cheatRecord of cheaterData.deceptionRolls) {
+      if (cheatRecord.isNat1) {
+        caught[cheaterId] = true;
+        nat1CaughtNames.push(game.users.get(cheaterId)?.name ?? "Unknown");
+        break;
+      }
+    }
+  }
+
+  if (nat1CaughtNames.length > 0) {
+    await createChatCard({
+      title: "Fumbled!",
+      subtitle: "A clumsy cheater exposed!",
+      message: `<strong>${nat1CaughtNames.join(", ")}</strong> fumbled their sleight of hand and got caught red-handed!`,
+      icon: "fa-solid fa-hand-fist",
+    });
+  }
 
   // Show all rolls publicly - launch all dice animations in parallel for speed
   const rollPromises = [];
@@ -343,15 +396,21 @@ export async function revealResults() {
   // Brief pause for dramatic effect after all dice shown
   await new Promise(r => setTimeout(r, 500));
 
-  // Calculate winners
+  // Calculate winners - exclude caught cheaters!
   const totals = tableData.totals ?? {};
   let best = 0;
   state.turnOrder.forEach((id) => {
+    // Caught cheaters cannot win
+    if (caught[id]) return;
     const total = totals[id] ?? 0;
     if (total <= 21 && total > best) best = total;
   });
 
-  const winners = state.turnOrder.filter((id) => (totals[id] ?? 0) === best && best > 0);
+  // Winners are those with best score who weren't caught cheating
+  const winners = state.turnOrder.filter((id) => {
+    if (caught[id]) return false;
+    return (totals[id] ?? 0) === best && best > 0;
+  });
   const potShare = winners.length ? Math.floor(state.pot / winners.length) : 0;
 
   if (winners.length) {
@@ -366,7 +425,12 @@ export async function revealResults() {
     const name = game.users.get(id)?.name ?? "Unknown";
     const total = totals[id] ?? 0;
     const busted = tableData.busts[id];
-    return `${name}: ${total}${busted ? " (BUST)" : ""}${winners.includes(id) ? " ★" : ""}`;
+    const wasCaught = caught[id];
+    let suffix = "";
+    if (wasCaught) suffix = " (CHEATER!)";
+    else if (busted) suffix = " (BUST)";
+    if (winners.includes(id)) suffix += " ★";
+    return `${name}: ${total}${suffix}`;
   }).join(" | ");
 
   await addHistoryEntry({
@@ -376,7 +440,7 @@ export async function revealResults() {
     payout: potShare,
     message: winners.length
       ? `${winnerNames} wins with ${best}! Payout: ${potShare}gp each.`
-      : "Everyone busted! House wins.",
+      : "Everyone busted or got caught! House wins.",
     results: resultsMsg,
   });
 
@@ -389,6 +453,7 @@ export async function revealResults() {
 
   return updateState({
     status: "PAYOUT",
+    tableData: { ...tableData, caught },
   });
 }
 
@@ -398,4 +463,248 @@ export async function returnToLobby() {
     pot: 0,
     tableData: emptyTableData(),
   });
+}
+
+/**
+ * Get actor for a user (for skill checks)
+ */
+function getActorForCheat(userId) {
+  const user = game.users.get(userId);
+  if (!user) return null;
+  const actorId = user.character?.id;
+  if (!actorId) return null;
+  return game.actors.get(actorId) ?? null;
+}
+
+/**
+ * Cheat: Modify a die result. Rolls Deception to see if they get away with it.
+ * - Nat 1: Instant caught (revealed at reveal phase)
+ * - Nat 20: Cannot be caught by any inspection
+ * - Otherwise: Deception score is stored for later comparison
+ */
+export async function cheat(payload, userId) {
+  const state = getState();
+  if (state.status !== "PLAYING") {
+    ui.notifications.warn("Cannot cheat outside of an active round.");
+    return state;
+  }
+
+  const tableData = state.tableData ?? emptyTableData();
+  const { dieIndex, newValue } = payload;
+
+  // Validate die index
+  const rolls = tableData.rolls[userId] ?? [];
+  if (dieIndex < 0 || dieIndex >= rolls.length) {
+    ui.notifications.warn("Invalid die selection.");
+    return state;
+  }
+
+  const targetDie = rolls[dieIndex];
+  const maxValue = targetDie.die;
+
+  // Validate new value
+  if (newValue < 1 || newValue > maxValue) {
+    ui.notifications.warn(`Value must be between 1 and ${maxValue}.`);
+    return state;
+  }
+
+  // Don't allow "cheating" to the same value
+  if (newValue === targetDie.result) {
+    ui.notifications.warn("That's already the value!");
+    return state;
+  }
+
+  // Roll Deception check for the player
+  const actor = getActorForCheat(userId);
+  let deceptionRoll = 10; // Default if no actor
+  let isNat1 = false;
+  let isNat20 = false;
+  let deceptionMod = 0;
+  let d20Result = 10;
+
+  if (actor) {
+    // Get the deception skill modifier from D&D 5e actor
+    deceptionMod = actor.system?.skills?.dec?.total ?? 0;
+    const roll = await new Roll("1d20").evaluate();
+    d20Result = roll.total;
+    isNat1 = d20Result === 1;
+    isNat20 = d20Result === 20;
+    deceptionRoll = d20Result + deceptionMod;
+
+    // Whisper the Deception roll to the player only
+    await roll.toMessage({
+      speaker: { alias: "Sleight of Hand" },
+      flavor: `<em>${actor.name} attempts to cheat...</em><br>Deception: ${d20Result} + ${deceptionMod} = <strong>${deceptionRoll}</strong>${isNat20 ? " <span style='color: gold;'>(Untouchable!)</span>" : ""}${isNat1 ? " <span style='color: red;'>(Fumbled!)</span>" : ""}`,
+      whisper: [userId],
+    });
+  }
+
+  // Update the die value
+  const updatedRolls = { ...tableData.rolls };
+  updatedRolls[userId] = [...rolls];
+  const oldValue = updatedRolls[userId][dieIndex].result;
+  updatedRolls[userId][dieIndex] = { ...targetDie, result: newValue };
+
+  // Update total
+  const updatedTotals = { ...tableData.totals };
+  updatedTotals[userId] = (updatedTotals[userId] ?? 0) - oldValue + newValue;
+
+  // Check for bust after cheating
+  const updatedBusts = { ...tableData.busts };
+  if (updatedTotals[userId] > 21) {
+    updatedBusts[userId] = true;
+  } else if (updatedTotals[userId] <= 21 && tableData.busts[userId]) {
+    // Un-bust if they cheated down from a bust
+    updatedBusts[userId] = false;
+  }
+
+  // Track this cheat
+  const cheaters = { ...tableData.cheaters };
+  if (!cheaters[userId]) {
+    cheaters[userId] = { deceptionRolls: [] };
+  }
+  cheaters[userId].deceptionRolls.push({
+    dieIndex,
+    oldValue,
+    newValue,
+    deception: deceptionRoll,
+    isNat1,
+    isNat20,
+  });
+
+  const updatedTable = {
+    ...tableData,
+    rolls: updatedRolls,
+    totals: updatedTotals,
+    busts: updatedBusts,
+    cheaters,
+  };
+
+  const userName = game.users.get(userId)?.name ?? "Unknown";
+  console.log(`Tavern Twenty-One | ${userName} cheated: d${targetDie.die} ${oldValue} → ${newValue}, Deception: ${deceptionRoll} (nat1: ${isNat1}, nat20: ${isNat20})`);
+
+  return updateState({ tableData: updatedTable });
+}
+
+/**
+ * Call for inspection: Pay ante, roll Perception, catch cheaters with lower Deception.
+ */
+export async function inspect(userId) {
+  const state = getState();
+  if (state.status !== "INSPECTION") {
+    ui.notifications.warn("Inspection can only be called at showdown.");
+    return state;
+  }
+
+  const tableData = state.tableData ?? emptyTableData();
+  const ante = game.settings.get(MODULE_ID, "fixedAnte");
+
+  // Check if already inspected
+  if (tableData.inspected[userId]) {
+    ui.notifications.warn("You've already called for inspection this round.");
+    return state;
+  }
+
+  // Deduct gold for inspection
+  const canAfford = await deductFromActor(userId, ante);
+  if (!canAfford) {
+    ui.notifications.warn(`You need ${ante}gp to call for inspection.`);
+    return state;
+  }
+
+  await playSound("coins");
+
+  // Roll Perception
+  const actor = getActorForCheat(userId);
+  let perceptionRoll = 10;
+  let perceptionMod = 0;
+  let d20Result = 10;
+
+  if (actor) {
+    perceptionMod = actor.system?.skills?.prc?.total ?? 0;
+    const roll = await new Roll("1d20").evaluate();
+    d20Result = roll.total;
+    perceptionRoll = d20Result + perceptionMod;
+
+    // Show the Perception roll publicly
+    await roll.toMessage({
+      speaker: { alias: actor.name },
+      flavor: `<em>${actor.name} scrutinizes the table...</em><br>Perception: ${d20Result} + ${perceptionMod} = <strong>${perceptionRoll}</strong>`,
+    });
+  }
+
+  // Check against all cheaters
+  const caught = { ...tableData.caught };
+  const newlyCaughtNames = [];
+
+  for (const [cheaterId, cheaterData] of Object.entries(tableData.cheaters)) {
+    if (caught[cheaterId]) continue; // Already caught (previous inspection)
+
+    // Check each deception roll - catch if ANY of their cheats are detected
+    for (const cheatRecord of cheaterData.deceptionRolls) {
+      // Nat 20 cannot be caught
+      if (cheatRecord.isNat20) continue;
+      // Nat 1 will be caught at reveal regardless
+      if (cheatRecord.isNat1) continue;
+
+      // If perception beats deception, caught!
+      if (perceptionRoll > cheatRecord.deception) {
+        caught[cheaterId] = true;
+        const cheaterName = game.users.get(cheaterId)?.name ?? "Unknown";
+        newlyCaughtNames.push(cheaterName);
+        break; // Once caught, no need to check other cheats
+      }
+    }
+  }
+
+  // Mark this user as having inspected
+  const inspected = { ...tableData.inspected, [userId]: true };
+
+  const inspectorName = game.users.get(userId)?.name ?? "Unknown";
+
+  await addHistoryEntry({
+    type: "inspection",
+    inspector: inspectorName,
+    perception: perceptionRoll,
+    message: `${inspectorName} called for inspection (Perception: ${perceptionRoll}).`,
+  });
+
+  if (newlyCaughtNames.length > 0) {
+    await playSound("reveal");
+    await createChatCard({
+      title: "Cheater Caught!",
+      subtitle: `${inspectorName} spotted something!`,
+      message: `<strong>${newlyCaughtNames.join(", ")}</strong> ${newlyCaughtNames.length > 1 ? "were" : "was"} caught cheating and will forfeit the round!`,
+      icon: "fa-solid fa-gavel",
+    });
+
+    await addHistoryEntry({
+      type: "cheat_caught",
+      inspector: inspectorName,
+      caught: newlyCaughtNames.join(", "),
+      message: `${inspectorName} caught ${newlyCaughtNames.join(", ")} cheating!`,
+    });
+  } else {
+    await createChatCard({
+      title: "Nothing Found",
+      subtitle: `${inspectorName} found nothing suspicious.`,
+      message: "The inspection revealed no foul play... or did it?",
+      icon: "fa-solid fa-magnifying-glass",
+    });
+  }
+
+  return updateState({
+    tableData: { ...tableData, caught, inspected },
+  });
+}
+
+/**
+ * Skip inspection and proceed to reveal
+ */
+export async function skipInspection() {
+  const state = getState();
+  if (state.status !== "INSPECTION") {
+    return state;
+  }
+  return revealResults();
 }

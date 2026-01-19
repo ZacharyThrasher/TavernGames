@@ -2,7 +2,7 @@
   {{#if hasPlayers}}
     <div class="player-seats">
       {{#each players}}
-        <div class="player-seat {{this.status}} {{#if this.isMe}}is-me{{/if}} {{#if this.isCurrent}}is-current{{/if}}">
+        <div class="player-seat {{this.status}} {{#if this.isMe}}is-me{{/if}} {{#if this.isCurrent}}is-current{{/if}} {{#if this.isCaught}}caught{{/if}}">
           {{!-- Avatar --}}
           <div class="player-avatar">
             <img src="{{this.avatar}}" alt="{{this.name}}" />
@@ -43,13 +43,20 @@
                 <span class="total-value">{{this.displayTotal}}</span>
               </div>
             {{/if}}
+          {{else if ../isInspection}}
+            {{#if this.isMe}}
+              <div class="player-total {{#if this.isBusted}}busted{{/if}} {{#if this.isCaught}}caught{{/if}}">
+                <span class="total-label">Total:</span>
+                <span class="total-value">{{this.displayTotal}}</span>
+              </div>
+            {{/if}}
           {{else if ../isRevealing}}
-            <div class="player-total {{#if this.isBusted}}busted{{/if}} revealing">
+            <div class="player-total {{#if this.isBusted}}busted{{/if}} {{#if this.isCaught}}caught{{/if}} revealing">
               <span class="total-label">Total:</span>
               <span class="total-value">{{this.displayTotal}}</span>
             </div>
           {{else if ../isPayout}}
-            <div class="player-total {{#if this.isBusted}}busted{{/if}}">
+            <div class="player-total {{#if this.isBusted}}busted{{/if}} {{#if this.isCaught}}caught{{/if}}">
               <span class="total-label">Total:</span>
               <span class="total-value">{{this.displayTotal}}</span>
             </div>

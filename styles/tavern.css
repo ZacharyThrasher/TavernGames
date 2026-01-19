@@ -1078,3 +1078,102 @@
     flex: 1;
   }
 }
+
+/* ============================================
+   Cheating System Styles
+   ============================================ */
+
+/* Cheat button */
+.cheat-section {
+  border-top: 1px dashed var(--tavern-wood-highlight);
+  padding-top: var(--tavern-gap-md);
+  margin-top: var(--tavern-gap-md);
+}
+
+.btn-cheat {
+  width: 100%;
+  padding: 10px;
+  background: linear-gradient(135deg, #3a2a4a 0%, #2a1a3a 100%);
+  border: 2px solid #6a4a7a;
+  color: #d4a0d4;
+  font-weight: 600;
+  border-radius: var(--tavern-radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-cheat:hover {
+  background: linear-gradient(135deg, #4a3a5a 0%, #3a2a4a 100%);
+  border-color: #9a6aaa;
+  box-shadow: 0 0 15px rgba(154, 106, 170, 0.4);
+}
+
+.btn-cheat i {
+  margin-right: 6px;
+}
+
+.cheat-hint {
+  font-size: 11px;
+  color: #9a7aaa;
+  text-align: center;
+}
+
+/* Inspection phase */
+.control-section.inspection {
+  background: rgba(74, 107, 139, 0.15);
+  border: 1px solid var(--tavern-info);
+  border-radius: var(--tavern-radius-md);
+  padding: var(--tavern-gap-md);
+  text-align: center;
+}
+
+.control-section.inspection h3 {
+  justify-content: center;
+  color: var(--tavern-info);
+}
+
+.inspection-text {
+  font-size: 12px;
+  color: var(--tavern-parchment-dark);
+  margin-bottom: var(--tavern-gap-md);
+}
+
+.btn-inspect {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, var(--tavern-info) 0%, #3a5a7a 100%);
+  border: 2px solid #5a8bab;
+  color: white;
+  font-weight: 600;
+  border-radius: var(--tavern-radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: var(--tavern-gap-sm);
+}
+
+.btn-inspect:hover {
+  background: linear-gradient(135deg, #5a8bab 0%, var(--tavern-info) 100%);
+  box-shadow: 0 0 15px rgba(74, 107, 139, 0.5);
+}
+
+/* Caught cheater status */
+.player-status-label.caught {
+  background: linear-gradient(135deg, #6a2a6a, #4a1a4a);
+  color: #ffaaff;
+  animation: caught-pulse 1s ease-in-out infinite;
+}
+
+@keyframes caught-pulse {
+  0%, 100% { box-shadow: 0 0 5px rgba(170, 106, 170, 0.5); }
+  50% { box-shadow: 0 0 15px rgba(170, 106, 170, 0.8); }
+}
+
+.player-seat.caught {
+  border-color: #9a4a9a;
+  background: linear-gradient(135deg, rgba(106, 42, 106, 0.3), rgba(42, 26, 58, 0.5));
+}
+
+/* History entry types for cheating */
+.history-entry.inspection { border-left-color: var(--tavern-info); }
+.history-entry.cheat_caught { border-left-color: #9a4a9a; }
+.history-entry.inspect_clean { border-left-color: var(--tavern-info); }

@@ -86,6 +86,16 @@
       </div>
     {{/if}}
 
+    {{!-- Cheat button - available when you have dice --}}
+    {{#if canCheat}}
+      <div class="control-section cheat-section">
+        <button type="button" class="btn btn-cheat" data-action="cheat" title="Attempt to modify one of your dice">
+          <i class="fa-solid fa-mask"></i> Cheat
+        </button>
+        <p class="hint cheat-hint">Sleight of hand... roll Deception</p>
+      </div>
+    {{/if}}
+
     {{#if isGM}}
       <div class="control-section gm-controls">
         <button type="button" class="btn btn-secondary btn-small" data-action="reveal">
@@ -93,6 +103,30 @@
         </button>
       </div>
     {{/if}}
+  {{/if}}
+
+  {{!-- Inspection state --}}
+  {{#if isInspection}}
+    <div class="control-section inspection">
+      <h3><i class="fa-solid fa-magnifying-glass"></i> Showdown!</h3>
+      <p class="inspection-text">Before revealing, you may call for inspection to catch cheaters.</p>
+      
+      {{#if isInGame}}
+        {{#if canInspect}}
+          <button type="button" class="btn btn-inspect" data-action="inspect">
+            <i class="fa-solid fa-eye"></i> Call Inspection ({{ante}}gp)
+          </button>
+        {{else if hasAlreadyInspected}}
+          <p class="hint">You've already called for inspection.</p>
+        {{/if}}
+      {{/if}}
+      
+      {{#if isGM}}
+        <button type="button" class="btn btn-success" data-action="skipInspection">
+          <i class="fa-solid fa-forward"></i> Skip to Reveal
+        </button>
+      {{/if}}
+    </div>
   {{/if}}
 
   {{!-- Revealing state --}}

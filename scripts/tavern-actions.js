@@ -1,5 +1,5 @@
 import { MODULE_ID, getState, updateState } from "./state.js";
-import { startRound, submitRoll, hold, revealResults, returnToLobby } from "./twenty-one.js";
+import { startRound, submitRoll, hold, revealResults, returnToLobby, cheat, inspect, skipInspection } from "./twenty-one.js";
 import { playSound } from "./sounds.js";
 
 function ensureGM() {
@@ -70,6 +70,12 @@ export async function handlePlayerAction(action, payload, userId) {
       return submitRoll(payload, userId);
     case "hold":
       return hold(userId);
+    case "cheat":
+      return cheat(payload, userId);
+    case "inspect":
+      return inspect(userId);
+    case "skipInspection":
+      return skipInspection();
     case "reveal":
       return revealResults();
     case "newRound":
@@ -94,7 +100,10 @@ export async function handleResetTable() {
       busts: {},
       rolls: {},
       currentPlayer: null,
-      revealedTotals: {},
+      phase: "opening",
+      cheaters: {},
+      inspected: {},
+      caught: {},
     },
     history: [],
   });

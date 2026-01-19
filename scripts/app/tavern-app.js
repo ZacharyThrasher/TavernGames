@@ -23,6 +23,9 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       start: TavernApp.onStart,
       roll: TavernApp.onRoll,
       hold: TavernApp.onHold,
+      cheat: TavernApp.onCheat,
+      inspect: TavernApp.onInspect,
+      skipInspection: TavernApp.onSkipInspection,
       reveal: TavernApp.onReveal,
       newRound: TavernApp.onNewRound,
       reset: TavernApp.onReset,
@@ -60,6 +63,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       const total = tableData.totals?.[player.id] ?? 0;
       const isHolding = tableData.holds?.[player.id] ?? false;
       const isBusted = tableData.busts?.[player.id] ?? false;
+      const isCaught = tableData.caught?.[player.id] ?? false;
       const isCurrent = tableData.currentPlayer === player.id;
       const isMe = player.id === userId;
 
@@ -80,8 +84,25 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
           status = "rolled";
           statusLabel = "Rolled";
         }
-      } else if (state.status === "REVEALING" || state.status === "PAYOUT") {
+      } else if (state.status === "INSPECTION") {
         if (isBusted) {
+          status = "busted";
+          statusLabel = "BUST!";
+        } else if (isCaught) {
+          status = "caught";
+          statusLabel = "CAUGHT!";
+        } else if (isHolding) {
+          status = "holding";
+          statusLabel = "Holding";
+        } else {
+          status = "waiting";
+          statusLabel = "Waiting";
+        }
+      } else if (state.status === "REVEALING" || state.status === "PAYOUT") {
+        if (isCaught) {
+          status = "caught";
+          statusLabel = `CHEATER! (${total})`;
+        } else if (isBusted) {
           status = "busted";
           statusLabel = `BUST (${total})`;
         } else {
@@ -90,12 +111,13 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         }
       }
 
-      // Show dice only to the player who owns them (or GM), or during reveal
-      const showDice = isMe || isGM || state.status === "REVEALING" || state.status === "PAYOUT";
-      const diceDisplay = showDice ? rolls.map(r => ({
+      // Show dice only to the player who owns them (or GM), or during reveal/inspection
+      const showDice = isMe || isGM || state.status === "REVEALING" || state.status === "PAYOUT" || state.status === "INSPECTION";
+      const diceDisplay = showDice ? rolls.map((r, idx) => ({
         die: r.die,
         result: r.result,
         icon: TavernApp.DICE_ICONS[r.die] || "d6",
+        index: idx,
       })) : rolls.map(() => ({ hidden: true }));
 
       return {
@@ -106,11 +128,14 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         displayTotal: showDice ? total : "?",
         isHolding,
         isBusted,
+        isCaught,
         isCurrent,
         isMe,
         status,
         statusLabel,
         canAct: isCurrent && isMe && state.status === "PLAYING" && !isHolding && !isBusted,
+        // For cheating: can cheat if it's playing, you're in the game, have at least 1 die, and haven't busted
+        canCheat: state.status === "PLAYING" && isMe && rolls.length > 0 && !isBusted,
       };
     });
 
@@ -127,6 +152,20 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const myRolls = tableData.rolls?.[userId] ?? [];
     const canHold = myTurn && isBettingPhase;
     const openingRollsRemaining = Math.max(0, 2 - myRolls.length);
+
+    // Cheating context - player can cheat their own dice during play
+    const canCheat = state.status === "PLAYING" && state.players?.[userId] && myRolls.length > 0 && !tableData.busts?.[userId];
+    const myDiceForCheat = canCheat ? myRolls.map((r, idx) => ({
+      index: idx,
+      die: r.die,
+      result: r.result,
+      maxValue: r.die,
+    })) : [];
+
+    // Inspection context
+    const isInspection = state.status === "INSPECTION";
+    const hasAlreadyInspected = tableData.inspected?.[userId] ?? false;
+    const canInspect = isInspection && state.players?.[userId] && !hasAlreadyInspected;
 
     // Build history entries with formatting
     const history = (state.history ?? []).slice().reverse().map(entry => ({
@@ -146,6 +185,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       status: state.status,
       isLobby: state.status === "LOBBY",
       isPlaying: state.status === "PLAYING",
+      isInspection,
       isRevealing: state.status === "REVEALING",
       isPayout: state.status === "PAYOUT",
       canJoin: !state.players?.[userId] && (state.status === "LOBBY" || state.status === "PAYOUT"),
@@ -155,6 +195,10 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       currentPlayer,
       myTurn,
       canHold,
+      canCheat,
+      myDiceForCheat,
+      canInspect,
+      hasAlreadyInspected,
       isOpeningPhase,
       isBettingPhase,
       openingRollsRemaining,
@@ -187,6 +231,8 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       case "hold": return "fa-solid fa-hand";
       case "bust": return "fa-solid fa-skull";
       case "round_end": return "fa-solid fa-flag-checkered";
+      case "inspection": return "fa-solid fa-magnifying-glass";
+      case "cheat_caught": return "fa-solid fa-gavel";
       default: return "fa-solid fa-circle";
     }
   }
@@ -218,6 +264,81 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static async onHold() {
     await tavernSocket.executeAsGM("playerAction", "hold", {}, game.user.id);
+  }
+
+  static async onCheat(event, target) {
+    const state = getState();
+    const userId = game.user.id;
+    const myRolls = state.tableData?.rolls?.[userId] ?? [];
+
+    if (myRolls.length === 0) {
+      return ui.notifications.warn("You have no dice to cheat with!");
+    }
+
+    // Build a dialog for selecting which die to cheat and the new value
+    const diceOptions = myRolls.map((r, idx) => 
+      `<option value="${idx}" data-max="${r.die}">Die ${idx + 1}: d${r.die} (current: ${r.result})</option>`
+    ).join("");
+
+    // Get initial max value from first die
+    const initialMax = myRolls[0]?.die ?? 20;
+
+    const content = `
+      <form>
+        <div class="form-group">
+          <label>Select Die to Modify:</label>
+          <select name="dieIndex" id="cheat-die-select" style="width: 100%;">
+            ${diceOptions}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>New Value: <span id="cheat-max-label">(1-${initialMax})</span></label>
+          <input type="number" name="newValue" id="cheat-new-value" min="1" max="${initialMax}" value="1" style="width: 100%;" />
+        </div>
+        <p class="hint" style="font-size: 0.9em; color: #666; margin-top: 10px;">
+          <i class="fa-solid fa-warning"></i> You'll roll Deception. Nat 1 = auto-caught at reveal. Nat 20 = untouchable!
+        </p>
+      </form>
+      <script>
+        document.getElementById('cheat-die-select')?.addEventListener('change', (e) => {
+          const max = e.target.selectedOptions[0]?.dataset?.max ?? 20;
+          document.getElementById('cheat-new-value').max = max;
+          document.getElementById('cheat-max-label').textContent = '(1-' + max + ')';
+        });
+      </script>
+    `;
+
+    const result = await Dialog.prompt({
+      title: "Cheat - Sleight of Hand",
+      content,
+      label: "Attempt Cheat",
+      callback: (html) => {
+        const dieIndex = parseInt(html.find('[name="dieIndex"]').val());
+        const newValue = parseInt(html.find('[name="newValue"]').val());
+        return { dieIndex, newValue };
+      },
+      rejectClose: false,
+    });
+
+    if (result) {
+      await tavernSocket.executeAsGM("playerAction", "cheat", result, game.user.id);
+    }
+  }
+
+  static async onInspect() {
+    const ante = game.settings.get(MODULE_ID, "fixedAnte");
+    const confirm = await Dialog.confirm({
+      title: "Call for Inspection",
+      content: `<p>Pay <strong>${ante}gp</strong> to roll Perception and try to catch cheaters?</p>
+        <p class="hint" style="font-size: 0.9em; color: #666;">If your Perception beats a cheater's Deception, they forfeit the round!</p>`,
+    });
+    if (confirm) {
+      await tavernSocket.executeAsGM("playerAction", "inspect", {}, game.user.id);
+    }
+  }
+
+  static async onSkipInspection() {
+    await tavernSocket.executeAsGM("playerAction", "skipInspection", {}, game.user.id);
   }
 
   static async onReveal() {
