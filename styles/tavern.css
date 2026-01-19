@@ -540,7 +540,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 12px 8px 8px;
+  padding: 14px 8px 10px;
   background: 
     radial-gradient(ellipse at 50% 30%, rgba(212, 160, 74, 0.15) 0%, transparent 70%),
     linear-gradient(180deg, var(--tavern-wood-medium) 0%, var(--tavern-wood-dark) 100%);
@@ -548,7 +548,8 @@
   border-radius: var(--tavern-radius-md);
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow: hidden;
+  overflow: visible;
+  min-height: 70px;
 }
 
 .btn-die-premium::before {

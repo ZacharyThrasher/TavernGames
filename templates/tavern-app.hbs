@@ -40,10 +40,12 @@
         {{> "modules/tavern-dice-master/templates/parts/controls.hbs"}}
       </div>
 
-      {{!-- History --}}
-      <div class="tavern-history-panel">
-        {{> "modules/tavern-dice-master/templates/parts/history.hbs"}}
-      </div>
+      {{!-- History (GM only) --}}
+      {{#if isGM}}
+        <div class="tavern-history-panel">
+          {{> "modules/tavern-dice-master/templates/parts/history.hbs"}}
+        </div>
+      {{/if}}
     </aside>
   </main>
 

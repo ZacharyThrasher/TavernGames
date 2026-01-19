@@ -61,7 +61,12 @@ export async function startRound() {
   await playSound("coins");
 
   const tableData = emptyTableData();
-  const pot = ante * state.turnOrder.length * 2;
+  
+  // Calculate pot: each non-GM player antes, house matches non-GM players only
+  const nonGMPlayers = state.turnOrder.filter(id => !game.users.get(id)?.isGM);
+  const playerAntes = nonGMPlayers.length * ante;
+  const houseMatch = playerAntes; // House matches player antes only
+  const pot = playerAntes + houseMatch;
 
   state.turnOrder.forEach((id) => {
     tableData.totals[id] = 0;
