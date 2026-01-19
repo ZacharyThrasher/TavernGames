@@ -164,8 +164,9 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
     // Inspection context
     const isInspection = state.status === "INSPECTION";
-    const hasAlreadyInspected = tableData.inspected?.[userId] ?? false;
-    const canInspect = isInspection && state.players?.[userId] && !hasAlreadyInspected;
+    const inspectionCalled = tableData.inspectionCalled ?? false;
+    const inspectionCost = Math.floor(state.pot / 2);
+    const canInspect = isInspection && state.players?.[userId] && !inspectionCalled;
 
     // Build history entries with formatting
     const history = (state.history ?? []).slice().reverse().map(entry => ({
@@ -182,6 +183,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       userId,
       ante,
       pot: state.pot,
+      inspectionCost,
       status: state.status,
       isLobby: state.status === "LOBBY",
       isPlaying: state.status === "PLAYING",
@@ -198,7 +200,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       canCheat,
       myDiceForCheat,
       canInspect,
-      hasAlreadyInspected,
+      inspectionCalled,
       isOpeningPhase,
       isBettingPhase,
       openingRollsRemaining,
@@ -233,6 +235,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       case "round_end": return "fa-solid fa-flag-checkered";
       case "inspection": return "fa-solid fa-magnifying-glass";
       case "cheat_caught": return "fa-solid fa-gavel";
+      case "inspection_failed": return "fa-solid fa-face-frown";
       default: return "fa-solid fa-circle";
     }
   }
@@ -326,11 +329,17 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   static async onInspect() {
-    const ante = game.settings.get(MODULE_ID, "fixedAnte");
+    const state = getState();
+    const inspectionCost = Math.floor(state.pot / 2);
     const confirm = await Dialog.confirm({
       title: "Call for Inspection",
-      content: `<p>Pay <strong>${ante}gp</strong> to roll Perception and try to catch cheaters?</p>
-        <p class="hint" style="font-size: 0.9em; color: #666;">If your Perception beats a cheater's Deception, they forfeit the round!</p>`,
+      content: `
+        <p><strong>Cost:</strong> ${inspectionCost}gp (half the pot)</p>
+        <p>Roll Perception to try to catch cheaters.</p>
+        <hr>
+        <p style="color: #c44; font-weight: bold;">WARNING: If you find no cheaters, you forfeit your winnings!</p>
+        <p class="hint" style="font-size: 0.9em; color: #666;">Only call if you're confident someone cheated.</p>
+      `,
     });
     if (confirm) {
       await tavernSocket.executeAsGM("playerAction", "inspect", {}, game.user.id);

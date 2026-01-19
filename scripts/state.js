@@ -46,9 +46,10 @@ export function defaultState() {
       rolls: {},
       currentPlayer: null,
       phase: "opening", // "opening" or "betting"
-      cheaters: {},     // { [userId]: { deceptionRolls: [...] } }
-      inspected: {},    // { [userId]: true } - who called inspection
-      caught: {},       // { [userId]: true } - caught cheaters
+      cheaters: {},         // { [userId]: { deceptionRolls: [...] } }
+      caught: {},           // { [userId]: true } - caught cheaters
+      inspectionCalled: false, // Only one inspection per round
+      failedInspector: null,   // User who called inspection but found nothing
     },
     history: [],
   };

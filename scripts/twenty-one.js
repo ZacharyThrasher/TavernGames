@@ -19,10 +19,12 @@ function emptyTableData() {
     // Cheating system: track each cheat with its Deception roll
     // cheaters: { [userId]: { deceptionRolls: [{ dieIndex, oldValue, newValue, deception, isNat1, isNat20 }] } }
     cheaters: {},
-    // Track who has already called for inspection this round
-    inspected: {},
     // Track who was caught cheating (forfeits the round)
     caught: {},
+    // Track if inspection was called (only one allowed per round)
+    inspectionCalled: false,
+    // Track who called inspection and failed (forfeits winnings)
+    failedInspector: null,
   };
 }
 
@@ -325,17 +327,20 @@ export async function hold(userId) {
 export async function startInspection() {
   const state = getState();
   const tableData = state.tableData ?? emptyTableData();
-  const ante = game.settings.get(MODULE_ID, "fixedAnte");
 
-  // Check if anyone cheated this round
+  // Check if anyone cheated this round (players won't know for sure)
   const hasCheaters = Object.keys(tableData.cheaters).length > 0;
+
+  // Calculate what inspection would cost
+  const inspectionCost = Math.floor(state.pot / 2);
 
   await createChatCard({
     title: "Showdown",
-    subtitle: hasCheaters ? "Something seems off..." : "Time to reveal!",
-    message: hasCheaters
-      ? `Before the reveal, anyone may <strong>call for inspection</strong> (costs ${ante}gp). Roll Perception to catch cheaters!<br><em>Or skip inspection to proceed to reveal.</em>`
-      : "All hands are in. Preparing to reveal...",
+    subtitle: "The moment of truth approaches...",
+    message: `All hands are in!<br><br>` +
+      `<strong>Call for Inspection?</strong> (Costs <strong>${inspectionCost}gp</strong> - half the pot)<br>` +
+      `<em>Roll Perception to catch cheaters. But if you find nothing, you forfeit your winnings!</em><br><br>` +
+      `Only one player may call for inspection.`,
     icon: "fa-solid fa-eye",
   });
 
@@ -396,19 +401,25 @@ export async function revealResults() {
   // Brief pause for dramatic effect after all dice shown
   await new Promise(r => setTimeout(r, 500));
 
-  // Calculate winners - exclude caught cheaters!
+  // Get the failed inspector (if any) - they forfeit their winnings
+  const failedInspector = tableData.failedInspector;
+
+  // Calculate winners - exclude caught cheaters AND failed inspectors!
   const totals = tableData.totals ?? {};
   let best = 0;
   state.turnOrder.forEach((id) => {
     // Caught cheaters cannot win
     if (caught[id]) return;
+    // Failed inspectors cannot win
+    if (failedInspector === id) return;
     const total = totals[id] ?? 0;
     if (total <= 21 && total > best) best = total;
   });
 
-  // Winners are those with best score who weren't caught cheating
+  // Winners are those with best score who weren't caught cheating or failed inspection
   const winners = state.turnOrder.filter((id) => {
     if (caught[id]) return false;
+    if (failedInspector === id) return false;
     return (totals[id] ?? 0) === best && best > 0;
   });
   const potShare = winners.length ? Math.floor(state.pot / winners.length) : 0;
@@ -426,8 +437,10 @@ export async function revealResults() {
     const total = totals[id] ?? 0;
     const busted = tableData.busts[id];
     const wasCaught = caught[id];
+    const wasFailedInspector = failedInspector === id;
     let suffix = "";
     if (wasCaught) suffix = " (CHEATER!)";
+    else if (wasFailedInspector) suffix = " (FALSE ACCUSER!)";
     else if (busted) suffix = " (BUST)";
     if (winners.includes(id)) suffix += " ★";
     return `${name}: ${total}${suffix}`;
@@ -440,7 +453,7 @@ export async function revealResults() {
     payout: potShare,
     message: winners.length
       ? `${winnerNames} wins with ${best}! Payout: ${potShare}gp each.`
-      : "Everyone busted or got caught! House wins.",
+      : "Everyone busted, got caught, or made false accusations! House wins.",
     results: resultsMsg,
   });
 
@@ -587,7 +600,9 @@ export async function cheat(payload, userId) {
 }
 
 /**
- * Call for inspection: Pay ante, roll Perception, catch cheaters with lower Deception.
+ * Call for inspection: Costs half the pot. Only one inspection per round.
+ * If you catch no one, you forfeit your winnings.
+ * If you catch a cheater, they forfeit instead.
  */
 export async function inspect(userId) {
   const state = getState();
@@ -597,22 +612,26 @@ export async function inspect(userId) {
   }
 
   const tableData = state.tableData ?? emptyTableData();
-  const ante = game.settings.get(MODULE_ID, "fixedAnte");
 
-  // Check if already inspected
-  if (tableData.inspected[userId]) {
-    ui.notifications.warn("You've already called for inspection this round.");
+  // Only one inspection allowed per round
+  if (tableData.inspectionCalled) {
+    ui.notifications.warn("An inspection has already been called this round.");
     return state;
   }
 
-  // Deduct gold for inspection
-  const canAfford = await deductFromActor(userId, ante);
-  if (!canAfford) {
-    ui.notifications.warn(`You need ${ante}gp to call for inspection.`);
-    return state;
+  // Calculate inspection cost: half the pot
+  const inspectionCost = Math.floor(state.pot / 2);
+  
+  // Check if player can afford it (GM doesn't pay)
+  const user = game.users.get(userId);
+  if (!user?.isGM) {
+    const canAfford = await deductFromActor(userId, inspectionCost);
+    if (!canAfford) {
+      ui.notifications.warn(`You need ${inspectionCost}gp (half the pot) to call for inspection.`);
+      return state;
+    }
+    await playSound("coins");
   }
-
-  await playSound("coins");
 
   // Roll Perception
   const actor = getActorForCheat(userId);
@@ -638,7 +657,7 @@ export async function inspect(userId) {
   const newlyCaughtNames = [];
 
   for (const [cheaterId, cheaterData] of Object.entries(tableData.cheaters)) {
-    if (caught[cheaterId]) continue; // Already caught (previous inspection)
+    if (caught[cheaterId]) continue; // Already caught
 
     // Check each deception roll - catch if ANY of their cheats are detected
     for (const cheatRecord of cheaterData.deceptionRolls) {
@@ -657,24 +676,32 @@ export async function inspect(userId) {
     }
   }
 
-  // Mark this user as having inspected
-  const inspected = { ...tableData.inspected, [userId]: true };
-
   const inspectorName = game.users.get(userId)?.name ?? "Unknown";
+  const foundCheaters = newlyCaughtNames.length > 0;
+
+  // Track that inspection was called, and if failed, who called it
+  const updatedTableData = {
+    ...tableData,
+    caught,
+    inspectionCalled: true,
+    failedInspector: foundCheaters ? null : userId,
+  };
 
   await addHistoryEntry({
     type: "inspection",
     inspector: inspectorName,
     perception: perceptionRoll,
-    message: `${inspectorName} called for inspection (Perception: ${perceptionRoll}).`,
+    cost: inspectionCost,
+    success: foundCheaters,
+    message: `${inspectorName} called for inspection (${inspectionCost}gp, Perception: ${perceptionRoll}).`,
   });
 
-  if (newlyCaughtNames.length > 0) {
+  if (foundCheaters) {
     await playSound("reveal");
     await createChatCard({
       title: "Cheater Caught!",
-      subtitle: `${inspectorName} spotted something!`,
-      message: `<strong>${newlyCaughtNames.join(", ")}</strong> ${newlyCaughtNames.length > 1 ? "were" : "was"} caught cheating and will forfeit the round!`,
+      subtitle: `${inspectorName}'s suspicions were correct!`,
+      message: `<strong>${newlyCaughtNames.join(", ")}</strong> ${newlyCaughtNames.length > 1 ? "were" : "was"} caught cheating and will forfeit the round!<br><em>${inspectorName}'s vigilance pays off.</em>`,
       icon: "fa-solid fa-gavel",
     });
 
@@ -685,17 +712,24 @@ export async function inspect(userId) {
       message: `${inspectorName} caught ${newlyCaughtNames.join(", ")} cheating!`,
     });
   } else {
+    await playSound("lose");
     await createChatCard({
-      title: "Nothing Found",
-      subtitle: `${inspectorName} found nothing suspicious.`,
-      message: "The inspection revealed no foul play... or did it?",
-      icon: "fa-solid fa-magnifying-glass",
+      title: "False Accusation!",
+      subtitle: `${inspectorName} found nothing.`,
+      message: `The inspection revealed no cheaters. <strong>${inspectorName}</strong> looks paranoid and forfeits their claim to the pot!`,
+      icon: "fa-solid fa-face-frown",
+    });
+
+    await addHistoryEntry({
+      type: "inspection_failed",
+      inspector: inspectorName,
+      message: `${inspectorName} found no cheaters and forfeits their winnings.`,
     });
   }
 
-  return updateState({
-    tableData: { ...tableData, caught, inspected },
-  });
+  // After inspection, proceed directly to reveal
+  await updateState({ tableData: updatedTableData });
+  return revealResults();
 }
 
 /**

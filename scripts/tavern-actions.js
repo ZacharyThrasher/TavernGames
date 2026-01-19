@@ -102,8 +102,9 @@ export async function handleResetTable() {
       currentPlayer: null,
       phase: "opening",
       cheaters: {},
-      inspected: {},
       caught: {},
+      inspectionCalled: false,
+      failedInspector: null,
     },
     history: [],
   });

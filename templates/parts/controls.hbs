@@ -109,22 +109,27 @@
   {{#if isInspection}}
     <div class="control-section inspection">
       <h3><i class="fa-solid fa-magnifying-glass"></i> Showdown!</h3>
-      <p class="inspection-text">Before revealing, you may call for inspection to catch cheaters.</p>
       
-      {{#if isInGame}}
-        {{#if canInspect}}
-          <button type="button" class="btn btn-inspect" data-action="inspect">
-            <i class="fa-solid fa-eye"></i> Call Inspection ({{ante}}gp)
-          </button>
-        {{else if hasAlreadyInspected}}
-          <p class="hint">You've already called for inspection.</p>
+      {{#if inspectionCalled}}
+        <p class="inspection-text">Inspection has been called. Awaiting results...</p>
+      {{else}}
+        <p class="inspection-text">Think someone cheated? Call for inspection!</p>
+        <p class="inspection-warning"><i class="fa-solid fa-warning"></i> If you find nothing, you forfeit your winnings!</p>
+        
+        {{#if isInGame}}
+          {{#if canInspect}}
+            <button type="button" class="btn btn-inspect" data-action="inspect">
+              <i class="fa-solid fa-eye"></i> Call Inspection ({{inspectionCost}}gp)
+            </button>
+            <p class="hint">Cost: Half the pot. Only one inspection allowed.</p>
+          {{/if}}
         {{/if}}
-      {{/if}}
-      
-      {{#if isGM}}
-        <button type="button" class="btn btn-success" data-action="skipInspection">
-          <i class="fa-solid fa-forward"></i> Skip to Reveal
-        </button>
+        
+        {{#if isGM}}
+          <button type="button" class="btn btn-success" data-action="skipInspection">
+            <i class="fa-solid fa-forward"></i> Skip to Reveal
+          </button>
+        {{/if}}
       {{/if}}
     </div>
   {{/if}}
