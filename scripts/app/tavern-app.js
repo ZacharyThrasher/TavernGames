@@ -153,12 +153,12 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       rollsRemaining,
       history,
       dice: [
-        { value: 4, label: "d4", risk: "Safe", color: "green" },
-        { value: 6, label: "d6", risk: "Safe", color: "green" },
-        { value: 8, label: "d8", risk: "Low", color: "yellow" },
-        { value: 10, label: "d10", risk: "Medium", color: "orange" },
-        { value: 12, label: "d12", risk: "High", color: "red" },
-        { value: 20, label: "d20", risk: "Risky!", color: "crimson" },
+        { value: 4, label: "d4", icon: "d4-grey" },
+        { value: 6, label: "d6", icon: "d6-grey" },
+        { value: 8, label: "d8", icon: "d8-grey" },
+        { value: 10, label: "d10", icon: "d10-grey" },
+        { value: 12, label: "d12", icon: "d12-grey" },
+        { value: 20, label: "d20", icon: "d20-grey" },
       ],
     };
   }

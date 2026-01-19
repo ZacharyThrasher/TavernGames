@@ -525,6 +525,102 @@
   margin-bottom: var(--tavern-gap-sm);
 }
 
+/* Premium Dice Buttons */
+.dice-buttons.premium {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: var(--tavern-gap-md);
+  padding: var(--tavern-gap-sm);
+}
+
+.btn-die-premium {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 8px 8px;
+  background: 
+    radial-gradient(ellipse at 50% 30%, rgba(212, 160, 74, 0.15) 0%, transparent 70%),
+    linear-gradient(180deg, var(--tavern-wood-medium) 0%, var(--tavern-wood-dark) 100%);
+  border: 2px solid var(--tavern-wood-highlight);
+  border-radius: var(--tavern-radius-md);
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.btn-die-premium::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.btn-die-premium .die-icon {
+  width: 42px;
+  height: 42px;
+  filter: 
+    drop-shadow(0 2px 4px rgba(0,0,0,0.4))
+    drop-shadow(0 0 8px rgba(212, 160, 74, 0.3));
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-die-premium .die-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--tavern-parchment);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 6px;
+  opacity: 0.9;
+}
+
+.btn-die-premium:hover {
+  transform: translateY(-4px) scale(1.05);
+  border-color: var(--tavern-gold);
+  box-shadow: 
+    0 8px 20px rgba(0,0,0,0.4),
+    0 0 20px rgba(212, 160, 74, 0.3),
+    inset 0 0 20px rgba(212, 160, 74, 0.1);
+}
+
+.btn-die-premium:hover .die-icon {
+  filter: 
+    drop-shadow(0 4px 8px rgba(0,0,0,0.5))
+    drop-shadow(0 0 15px rgba(212, 160, 74, 0.6))
+    brightness(1.2);
+  transform: scale(1.1);
+}
+
+.btn-die-premium:hover .die-label {
+  color: var(--tavern-gold);
+}
+
+.btn-die-premium:active {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 
+    0 4px 10px rgba(0,0,0,0.3),
+    0 0 15px rgba(212, 160, 74, 0.4);
+}
+
+/* Dice button click animation */
+@keyframes diceClick {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+.btn-die-premium:active .die-icon {
+  animation: diceClick 0.15s ease-out;
+}
+
+/* Legacy dice button styles (fallback) */
 .btn-die {
   display: flex;
   flex-direction: column;
@@ -534,6 +630,8 @@
   border: 2px solid transparent;
   cursor: pointer;
   transition: all 0.2s ease;
+  background: var(--tavern-wood-medium);
+  color: var(--tavern-parchment);
 }
 
 .btn-die .die-label {
@@ -541,17 +639,11 @@
   font-weight: 700;
 }
 
-.btn-die .die-risk {
-  font-size: 9px;
-  opacity: 0.8;
-  text-transform: uppercase;
+.btn-die:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  border-color: var(--tavern-gold);
 }
-
-.btn-die.green { background: linear-gradient(135deg, #4a7c4e, #3a5c3e); color: white; }
-.btn-die.yellow { background: linear-gradient(135deg, #8b8b3a, #6b6b2a); color: white; }
-.btn-die.orange { background: linear-gradient(135deg, #b5854a, #8b652a); color: white; }
-.btn-die.red { background: linear-gradient(135deg, #8b5a3a, #6b3a2a); color: white; }
-.btn-die.crimson { background: linear-gradient(135deg, #8b3a3a, #6b2a2a); color: white; }
 
 .btn-die:hover {
   transform: translateY(-2px);

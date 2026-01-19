@@ -45,16 +45,16 @@
       <div class="control-section your-turn">
         <h3><i class="fa-solid fa-dice"></i> Your Turn!</h3>
         {{#if rollsRemaining}}
-          <p class="turn-hint">Choose {{rollsRemaining}} more {{#if (eq rollsRemaining 1)}}die{{else}}dice{{/if}} to roll before you can hold.</p>
+          <p class="turn-hint">Choose {{rollsRemaining}} more {{#if (eq rollsRemaining 1)}}die{{else}}dice{{/if}} to roll.</p>
         {{else}}
-          <p class="turn-hint">Roll another die or hold to keep your total.</p>
+          <p class="turn-hint">Roll again or hold to keep your total.</p>
         {{/if}}
         
-        <div class="dice-buttons">
+        <div class="dice-buttons premium">
           {{#each dice}}
-            <button type="button" class="btn btn-die {{this.color}}" data-action="roll" data-die="{{this.value}}" title="{{this.risk}}">
+            <button type="button" class="btn-die-premium" data-action="roll" data-die="{{this.value}}" title="Roll {{this.label}}">
+              <img src="icons/svg/{{this.icon}}.svg" alt="{{this.label}}" class="die-icon" />
               <span class="die-label">{{this.label}}</span>
-              <span class="die-risk">{{this.risk}}</span>
             </button>
           {{/each}}
         </div>
