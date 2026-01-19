@@ -26,21 +26,11 @@ Hooks.on("getSceneControlButtons", (controls) => {
     onClick: openTavern,
   };
 
-  const tokenControls = controls.find((control) => control.name === "token");
+  // V13: controls is an object keyed by control name
+  const tokenControls = controls.tokens;
   if (tokenControls) {
-    tokenControls.tools.push(tool);
-    return;
+    tokenControls.tools["tavern-dice-master"] = tool;
   }
-
-  controls.push({
-    name: "tavern",
-    title: "Tavern",
-    icon: "fa-solid fa-dice-d20",
-    layer: "TokenLayer",
-    tools: [tool],
-    activeTool: "tavern-dice-master",
-    visible: true,
-  });
 });
 
 const injectSidebarButton = (root) => {
