@@ -171,8 +171,11 @@ export async function submitRoll(payload, userId) {
     busts,
   };
 
-  // Find next player
-  updatedTable.currentPlayer = getNextActivePlayer(state, updatedTable);
+  // Only move to next player if this player busted
+  // Otherwise, they continue rolling until they hold or bust
+  if (isBust) {
+    updatedTable.currentPlayer = getNextActivePlayer(state, updatedTable);
+  }
 
   const next = await updateState({ tableData: updatedTable });
 
@@ -238,20 +241,28 @@ export async function revealResults() {
   await updateState({ status: "REVEALING" });
   await playSound("reveal");
 
-  // Show all rolls publicly
+  // Show all rolls publicly - launch all dice animations in parallel for speed
+  const rollPromises = [];
   for (const userId of state.turnOrder) {
     const playerRolls = tableData.rolls[userId] ?? [];
     for (const rollData of playerRolls) {
-      const roll = await new Roll(`1d${rollData.die}`).evaluate();
-      // Override the result to show the actual value
-      if (roll.terms?.[0]?.results?.[0]) {
-        roll.terms[0].results[0].result = rollData.result;
-        roll._total = rollData.result;
-      }
-      await showPublicRoll(roll, userId);
-      await new Promise(r => setTimeout(r, 800)); // Stagger reveals
+      rollPromises.push((async () => {
+        const roll = await new Roll(`1d${rollData.die}`).evaluate();
+        // Override the result to show the actual value
+        if (roll.terms?.[0]?.results?.[0]) {
+          roll.terms[0].results[0].result = rollData.result;
+          roll._total = rollData.result;
+        }
+        await showPublicRoll(roll, userId);
+      })());
     }
   }
+  
+  // Wait for all dice to finish rolling
+  await Promise.all(rollPromises);
+  
+  // Brief pause for dramatic effect after all dice shown
+  await new Promise(r => setTimeout(r, 500));
 
   // Calculate winners
   const totals = tableData.totals ?? {};
