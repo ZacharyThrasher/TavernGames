@@ -384,6 +384,51 @@ export async function revealResults() {
     });
   }
 
+  // If an accusation was made, reveal the outcome now
+  if (tableData.accusation) {
+    const { accuserId, targetId, success } = tableData.accusation;
+    const accuserName = getActorForUser(accuserId)?.name ?? game.users.get(accuserId)?.name ?? "Unknown";
+    const targetName = getActorForUser(targetId)?.name ?? game.users.get(targetId)?.name ?? "Unknown";
+
+    // Brief pause for tension
+    await new Promise(r => setTimeout(r, 1000));
+
+    if (success) {
+      await playSound("reveal");
+      await createChatCard({
+        title: "Cheater Caught!",
+        subtitle: `${accuserName}'s suspicions were correct!`,
+        message: `<strong>${targetName}</strong> was caught cheating and will forfeit the round!<br><em>"I knew it!" ${accuserName} exclaims.</em>`,
+        icon: "fa-solid fa-gavel",
+      });
+
+      await addHistoryEntry({
+        type: "cheat_caught",
+        accuser: accuserName,
+        caught: targetName,
+        message: `${accuserName} caught ${targetName} cheating!`,
+      });
+    } else {
+      await playSound("lose");
+      await createChatCard({
+        title: "False Accusation!",
+        subtitle: `${accuserName} was wrong.`,
+        message: `<strong>${targetName}</strong> wasn't cheating! ${accuserName} forfeits their claim to the pot!<br><em>${targetName} is innocent. ${accuserName} jumped to conclusions.</em>`,
+        icon: "fa-solid fa-face-frown",
+      });
+
+      await addHistoryEntry({
+        type: "accusation_failed",
+        accuser: accuserName,
+        target: targetName,
+        message: `${accuserName} falsely accused ${targetName} and forfeits their winnings.`,
+      });
+    }
+
+    // Another pause after accusation result
+    await new Promise(r => setTimeout(r, 500));
+  }
+
   // Show all rolls publicly - launch all dice animations in parallel for speed
   const rollPromises = [];
   for (const userId of state.turnOrder) {
@@ -723,18 +768,22 @@ export async function accuse(payload, userId) {
     skillMod = accuserActor.system?.skills?.[skill]?.total ?? 0;
     skillRoll = d20Result + skillMod;
 
-    // Show the skill roll publicly
-    await roll.toMessage({
-      speaker: { alias: accuserActor.name },
-      flavor: `<em>${accuserName} stares down ${targetName}...</em><br>${skillName}: ${d20Result} + ${skillMod} = <strong>${skillRoll}</strong>`,
+    // Show the skill roll publicly (not as GM whisper)
+    await ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: accuserActor }),
+      flavor: `<em>${accuserName} stares down ${targetName}...</em><br>${skillName}`,
+      content: `<div class="dice-roll"><div class="dice-result"><div class="dice-formula">1d20 + ${skillMod}</div><div class="dice-tooltip"><section class="tooltip-part"><div class="dice"><ol class="dice-rolls"><li class="roll die d20">${d20Result}</li></ol></div></section></div><h4 class="dice-total">${skillRoll}</h4></div></div>`,
+      rolls: [roll],
     });
   } else {
     // No actor - flat d20 roll
     skillRoll = d20Result;
     
-    await roll.toMessage({
+    await ChatMessage.create({
       speaker: { alias: game.users.get(userId)?.name ?? "Unknown" },
-      flavor: `<em>Staring down ${targetName}...</em><br>${skillName}: <strong>${skillRoll}</strong>`,
+      flavor: `<em>Staring down ${targetName}...</em><br>${skillName}`,
+      content: `<div class="dice-roll"><div class="dice-result"><div class="dice-formula">1d20</div><div class="dice-tooltip"><section class="tooltip-part"><div class="dice"><ol class="dice-rolls"><li class="roll die d20">${d20Result}</li></ol></div></section></div><h4 class="dice-total">${skillRoll}</h4></div></div>`,
+      rolls: [roll],
     });
   }
 
@@ -783,43 +832,17 @@ export async function accuse(payload, userId) {
     message: `${accuserName} accused ${targetName} of cheating! (${accusationCost}gp, ${skillName}: ${skillRoll})`,
   });
 
-  if (success) {
-    await playSound("reveal");
-    await createChatCard({
-      title: "Cheater Caught!",
-      subtitle: `${accuserName}'s suspicions were correct!`,
-      message: `<strong>${targetName}</strong> was caught cheating and will forfeit the round!<br><em>"I knew it!" ${accuserName} exclaims.</em>`,
-      icon: "fa-solid fa-gavel",
-    });
+  // Don't reveal the result yet - just show that an accusation was made
+  // The GM will trigger the reveal when ready for dramatic effect
+  await createChatCard({
+    title: "Accusation Made!",
+    subtitle: `${accuserName} points at ${targetName}`,
+    message: `<strong>"${targetName} is a cheater!"</strong><br><em>The table falls silent... all eyes turn to the accused.</em>`,
+    icon: "fa-solid fa-hand-point-right",
+  });
 
-    await addHistoryEntry({
-      type: "cheat_caught",
-      accuser: accuserName,
-      caught: targetName,
-      message: `${accuserName} caught ${targetName} cheating!`,
-    });
-  } else {
-    await playSound("lose");
-    const flavorText = `${targetName} is innocent. ${accuserName} jumped to conclusions.`;
-    
-    await createChatCard({
-      title: "False Accusation!",
-      subtitle: `${accuserName} was wrong.`,
-      message: `<strong>${targetName}</strong> wasn't cheating! ${accuserName} forfeits their claim to the pot!<br><em>${flavorText}</em>`,
-      icon: "fa-solid fa-face-frown",
-    });
-
-    await addHistoryEntry({
-      type: "accusation_failed",
-      accuser: accuserName,
-      target: targetName,
-      message: `${accuserName} falsely accused ${targetName} and forfeits their winnings.`,
-    });
-  }
-
-  // After accusation, proceed directly to reveal
-  await updateState({ tableData: updatedTableData });
-  return revealResults();
+  // Update state but stay in INSPECTION - GM will trigger reveal
+  return updateState({ tableData: updatedTableData });
 }
 
 /**

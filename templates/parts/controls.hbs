@@ -111,7 +111,8 @@
       <h3><i class="fa-solid fa-eye"></i> The Staredown</h3>
       
       {{#if accusationMade}}
-        <p class="staredown-text">An accusation has been made. Awaiting judgment...</p>
+        <p class="staredown-text">An accusation has been made. The tension builds...</p>
+        <p class="staredown-hint"><i class="fa-solid fa-hourglass-half"></i> Awaiting the GM to reveal the truth.</p>
       {{else}}
         <p class="staredown-text">All hands are in. Who do you trust?</p>
         <p class="staredown-warning"><i class="fa-solid fa-warning"></i> Accuse an innocent and you forfeit your winnings!</p>
@@ -135,12 +136,12 @@
             <p class="hint">Click a portrait to select. Cost: Half the pot.</p>
           {{/if}}
         {{/if}}
-        
-        {{#if isGM}}
-          <button type="button" class="btn btn-success" data-action="skipInspection">
-            <i class="fa-solid fa-forward"></i> Skip to Reveal
-          </button>
-        {{/if}}
+      {{/if}}
+      
+      {{#if isGM}}
+        <button type="button" class="btn btn-success" data-action="skipInspection">
+          <i class="fa-solid fa-eye"></i> Reveal Results
+        </button>
       {{/if}}
     </div>
   {{/if}}

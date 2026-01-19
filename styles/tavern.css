@@ -1265,6 +1265,14 @@
   margin-bottom: var(--tavern-gap-md);
 }
 
+.staredown-hint {
+  font-size: 12px;
+  color: var(--tavern-gold);
+  text-align: center;
+  margin-bottom: var(--tavern-gap-md);
+  font-style: italic;
+}
+
 /* Accuse Section */
 .accuse-section {
   display: flex;
