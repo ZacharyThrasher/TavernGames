@@ -153,8 +153,8 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const canHold = myTurn && isBettingPhase;
     const openingRollsRemaining = Math.max(0, 2 - myRolls.length);
 
-    // Cheating context - player can cheat their own dice during play
-    const canCheat = state.status === "PLAYING" && state.players?.[userId] && myRolls.length > 0 && !tableData.busts?.[userId];
+    // Cheating context - player can cheat their own dice during play (GM cannot cheat)
+    const canCheat = state.status === "PLAYING" && state.players?.[userId] && myRolls.length > 0 && !tableData.busts?.[userId] && !isGM;
     const myDiceForCheat = canCheat ? myRolls.map((r, idx) => ({
       index: idx,
       die: r.die,
@@ -179,7 +179,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         return { id: p.id, name: p.name, img };
       }) : [];
     const isBusted = tableData.busts?.[userId] ?? false;
-    const canAccuse = isInspection && state.players?.[userId] && !accusationMade && !isBusted && accuseTargets.length > 0;
+    const canAccuse = isInspection && state.players?.[userId] && !accusationMade && !isBusted && accuseTargets.length > 0 && !isGM;
 
     // Build history entries with formatting
     const history = (state.history ?? []).slice().reverse().map(entry => ({

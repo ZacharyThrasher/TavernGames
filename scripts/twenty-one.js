@@ -556,6 +556,13 @@ export async function cheat(payload, userId) {
     return state;
   }
 
+  // GM cannot cheat - they're the house
+  const user = game.users.get(userId);
+  if (user?.isGM) {
+    ui.notifications.warn("The house doesn't cheat... or do they?");
+    return state;
+  }
+
   const tableData = state.tableData ?? emptyTableData();
   const { dieIndex, newValue, skill = "dec" } = payload;
 
@@ -636,7 +643,11 @@ export async function cheat(payload, userId) {
 
   // Check for bust after cheating
   const updatedBusts = { ...tableData.busts };
-  if (updatedTotals[userId] > 21) {
+  
+  // Nat 1 on cheat = auto-bust (fumbled so badly everyone notices)
+  if (isNat1) {
+    updatedBusts[userId] = true;
+  } else if (updatedTotals[userId] > 21) {
     updatedBusts[userId] = true;
   } else if (updatedTotals[userId] <= 21 && tableData.busts[userId]) {
     // Un-bust if they cheated down from a bust
@@ -671,17 +682,28 @@ export async function cheat(payload, userId) {
   // Notify the GM with cheat details so they can narrate tells
   const gmIds = getGMUserIds();
   if (gmIds.length > 0) {
-    const natStatus = isNat1 ? " (NAT 1 - FUMBLED!)" : isNat20 ? " (NAT 20 - UNTOUCHABLE!)" : "";
+    const natStatus = isNat1 ? " (NAT 1 - FUMBLED! AUTO-BUST)" : isNat20 ? " (NAT 20 - UNTOUCHABLE!)" : "";
     await ChatMessage.create({
       content: `<div class="tavern-gm-alert tavern-gm-cheat">
         <strong>CHEAT DETECTED</strong><br>
         <em>${characterName}</em> changed their d${targetDie.die} from <strong>${oldValue}</strong> to <strong>${newValue}</strong><br>
         ${skillName}: <strong>${skillRoll}</strong>${natStatus}<br>
-        <small>Narrate a tell to the table if appropriate.</small>
+        <small>${isNat1 ? "They fumbled and busted!" : "Narrate a tell to the table if appropriate."}</small>
       </div>`,
       whisper: gmIds,
       speaker: { alias: "Tavern Twenty-One" },
     });
+  }
+
+  // If nat 1, also notify the player they busted
+  if (isNat1) {
+    await createChatCard({
+      title: "Clumsy Hands!",
+      subtitle: `${characterName} fumbles`,
+      message: `${characterName} tried to cheat but fumbled badly - Loss of Trust! (Bust)`,
+      icon: "fa-solid fa-hand-fist",
+    });
+    await playSound("lose");
   }
 
   console.log(`Tavern Twenty-One | ${userName} cheated: d${targetDie.die} ${oldValue} → ${newValue}, ${skillName}: ${skillRoll} (nat1: ${isNat1}, nat20: ${isNat20})`);
@@ -700,6 +722,13 @@ export async function accuse(payload, userId) {
   const state = getState();
   if (state.status !== "INSPECTION") {
     ui.notifications.warn("Accusations can only be made during the showdown.");
+    return state;
+  }
+
+  // GM cannot accuse - they're the house
+  const user = game.users.get(userId);
+  if (user?.isGM) {
+    ui.notifications.warn("The house observes but does not accuse.");
     return state;
   }
 
