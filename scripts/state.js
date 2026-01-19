@@ -1,11 +1,6 @@
 export const MODULE_ID = "tavern-dice-master";
 export const STATE_MACRO_NAME = "TavernState";
 
-export const TAVERN_GAMES = {
-  LIARS_DICE: "liars-dice",
-  TWENTY_ONE: "twenty-one",
-};
-
 export function registerSettings() {
   game.settings.register(MODULE_ID, "fixedAnte", {
     name: "Fixed Ante (GP)",
@@ -14,29 +9,45 @@ export function registerSettings() {
     config: true,
     type: Number,
     default: 5,
-    min: 1,
+    range: { min: 1, max: 100, step: 1 },
+  });
+
+  game.settings.register(MODULE_ID, "enableSounds", {
+    name: "Enable Sound Effects",
+    hint: "Play sound effects for dice rolls, coins, and game events.",
+    scope: "client",
+    config: true,
+    type: Boolean,
+    default: true,
   });
 }
 
 export async function preloadTemplates() {
   return loadTemplates([
     `modules/${MODULE_ID}/templates/tavern-app.hbs`,
-    `modules/${MODULE_ID}/templates/parts/lobby.hbs`,
-    `modules/${MODULE_ID}/templates/parts/game.hbs`,
-    `modules/${MODULE_ID}/templates/parts/status.hbs`,
+    `modules/${MODULE_ID}/templates/parts/table.hbs`,
+    `modules/${MODULE_ID}/templates/parts/controls.hbs`,
+    `modules/${MODULE_ID}/templates/parts/history.hbs`,
   ]);
 }
 
 export function defaultState() {
   return {
-    version: 1,
-    status: "LOBBY",
-    activeGame: TAVERN_GAMES.LIARS_DICE,
+    version: 2,
+    status: "LOBBY", // LOBBY, PLAYING, REVEALING, PAYOUT
     pot: 0,
     turnOrder: [],
     turnIndex: 0,
     players: {},
-    tableData: {},
+    tableData: {
+      totals: {},
+      holds: {},
+      busts: {},
+      rolls: {},
+      currentPlayer: null,
+      revealedTotals: {},
+    },
+    history: [],
   };
 }
 
@@ -44,7 +55,7 @@ export async function ensureStateMacro() {
   const existing = game.macros.getName(STATE_MACRO_NAME);
   if (existing) {
     const current = existing.getFlag(MODULE_ID, "state");
-    if (!current) {
+    if (!current || current.version < 2) {
       await existing.setFlag(MODULE_ID, "state", defaultState());
     }
     return existing;
@@ -54,7 +65,7 @@ export async function ensureStateMacro() {
     name: STATE_MACRO_NAME,
     type: "script",
     command: "",
-    img: "icons/dice/d20black.svg",
+    img: "icons/sundries/gaming/dice-runed-brown.webp",
     ownership: { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER },
   });
   await macro.setFlag(MODULE_ID, "state", defaultState());
@@ -83,4 +94,16 @@ export async function updateState(patch) {
 export function getPlayerState(userId) {
   const state = getState();
   return state.players?.[userId] ?? null;
+}
+
+export async function addHistoryEntry(entry) {
+  const state = getState();
+  const history = [...(state.history ?? []), { ...entry, timestamp: Date.now() }];
+  // Keep only last 50 entries
+  if (history.length > 50) history.shift();
+  return updateState({ history });
+}
+
+export async function clearHistory() {
+  return updateState({ history: [] });
 }

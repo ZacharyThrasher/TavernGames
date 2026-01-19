@@ -1,25 +1,19 @@
 import { TavernApp } from "./app/tavern-app.js";
-import { MODULE_ID, preloadTemplates, registerSettings, ensureStateMacro } from "./state.js";
+import { MODULE_ID, STATE_MACRO_NAME, preloadTemplates, registerSettings, ensureStateMacro } from "./state.js";
 import { setupSockets } from "./socket.js";
 
 const openTavern = () => {
-  if (game.tavernDiceMaster?.open) {
-    game.tavernDiceMaster.open();
+  if (game.tavernDiceMaster?.app?.rendered) {
+    game.tavernDiceMaster.app.bringToFront();
     return;
   }
-  const app = new TavernApp();
-  game.tavernDiceMaster = {
-    app,
-    open: () => app.render(true),
-    close: () => app.close(),
-  };
-  app.render(true);
+  game.tavernDiceMaster?.open();
 };
 
 Hooks.on("getSceneControlButtons", (controls) => {
   const tool = {
-    name: "tavern-dice-master",
-    title: "Tavern Dice Master",
+    name: "tavern-twenty-one",
+    title: "Tavern Twenty-One",
     icon: "fa-solid fa-dice-d20",
     button: true,
     visible: true,
@@ -29,56 +23,24 @@ Hooks.on("getSceneControlButtons", (controls) => {
   // V13: controls is an object keyed by control name
   const tokenControls = controls.tokens;
   if (tokenControls) {
-    tokenControls.tools["tavern-dice-master"] = tool;
-  }
-});
-
-const injectSidebarButton = (root) => {
-  if (!root?.length) return false;
-  if (root.find(".tavern-sidebar-button").length) return true;
-
-  const header = root.find(".header-actions, .header-buttons, .directory-header .header-actions").first();
-  if (!header.length) return false;
-
-  const button = $(
-    `<button type="button" class="tavern-sidebar-button" title="Tavern Dice Master">
-      <i class="fa-solid fa-dice-d20"></i>
-    </button>`
-  );
-  button.on("click", openTavern);
-  header.prepend(button);
-  return true;
-};
-
-const ensureFloatingButton = () => {
-  if (document.querySelector(".tavern-floating-button")) return;
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "tavern-floating-button";
-  button.title = "Tavern Dice Master";
-  button.innerHTML = "<i class=\"fa-solid fa-dice-d20\"></i>";
-  button.addEventListener("click", openTavern);
-  document.body.appendChild(button);
-};
-
-Hooks.on("renderSidebarTab", (app, html) => {
-  if (app?.options?.id !== "chat") return;
-  const injected = injectSidebarButton(html);
-  if (!injected) {
-    ensureFloatingButton();
+    tokenControls.tools["tavern-twenty-one"] = tool;
   }
 });
 
 Hooks.once("init", async () => {
+  console.log("Tavern Twenty-One | Initializing module");
   registerSettings();
   await preloadTemplates();
 });
 
 Hooks.once("socketlib.ready", () => {
+  console.log("Tavern Twenty-One | Setting up sockets");
   setupSockets();
 });
 
 Hooks.once("ready", async () => {
+  console.log("Tavern Twenty-One | Module ready");
+  
   if (game.user.isGM) {
     await ensureStateMacro();
   }
@@ -90,10 +52,11 @@ Hooks.once("ready", async () => {
     close: () => app.close(),
   };
 
-  const macro = game.macros.getName("TavernState");
+  // Watch for state changes via the macro
+  const macro = game.macros.getName(STATE_MACRO_NAME);
   if (macro) {
     Hooks.on("updateMacro", (updated) => {
-      if (updated.id === macro.id) {
+      if (updated.id === macro.id && app.rendered) {
         app.render();
       }
     });

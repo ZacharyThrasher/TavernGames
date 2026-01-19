@@ -1,0 +1,109 @@
+<div class="tavern-controls">
+  {{!-- Lobby state --}}
+  {{#if isLobby}}
+    <div class="control-section">
+      <h3><i class="fa-solid fa-users"></i> Join the Game</h3>
+      {{#if canJoin}}
+        <button type="button" class="btn btn-primary btn-large" data-action="join">
+          <i class="fa-solid fa-chair"></i> Take a Seat
+        </button>
+      {{else if isInGame}}
+        <button type="button" class="btn btn-secondary" data-action="leave">
+          <i class="fa-solid fa-door-open"></i> Leave Table
+        </button>
+      {{/if}}
+    </div>
+
+    {{#if isGM}}
+      <div class="control-section">
+        <h3><i class="fa-solid fa-play"></i> Start Game</h3>
+        {{#if hasPlayers}}
+          <button type="button" class="btn btn-success btn-large" data-action="start">
+            <i class="fa-solid fa-dice"></i> Deal the Dice!
+          </button>
+          <p class="hint">{{players.length}} player{{#if (gt players.length 1)}}s{{/if}} at the table</p>
+        {{else}}
+          <p class="hint">Waiting for players to join...</p>
+        {{/if}}
+      </div>
+    {{/if}}
+
+    <div class="control-section rules">
+      <h3><i class="fa-solid fa-scroll"></i> Rules</h3>
+      <ul>
+        <li>Roll dice to reach <strong>21</strong> without going over</li>
+        <li>Choose your risk: d4 is safe, d20 is dangerous</li>
+        <li>Hold when you're satisfied with your total</li>
+        <li>Highest total ≤21 wins the pot!</li>
+      </ul>
+    </div>
+  {{/if}}
+
+  {{!-- Playing state --}}
+  {{#if isPlaying}}
+    {{#if myTurn}}
+      <div class="control-section your-turn">
+        <h3><i class="fa-solid fa-dice"></i> Your Turn!</h3>
+        <p class="turn-hint">Choose a die to roll, or hold to keep your total.</p>
+        
+        <div class="dice-buttons">
+          {{#each dice}}
+            <button type="button" class="btn btn-die {{this.color}}" data-action="roll" data-die="{{this.value}}" title="{{this.risk}}">
+              <span class="die-label">{{this.label}}</span>
+              <span class="die-risk">{{this.risk}}</span>
+            </button>
+          {{/each}}
+        </div>
+
+        <button type="button" class="btn btn-hold" data-action="hold">
+          <i class="fa-solid fa-hand"></i> Hold
+        </button>
+      </div>
+    {{else}}
+      <div class="control-section waiting">
+        <h3><i class="fa-solid fa-hourglass-half"></i> Waiting</h3>
+        {{#if currentPlayer}}
+          <p class="waiting-text">
+            <strong>{{currentPlayer.name}}</strong> is rolling...
+          </p>
+        {{/if}}
+      </div>
+    {{/if}}
+
+    {{#if isGM}}
+      <div class="control-section gm-controls">
+        <button type="button" class="btn btn-secondary btn-small" data-action="reveal">
+          <i class="fa-solid fa-eye"></i> Force Reveal
+        </button>
+      </div>
+    {{/if}}
+  {{/if}}
+
+  {{!-- Revealing state --}}
+  {{#if isRevealing}}
+    <div class="control-section revealing">
+      <h3><i class="fa-solid fa-eye"></i> Revealing...</h3>
+      <p>All dice are being revealed!</p>
+      <div class="reveal-animation">
+        <i class="fa-solid fa-dice fa-spin"></i>
+      </div>
+    </div>
+  {{/if}}
+
+  {{!-- Payout state --}}
+  {{#if isPayout}}
+    <div class="control-section payout">
+      <h3><i class="fa-solid fa-trophy"></i> Round Complete!</h3>
+      {{#if isInGame}}
+        <button type="button" class="btn btn-secondary" data-action="leave">
+          <i class="fa-solid fa-door-open"></i> Leave Table
+        </button>
+      {{/if}}
+      {{#if isGM}}
+        <button type="button" class="btn btn-success btn-large" data-action="newRound">
+          <i class="fa-solid fa-rotate"></i> New Round
+        </button>
+      {{/if}}
+    </div>
+  {{/if}}
+</div>

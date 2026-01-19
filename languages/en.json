@@ -1,7 +1,33 @@
 {
-  "TAVERN": {
-    "Join": "Join Table",
+  "TAVERN21": {
+    "Title": "Tavern Twenty-One",
+    "Subtitle": "A Game of Fortune & Folly",
+    "Join": "Take a Seat",
     "Leave": "Leave Table",
-    "Start": "Start Round"
+    "Start": "Deal the Dice!",
+    "Hold": "Hold",
+    "NewRound": "New Round",
+    "Reset": "Reset Table",
+    "YourTurn": "Your Turn!",
+    "Waiting": "Waiting",
+    "Bust": "BUST!",
+    "Holding": "Holding",
+    "Rolling": "Rolling...",
+    "Pot": "in the pot",
+    "Ante": "Ante",
+    "GMOnline": "GM Online",
+    "GMRequired": "GM Required",
+    "Rules": {
+      "Line1": "Roll dice to reach 21 without going over",
+      "Line2": "Choose your risk: d4 is safe, d20 is dangerous",
+      "Line3": "Hold when you're satisfied with your total",
+      "Line4": "Highest total ≤21 wins the pot!"
+    },
+    "Settings": {
+      "FixedAnte": "Fixed Ante (GP)",
+      "FixedAnteHint": "The ante amount each player must pay to join a round.",
+      "EnableSounds": "Enable Sound Effects",
+      "EnableSoundsHint": "Play sound effects for dice rolls, coins, and game events."
+    }
   }
 }

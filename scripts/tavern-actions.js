@@ -1,7 +1,6 @@
-import { MODULE_ID, TAVERN_GAMES, getState, updateState, getStateMacro } from "./state.js";
-import { tavernSocket } from "./socket.js";
-import { resolveTwentyOne, startTwentyOneRound, submitTwentyOneRoll, holdTwentyOne } from "./twenty-one.js";
-import { startLiarsDiceRound, submitLiarsBid, callLiarsDice } from "./liars-dice.js";
+import { MODULE_ID, getState, updateState } from "./state.js";
+import { startRound, submitRoll, hold, revealResults, returnToLobby } from "./twenty-one.js";
+import { playSound } from "./sounds.js";
 
 function ensureGM() {
   if (!game.user.isGM) {
@@ -15,25 +14,39 @@ export async function handleJoinTable(userId) {
   if (!user) return getState();
 
   const state = getState();
+  if (state.status !== "LOBBY") {
+    ui.notifications.warn("Cannot join while a round is in progress.");
+    return state;
+  }
   if (state.players[userId]) return state;
+
+  // Get character info for avatar
+  const actor = user.character;
+  const avatar = actor?.img || user.avatar || "icons/svg/mystery-man.svg";
+  const characterName = actor?.name || user.name;
 
   const players = { ...state.players };
   players[userId] = {
     id: userId,
-    name: user.name,
-    gold: 0,
-    currentBet: 0,
-    hasFolded: false,
-    hand: [],
+    name: characterName,
+    userName: user.name,
+    avatar,
   };
 
   const turnOrder = [...state.turnOrder, userId];
+  
+  await playSound("join");
+  
   return updateState({ players, turnOrder });
 }
 
 export async function handleLeaveTable(userId) {
   ensureGM();
   const state = getState();
+  if (state.status !== "LOBBY" && state.status !== "PAYOUT") {
+    ui.notifications.warn("Cannot leave while a round is in progress.");
+    return state;
+  }
   if (!state.players[userId]) return state;
 
   const players = { ...state.players };
@@ -44,73 +57,45 @@ export async function handleLeaveTable(userId) {
   return updateState({ players, turnOrder, turnIndex });
 }
 
-export async function handleSetGame(gameId) {
-  ensureGM();
-  const state = getState();
-  if (state.status !== "LOBBY") {
-    ui.notifications.warn("Cannot switch games while a round is active.");
-    return state;
-  }
-  return updateState({ activeGame: gameId });
-}
-
 export async function handleStartRound() {
   ensureGM();
-  const state = getState();
-  if (!state.turnOrder.length) {
-    ui.notifications.warn("No players at the table.");
-    return state;
-  }
-
-  if (state.activeGame === TAVERN_GAMES.TWENTY_ONE) {
-    return startTwentyOneRound();
-  }
-  return startLiarsDiceRound();
+  return startRound();
 }
 
 export async function handlePlayerAction(action, payload, userId) {
   ensureGM();
+
+  switch (action) {
+    case "roll":
+      return submitRoll(payload, userId);
+    case "hold":
+      return hold(userId);
+    case "reveal":
+      return revealResults();
+    case "newRound":
+      return returnToLobby();
+    default:
+      return getState();
+  }
+}
+
+export async function handleResetTable() {
+  ensureGM();
   const state = getState();
-
-  if (state.activeGame === TAVERN_GAMES.TWENTY_ONE) {
-    if (action === "roll") {
-      return submitTwentyOneRoll(payload, userId);
-    }
-    if (action === "hold") {
-      return holdTwentyOne(userId);
-    }
-    if (action === "resolve") {
-      return resolveTwentyOne();
-    }
-  }
-
-  if (state.activeGame === TAVERN_GAMES.LIARS_DICE) {
-    if (action === "bid") {
-      return submitLiarsBid(payload, userId);
-    }
-    if (action === "call") {
-      return callLiarsDice(userId);
-    }
-  }
-
-  return state;
-}
-
-export async function broadcastSound(src) {
-  return tavernSocket.executeForEveryone("playSound", src);
-}
-
-export async function playSound(src) {
-  AudioHelper.play({ src, volume: 0.8, autoplay: true, loop: false }, true);
-}
-
-Hooks.on("ready", () => {
-  if (!tavernSocket) return;
-  tavernSocket.register("playSound", playSound);
-});
-
-export async function updateMacroState(next) {
-  const macro = getStateMacro();
-  if (!macro) return;
-  await macro.setFlag(MODULE_ID, "state", next);
+  
+  return updateState({
+    status: "LOBBY",
+    pot: 0,
+    turnOrder: [],
+    players: {},
+    tableData: {
+      totals: {},
+      holds: {},
+      busts: {},
+      rolls: {},
+      currentPlayer: null,
+      revealedTotals: {},
+    },
+    history: [],
+  });
 }

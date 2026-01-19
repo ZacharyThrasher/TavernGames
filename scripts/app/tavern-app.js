@@ -1,4 +1,4 @@
-import { MODULE_ID, TAVERN_GAMES, getState } from "../state.js";
+import { MODULE_ID, getState } from "../state.js";
 import { tavernSocket } from "../socket.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -8,23 +8,24 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     id: "tavern-dice-master",
     tag: "div",
     window: {
-      title: "Tavern Dice Master",
+      title: "Tavern Twenty-One",
+      icon: "fa-solid fa-dice-d20",
       resizable: true,
       minimizable: true,
-      width: 720,
-      height: 620,
+    },
+    position: {
+      width: 800,
+      height: 700,
     },
     actions: {
-      open: TavernApp.onOpen,
       join: TavernApp.onJoin,
       leave: TavernApp.onLeave,
-      setGame: TavernApp.onSetGame,
       start: TavernApp.onStart,
       roll: TavernApp.onRoll,
       hold: TavernApp.onHold,
-      bid: TavernApp.onBid,
-      call: TavernApp.onCall,
-      resolve: TavernApp.onResolve,
+      reveal: TavernApp.onReveal,
+      newRound: TavernApp.onNewRound,
+      reset: TavernApp.onReset,
     },
     classes: ["tavern-dice-master"],
   };
@@ -35,79 +36,156 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     },
   };
 
+  // Dice display helper
+  static DICE_ICONS = {
+    4: "d4",
+    6: "d6", 
+    8: "d8",
+    10: "d10",
+    12: "d12",
+    20: "d20",
+  };
+
   async _prepareContext() {
     const state = getState();
     const userId = game.user.id;
-    const players = Object.values(state.players ?? {});
     const isGM = game.user.isGM;
+    const players = Object.values(state.players ?? {});
+    const tableData = state.tableData ?? {};
+    const ante = game.settings.get(MODULE_ID, "fixedAnte");
+
+    // Build rich player data for display
+    const playerSeats = players.map((player) => {
+      const rolls = tableData.rolls?.[player.id] ?? [];
+      const total = tableData.totals?.[player.id] ?? 0;
+      const isHolding = tableData.holds?.[player.id] ?? false;
+      const isBusted = tableData.busts?.[player.id] ?? false;
+      const isCurrent = tableData.currentPlayer === player.id;
+      const isMe = player.id === userId;
+
+      // Determine status
+      let status = "waiting";
+      let statusLabel = "Waiting";
+      if (state.status === "PLAYING") {
+        if (isBusted) {
+          status = "busted";
+          statusLabel = "BUST!";
+        } else if (isHolding) {
+          status = "holding";
+          statusLabel = "Holding";
+        } else if (isCurrent) {
+          status = "active";
+          statusLabel = "Rolling...";
+        } else if (rolls.length > 0) {
+          status = "rolled";
+          statusLabel = "Rolled";
+        }
+      } else if (state.status === "REVEALING" || state.status === "PAYOUT") {
+        if (isBusted) {
+          status = "busted";
+          statusLabel = `BUST (${total})`;
+        } else {
+          status = "revealed";
+          statusLabel = `Total: ${total}`;
+        }
+      }
+
+      // Show dice only to the player who owns them (or GM), or during reveal
+      const showDice = isMe || isGM || state.status === "REVEALING" || state.status === "PAYOUT";
+      const diceDisplay = showDice ? rolls.map(r => ({
+        die: r.die,
+        result: r.result,
+        icon: TavernApp.DICE_ICONS[r.die] || "d6",
+      })) : rolls.map(() => ({ hidden: true }));
+
+      return {
+        ...player,
+        rolls,
+        diceDisplay,
+        total,
+        displayTotal: showDice ? total : "?",
+        isHolding,
+        isBusted,
+        isCurrent,
+        isMe,
+        status,
+        statusLabel,
+        canAct: isCurrent && isMe && state.status === "PLAYING" && !isHolding && !isBusted,
+      };
+    });
+
+    // Determine current player info
+    const currentPlayer = players.find(p => p.id === tableData.currentPlayer);
+    const myTurn = tableData.currentPlayer === userId;
+
+    // Build history entries with formatting
+    const history = (state.history ?? []).slice().reverse().map(entry => ({
+      ...entry,
+      timeAgo: this._formatTimeAgo(entry.timestamp),
+      icon: this._getHistoryIcon(entry.type),
+    }));
 
     return {
       moduleId: MODULE_ID,
       state,
-      players,
+      players: playerSeats,
       isGM,
       userId,
-      games: [
-        {
-          id: TAVERN_GAMES.LIARS_DICE,
-          name: "Liar's Dice",
-          active: state.activeGame === TAVERN_GAMES.LIARS_DICE,
-        },
-        {
-          id: TAVERN_GAMES.TWENTY_ONE,
-          name: "Twenty-One",
-          active: state.activeGame === TAVERN_GAMES.TWENTY_ONE,
-        },
-      ],
-      bidQuantities: [1, 2, 3, 4, 5],
-      bidFaces: [2, 3, 4, 5, 6],
-      canJoin: !state.players?.[userId],
+      ante,
+      pot: state.pot,
+      status: state.status,
+      isLobby: state.status === "LOBBY",
+      isPlaying: state.status === "PLAYING",
+      isRevealing: state.status === "REVEALING",
+      isPayout: state.status === "PAYOUT",
+      canJoin: !state.players?.[userId] && (state.status === "LOBBY" || state.status === "PAYOUT"),
       isInGame: Boolean(state.players?.[userId]),
       hasGM: Boolean(game.users.activeGM),
-      ante: game.settings.get(MODULE_ID, "fixedAnte"),
-      twentyOne: state.activeGame === TAVERN_GAMES.TWENTY_ONE,
-      liarsDice: state.activeGame === TAVERN_GAMES.LIARS_DICE,
-      twentyOneStatus: players.map((player) => {
-        const tableData = state.tableData ?? {};
-        const holds = tableData.holds ?? {};
-        const busts = tableData.busts ?? {};
-        const totals = tableData.totals ?? {};
-        const rolls = tableData.rolls ?? {};
-        return {
-          id: player.id,
-          name: player.name,
-          isCurrent: tableData.currentPlayer === player.id,
-          status: busts[player.id]
-            ? "Bust"
-            : holds[player.id]
-            ? "Hold"
-            : totals[player.id] > 0 || (rolls[player.id] ?? []).length
-            ? "Rolling"
-            : "Waiting",
-        };
-      }),
+      hasPlayers: players.length > 0,
+      currentPlayer,
+      myTurn,
+      history,
+      dice: [
+        { value: 4, label: "d4", risk: "Safe", color: "green" },
+        { value: 6, label: "d6", risk: "Safe", color: "green" },
+        { value: 8, label: "d8", risk: "Low", color: "yellow" },
+        { value: 10, label: "d10", risk: "Medium", color: "orange" },
+        { value: 12, label: "d12", risk: "High", color: "red" },
+        { value: 20, label: "d20", risk: "Risky!", color: "crimson" },
+      ],
     };
   }
 
-  static async onOpen() {
-    game.tavernDiceMaster?.open();
+  _formatTimeAgo(timestamp) {
+    if (!timestamp) return "";
+    const seconds = Math.floor((Date.now() - timestamp) / 1000);
+    if (seconds < 60) return "just now";
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    return `${hours}h ago`;
+  }
+
+  _getHistoryIcon(type) {
+    switch (type) {
+      case "round_start": return "fa-solid fa-play";
+      case "roll": return "fa-solid fa-dice";
+      case "hold": return "fa-solid fa-hand";
+      case "bust": return "fa-solid fa-skull";
+      case "round_end": return "fa-solid fa-flag-checkered";
+      default: return "fa-solid fa-circle";
+    }
   }
 
   static async onJoin() {
     if (!game.users.activeGM) {
-      return ui.notifications.warn("A GM must be connected.");
+      return ui.notifications.warn("A GM must be connected to play.");
     }
     await tavernSocket.executeAsGM("joinTable", game.user.id);
   }
 
   static async onLeave() {
     await tavernSocket.executeAsGM("leaveTable", game.user.id);
-  }
-
-  static async onSetGame(event) {
-    const id = event.currentTarget?.dataset?.game;
-    if (!id) return;
-    await tavernSocket.executeAsGM("setGame", id);
   }
 
   static async onStart() {
@@ -124,17 +202,21 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     await tavernSocket.executeAsGM("playerAction", "hold", {}, game.user.id);
   }
 
-  static async onResolve() {
-    await tavernSocket.executeAsGM("playerAction", "resolve", {}, game.user.id);
+  static async onReveal() {
+    await tavernSocket.executeAsGM("playerAction", "reveal", {}, game.user.id);
   }
 
-  static async onBid(event) {
-    const quantity = Number(event.currentTarget?.dataset?.quantity ?? 0);
-    const face = Number(event.currentTarget?.dataset?.face ?? 0);
-    await tavernSocket.executeAsGM("playerAction", "bid", { quantity, face }, game.user.id);
+  static async onNewRound() {
+    await tavernSocket.executeAsGM("playerAction", "newRound", {}, game.user.id);
   }
 
-  static async onCall() {
-    await tavernSocket.executeAsGM("playerAction", "call", {}, game.user.id);
+  static async onReset() {
+    const confirm = await Dialog.confirm({
+      title: "Reset Table",
+      content: "<p>Clear all players and reset the table?</p>",
+    });
+    if (confirm) {
+      await tavernSocket.executeAsGM("resetTable");
+    }
   }
 }

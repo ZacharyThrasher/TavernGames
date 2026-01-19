@@ -1,16 +1,16 @@
 {
   "id": "tavern-dice-master",
-  "title": "Tavern Dice Master",
-  "description": "Tavern dice games for D&D 5e: Liar's Dice and Twenty-One.",
+  "title": "Tavern Twenty-One",
+  "description": "A premium tavern dice game for D&D 5e. Roll polyhedral dice to reach 21 without busting. Features beautiful UI, player avatars, animated reveals, and full game history.",
   "authors": [
     {
       "name": "Zachary Thrasher"
     }
   ],
-  "version": "0.1.8",
+  "version": "1.0.0",
   "compatibility": {
     "minimum": "13",
-    "verified": "13.0"
+    "verified": "13"
   },
   "url": "https://github.com/ZacharyThrasher/TavernGames",
   "manifest": "https://github.com/ZacharyThrasher/TavernGames/releases/latest/download/module.json",
@@ -32,7 +32,7 @@
         "id": "dnd5e",
         "type": "system",
         "compatibility": {
-          "minimum": "5.2.4"
+          "minimum": "4.0.0"
         }
       }
     ],
@@ -40,7 +40,7 @@
       {
         "id": "socketlib",
         "type": "module",
-        "manifest": "https://github.com/farling42/foundryvtt-socketlib/releases/latest/download/module.json"
+        "manifest": "https://github.com/manuelVo/foundryvtt-socketlib/releases/latest/download/module.json"
       }
     ]
   }

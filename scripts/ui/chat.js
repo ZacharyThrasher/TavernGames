@@ -1,9 +1,12 @@
-export async function createChatCard({ title, message, img = "icons/dice/d20black.svg" }) {
+export async function createChatCard({ title, subtitle = "", message, icon = "fa-solid fa-dice-d20" }) {
   const content = `
-    <div class="dnd5e chat-card tavern-card">
+    <div class="tavern-card">
       <header class="card-header">
-        <img src="${img}" />
-        <h3>${title}</h3>
+        <i class="${icon}"></i>
+        <div>
+          <h3>${title}</h3>
+          ${subtitle ? `<span class="subtitle">${subtitle}</span>` : ""}
+        </div>
       </header>
       <div class="card-content">
         ${message}
@@ -14,5 +17,6 @@ export async function createChatCard({ title, message, img = "icons/dice/d20blac
   return ChatMessage.create({
     user: game.user.id,
     content,
+    speaker: { alias: "Tavern Twenty-One" },
   });
 }

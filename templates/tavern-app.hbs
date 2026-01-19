@@ -1,20 +1,64 @@
-<section class="tavern-shell">
+<div class="tavern-container">
+  {{!-- Header --}}
   <header class="tavern-header">
-    <div class="title">
-      <h1>Tavern Dice Master</h1>
-      <p>Games for a roaring dnd5e tavern night.</p>
+    <div class="tavern-title">
+      <div class="tavern-logo">
+        <i class="fa-solid fa-dice-d20"></i>
+      </div>
+      <div class="tavern-title-text">
+        <h1>Twenty-One</h1>
+        <span class="tavern-subtitle">A Game of Fortune & Folly</span>
+      </div>
     </div>
-    <div class="status">
-      {{> "modules/tavern-dice-master/templates/parts/status.hbs"}}
+    <div class="tavern-info">
+      {{#if isPlaying}}
+        <div class="pot-display">
+          <i class="fa-solid fa-coins"></i>
+          <span class="pot-amount">{{pot}} gp</span>
+          <span class="pot-label">in the pot</span>
+        </div>
+      {{else}}
+        <div class="ante-display">
+          <span class="ante-label">Ante:</span>
+          <span class="ante-amount">{{ante}} gp</span>
+        </div>
+      {{/if}}
     </div>
   </header>
 
+  {{!-- Main game area --}}
   <main class="tavern-main">
-    <section class="tavern-panel">
-      {{> "modules/tavern-dice-master/templates/parts/lobby.hbs"}}
+    {{!-- Table area with players --}}
+    <section class="tavern-table-area">
+      {{> "modules/tavern-dice-master/templates/parts/table.hbs"}}
     </section>
-    <section class="tavern-panel">
-      {{> "modules/tavern-dice-master/templates/parts/game.hbs"}}
-    </section>
+
+    {{!-- Right sidebar --}}
+    <aside class="tavern-sidebar">
+      {{!-- Controls --}}
+      <div class="tavern-controls-panel">
+        {{> "modules/tavern-dice-master/templates/parts/controls.hbs"}}
+      </div>
+
+      {{!-- History --}}
+      <div class="tavern-history-panel">
+        {{> "modules/tavern-dice-master/templates/parts/history.hbs"}}
+      </div>
+    </aside>
   </main>
-</section>
+
+  {{!-- Footer --}}
+  <footer class="tavern-footer">
+    {{#if hasGM}}
+      <span class="gm-status online"><i class="fa-solid fa-circle"></i> GM Online</span>
+    {{else}}
+      <span class="gm-status offline"><i class="fa-solid fa-circle"></i> GM Required</span>
+    {{/if}}
+    <span class="game-status">{{status}}</span>
+    {{#if isGM}}
+      <button type="button" class="reset-btn" data-action="reset" title="Reset Table">
+        <i class="fa-solid fa-rotate-left"></i>
+      </button>
+    {{/if}}
+  </footer>
+</div>

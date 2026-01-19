@@ -1,208 +1,962 @@
+/* ============================================
+   TAVERN TWENTY-ONE - Premium Module Styles
+   ============================================ */
+
+/* CSS Custom Properties */
 :root {
-  --tavern-ink: #2b1a0f;
-  --tavern-gold: #d2a65a;
-  --tavern-umber: #7c4d2d;
-  --tavern-crimson: #7a1f1f;
-  --tavern-parchment: #f5ebd2;
-  --tavern-shadow: rgba(15, 8, 4, 0.35);
+  /* Core palette - warm tavern tones */
+  --tavern-wood-dark: #2a1810;
+  --tavern-wood-medium: #4a2c1a;
+  --tavern-wood-light: #6b422a;
+  --tavern-wood-highlight: #8b5a3c;
+  
+  /* Accent colors */
+  --tavern-gold: #d4a04a;
+  --tavern-gold-bright: #f0c060;
+  --tavern-gold-dim: #a67c32;
+  --tavern-brass: #b5854a;
+  
+  /* Parchment tones */
+  --tavern-parchment: #f5e6c8;
+  --tavern-parchment-dark: #dbc9a0;
+  --tavern-ink: #1a0f08;
+  
+  /* Status colors */
+  --tavern-success: #4a7c4e;
+  --tavern-danger: #8b3a3a;
+  --tavern-warning: #a67c32;
+  --tavern-info: #4a6b8b;
+  
+  /* Effects */
+  --tavern-glow: rgba(212, 160, 74, 0.4);
+  --tavern-shadow: rgba(10, 5, 2, 0.6);
+  --tavern-candle-glow: radial-gradient(ellipse at center, rgba(255, 180, 80, 0.15) 0%, transparent 70%);
+  
+  /* Spacing */
+  --tavern-gap-sm: 8px;
+  --tavern-gap-md: 16px;
+  --tavern-gap-lg: 24px;
+  
+  /* Border radius */
+  --tavern-radius-sm: 4px;
+  --tavern-radius-md: 8px;
+  --tavern-radius-lg: 12px;
+}
+
+/* ============================================
+   Window & Container
+   ============================================ */
+
+.tavern-dice-master {
+  --window-header-bg: var(--tavern-wood-dark);
+  --window-border-color: var(--tavern-gold-dim);
+}
+
+.tavern-dice-master .window-header {
+  background: linear-gradient(180deg, var(--tavern-wood-medium) 0%, var(--tavern-wood-dark) 100%);
+  border-bottom: 2px solid var(--tavern-gold-dim);
+}
+
+.tavern-dice-master .window-title {
+  color: var(--tavern-gold);
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
 
 .tavern-dice-master .window-content {
   padding: 0;
-  background: radial-gradient(circle at top, #c59b63 0%, #8a603d 45%, #5a3822 100%);
+  background: 
+    var(--tavern-candle-glow),
+    linear-gradient(180deg, var(--tavern-wood-medium) 0%, var(--tavern-wood-dark) 100%);
   color: var(--tavern-parchment);
-  font-family: "Modesto Condensed", "Palatino Linotype", serif;
+  font-family: "Signika", "Palatino Linotype", serif;
 }
 
-.tavern-shell {
-  display: grid;
-  grid-template-rows: auto 1fr;
-  gap: 16px;
-  padding: 20px;
+.tavern-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
 }
+
+/* ============================================
+   Header
+   ============================================ */
 
 .tavern-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
-  border-bottom: 2px solid var(--tavern-gold);
-  padding-bottom: 12px;
+  align-items: center;
+  padding: var(--tavern-gap-md) var(--tavern-gap-lg);
+  background: linear-gradient(180deg, rgba(0,0,0,0.3) 0%, transparent 100%);
+  border-bottom: 1px solid var(--tavern-gold-dim);
 }
 
-.tavern-header h1 {
+.tavern-title {
+  display: flex;
+  align-items: center;
+  gap: var(--tavern-gap-md);
+}
+
+.tavern-logo {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle, var(--tavern-gold) 0%, var(--tavern-gold-dim) 100%);
+  border-radius: 50%;
+  box-shadow: 
+    0 0 20px var(--tavern-glow),
+    inset 0 2px 4px rgba(255,255,255,0.2);
+}
+
+.tavern-logo i {
+  font-size: 24px;
+  color: var(--tavern-wood-dark);
+}
+
+.tavern-title-text h1 {
   margin: 0;
-  font-size: 32px;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--tavern-gold);
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
   letter-spacing: 1px;
 }
 
-.tavern-header p {
-  margin: 4px 0 0;
-  color: rgba(245, 235, 210, 0.8);
-}
-
-.tavern-status {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.badge {
-  background: rgba(26, 14, 7, 0.6);
-  border: 1px solid var(--tavern-gold);
-  padding: 4px 8px;
-  border-radius: 999px;
+.tavern-subtitle {
+  display: block;
   font-size: 12px;
-  text-transform: uppercase;
+  color: var(--tavern-parchment-dark);
+  font-style: italic;
+  opacity: 0.8;
 }
 
-.badge-warn {
-  border-color: #f3b562;
-  color: #fce0a5;
+.tavern-info {
+  text-align: right;
 }
+
+.pot-display, .ante-display {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.pot-display i {
+  color: var(--tavern-gold);
+  font-size: 18px;
+}
+
+.pot-amount, .ante-amount {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--tavern-gold-bright);
+  text-shadow: 0 0 10px var(--tavern-glow);
+}
+
+.pot-label, .ante-label {
+  font-size: 11px;
+  color: var(--tavern-parchment-dark);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* ============================================
+   Main Layout
+   ============================================ */
 
 .tavern-main {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 16px;
+  grid-template-columns: 1fr 280px;
+  gap: var(--tavern-gap-md);
+  flex: 1;
+  padding: var(--tavern-gap-md);
+  overflow: hidden;
 }
 
-.tavern-panel {
-  background: rgba(28, 16, 9, 0.75);
-  border: 1px solid rgba(210, 166, 90, 0.4);
-  box-shadow: 0 12px 24px var(--tavern-shadow);
-  padding: 16px;
-  border-radius: 16px;
+.tavern-table-area {
+  background: 
+    radial-gradient(ellipse at 50% 30%, rgba(107, 66, 42, 0.5) 0%, transparent 60%),
+    linear-gradient(180deg, var(--tavern-wood-light) 0%, var(--tavern-wood-medium) 100%);
+  border-radius: var(--tavern-radius-lg);
+  border: 2px solid var(--tavern-wood-highlight);
+  box-shadow: 
+    inset 0 4px 20px rgba(0,0,0,0.4),
+    0 4px 12px rgba(0,0,0,0.3);
+  overflow: auto;
 }
 
-.tavern-panel h2 {
-  margin-top: 0;
-}
-
-.section {
-  margin-bottom: 18px;
-}
-
-.players {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 8px;
-}
-
-.player {
-  background: rgba(85, 52, 30, 0.6);
-  border: 1px solid rgba(210, 166, 90, 0.3);
-  padding: 6px 10px;
-  border-radius: 10px;
-}
-
-.actions {
-  margin-top: 12px;
+.tavern-sidebar {
   display: flex;
-  gap: 8px;
+  flex-direction: column;
+  gap: var(--tavern-gap-md);
+  overflow: hidden;
 }
 
-.games {
+.tavern-controls-panel,
+.tavern-history-panel {
+  background: rgba(26, 15, 8, 0.8);
+  border: 1px solid var(--tavern-wood-highlight);
+  border-radius: var(--tavern-radius-md);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.tavern-controls-panel {
+  flex-shrink: 0;
+}
+
+.tavern-history-panel {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ============================================
+   Player Table
+   ============================================ */
+
+.tavern-table {
+  padding: var(--tavern-gap-lg);
+  min-height: 100%;
+}
+
+.player-seats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--tavern-gap-md);
 }
 
-button {
-  background: var(--tavern-crimson);
-  border: 1px solid var(--tavern-gold);
+.player-seat {
+  background: linear-gradient(135deg, var(--tavern-wood-dark) 0%, rgba(26, 15, 8, 0.9) 100%);
+  border: 2px solid var(--tavern-wood-highlight);
+  border-radius: var(--tavern-radius-md);
+  padding: var(--tavern-gap-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--tavern-gap-sm);
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.player-seat.is-current {
+  border-color: var(--tavern-gold);
+  box-shadow: 
+    0 0 20px var(--tavern-glow),
+    inset 0 0 30px rgba(212, 160, 74, 0.1);
+}
+
+.player-seat.is-me {
+  background: linear-gradient(135deg, var(--tavern-wood-medium) 0%, var(--tavern-wood-dark) 100%);
+}
+
+.player-seat.busted {
+  opacity: 0.7;
+  border-color: var(--tavern-danger);
+}
+
+.player-seat.holding {
+  border-color: var(--tavern-success);
+}
+
+/* Avatar */
+.player-avatar {
+  position: relative;
+  width: 64px;
+  height: 64px;
+}
+
+.player-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 3px solid var(--tavern-brass);
+  object-fit: cover;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+}
+
+.turn-indicator {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  width: 24px;
+  height: 24px;
+  background: var(--tavern-gold);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.turn-indicator i {
+  font-size: 12px;
+  color: var(--tavern-wood-dark);
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 10px var(--tavern-glow); }
+  50% { transform: scale(1.1); box-shadow: 0 0 20px var(--tavern-glow); }
+}
+
+/* Player info */
+.player-info {
+  text-align: center;
+}
+
+.player-name {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
   color: var(--tavern-parchment);
-  padding: 8px 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+}
+
+.player-status-label {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 8px;
   border-radius: 10px;
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.player-status-label.waiting { background: var(--tavern-wood-light); color: var(--tavern-parchment-dark); }
+.player-status-label.active { background: var(--tavern-gold); color: var(--tavern-wood-dark); }
+.player-status-label.rolled { background: var(--tavern-info); color: white; }
+.player-status-label.holding { background: var(--tavern-success); color: white; }
+.player-status-label.busted { background: var(--tavern-danger); color: white; }
+.player-status-label.revealed { background: var(--tavern-gold-dim); color: white; }
+
+/* Dice display */
+.player-dice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  min-height: 40px;
+  padding: var(--tavern-gap-sm);
+}
+
+.die-face {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--tavern-radius-sm);
+  font-weight: 700;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  transition: transform 0.2s ease;
+}
+
+.die-face:hover {
+  transform: scale(1.1);
+}
+
+.die-face.hidden {
+  background: var(--tavern-wood-medium);
+  border: 2px dashed var(--tavern-wood-highlight);
+  color: var(--tavern-parchment-dark);
+}
+
+.die-face.d4 { background: linear-gradient(135deg, #4a7c4e, #3a5c3e); color: white; }
+.die-face.d6 { background: linear-gradient(135deg, #4a8b6e, #3a6b5e); color: white; }
+.die-face.d8 { background: linear-gradient(135deg, #8b8b3a, #6b6b2a); color: white; }
+.die-face.d10 { background: linear-gradient(135deg, #b5854a, #8b652a); color: white; }
+.die-face.d12 { background: linear-gradient(135deg, #8b5a3a, #6b3a2a); color: white; }
+.die-face.d20 { background: linear-gradient(135deg, #8b3a3a, #6b2a2a); color: white; }
+
+.die-type {
+  font-size: 9px;
+  opacity: 0.8;
+  line-height: 1;
+}
+
+.die-result {
+  font-size: 14px;
+  line-height: 1;
+}
+
+/* Player total */
+.player-total {
+  background: rgba(0,0,0,0.3);
+  padding: 6px 16px;
+  border-radius: var(--tavern-radius-sm);
+  text-align: center;
+}
+
+.player-total .total-label {
+  font-size: 10px;
+  color: var(--tavern-parchment-dark);
+  text-transform: uppercase;
+}
+
+.player-total .total-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--tavern-gold-bright);
+  margin-left: 4px;
+}
+
+.player-total.busted .total-value {
+  color: var(--tavern-danger);
+  text-decoration: line-through;
+}
+
+.player-total.revealing {
+  animation: reveal-glow 0.5s ease-out;
+}
+
+@keyframes reveal-glow {
+  0% { box-shadow: 0 0 30px var(--tavern-gold); }
+  100% { box-shadow: none; }
+}
+
+/* Empty table */
+.empty-table {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  text-align: center;
+}
+
+.empty-table-content i {
+  font-size: 48px;
+  color: var(--tavern-wood-highlight);
+  margin-bottom: var(--tavern-gap-md);
+}
+
+.empty-table-content h3 {
+  margin: 0 0 8px;
+  color: var(--tavern-parchment);
+}
+
+.empty-table-content p {
+  margin: 0;
+  color: var(--tavern-parchment-dark);
+  font-style: italic;
+}
+
+/* ============================================
+   Controls Panel
+   ============================================ */
+
+.tavern-controls {
+  padding: var(--tavern-gap-md);
+}
+
+.control-section {
+  margin-bottom: var(--tavern-gap-md);
+}
+
+.control-section:last-child {
+  margin-bottom: 0;
+}
+
+.control-section h3 {
+  margin: 0 0 var(--tavern-gap-sm);
+  font-size: 14px;
+  color: var(--tavern-gold);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.control-section h3 i {
+  font-size: 12px;
+}
+
+.control-section .hint {
+  font-size: 12px;
+  color: var(--tavern-parchment-dark);
+  margin-top: 8px;
+  font-style: italic;
+}
+
+.control-section.rules ul {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 12px;
+  color: var(--tavern-parchment-dark);
+  line-height: 1.6;
+}
+
+.control-section.rules li strong {
+  color: var(--tavern-gold);
+}
+
+/* Your turn section */
+.control-section.your-turn {
+  background: rgba(212, 160, 74, 0.1);
+  border: 1px solid var(--tavern-gold-dim);
+  border-radius: var(--tavern-radius-md);
+  padding: var(--tavern-gap-md);
+  animation: your-turn-glow 2s ease-in-out infinite;
+}
+
+@keyframes your-turn-glow {
+  0%, 100% { box-shadow: 0 0 10px rgba(212, 160, 74, 0.2); }
+  50% { box-shadow: 0 0 20px rgba(212, 160, 74, 0.4); }
+}
+
+.turn-hint {
+  font-size: 12px;
+  color: var(--tavern-parchment-dark);
+  margin-bottom: var(--tavern-gap-sm);
+}
+
+/* Dice buttons */
+.dice-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: var(--tavern-gap-sm);
+}
+
+.btn-die {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 4px;
+  border-radius: var(--tavern-radius-sm);
+  border: 2px solid transparent;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: all 0.2s ease;
 }
 
-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.35);
+.btn-die .die-label {
+  font-size: 16px;
+  font-weight: 700;
 }
 
-button.secondary {
-  background: var(--tavern-umber);
+.btn-die .die-risk {
+  font-size: 9px;
+  opacity: 0.8;
+  text-transform: uppercase;
 }
 
-button.active {
-  background: #29402b;
+.btn-die.green { background: linear-gradient(135deg, #4a7c4e, #3a5c3e); color: white; }
+.btn-die.yellow { background: linear-gradient(135deg, #8b8b3a, #6b6b2a); color: white; }
+.btn-die.orange { background: linear-gradient(135deg, #b5854a, #8b652a); color: white; }
+.btn-die.red { background: linear-gradient(135deg, #8b5a3a, #6b3a2a); color: white; }
+.btn-die.crimson { background: linear-gradient(135deg, #8b3a3a, #6b2a2a); color: white; }
+
+.btn-die:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  border-color: var(--tavern-gold);
 }
 
-button:disabled {
+/* Hold button */
+.btn-hold {
+  width: 100%;
+  padding: 10px;
+  background: var(--tavern-wood-light);
+  border: 2px solid var(--tavern-wood-highlight);
+  color: var(--tavern-parchment);
+  font-weight: 600;
+  border-radius: var(--tavern-radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-hold:hover {
+  background: var(--tavern-wood-highlight);
+  border-color: var(--tavern-gold);
+}
+
+/* Waiting section */
+.control-section.waiting {
+  text-align: center;
+  padding: var(--tavern-gap-lg);
+}
+
+.waiting-text {
+  color: var(--tavern-parchment-dark);
+}
+
+.waiting-text strong {
+  color: var(--tavern-gold);
+}
+
+/* Revealing section */
+.control-section.revealing {
+  text-align: center;
+  padding: var(--tavern-gap-lg);
+}
+
+.reveal-animation {
+  margin-top: var(--tavern-gap-md);
+}
+
+.reveal-animation i {
+  font-size: 32px;
+  color: var(--tavern-gold);
+}
+
+/* Payout section */
+.control-section.payout {
+  text-align: center;
+}
+
+.control-section.payout h3 {
+  justify-content: center;
+  color: var(--tavern-gold-bright);
+}
+
+/* GM controls */
+.gm-controls {
+  border-top: 1px solid var(--tavern-wood-highlight);
+  padding-top: var(--tavern-gap-md);
+  margin-top: var(--tavern-gap-md);
+}
+
+/* ============================================
+   Buttons
+   ============================================ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: var(--tavern-radius-md);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 2px solid transparent;
+  font-family: inherit;
+}
+
+.btn-large {
+  width: 100%;
+  padding: 14px 20px;
+  font-size: 16px;
+}
+
+.btn-small {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--tavern-gold), var(--tavern-gold-dim));
+  color: var(--tavern-wood-dark);
+  border-color: var(--tavern-gold-bright);
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, var(--tavern-gold-bright), var(--tavern-gold));
+  box-shadow: 0 0 15px var(--tavern-glow);
+}
+
+.btn-secondary {
+  background: var(--tavern-wood-light);
+  color: var(--tavern-parchment);
+  border-color: var(--tavern-wood-highlight);
+}
+
+.btn-secondary:hover {
+  background: var(--tavern-wood-highlight);
+  border-color: var(--tavern-gold-dim);
+}
+
+.btn-success {
+  background: linear-gradient(135deg, var(--tavern-success), #3a5c3e);
+  color: white;
+  border-color: #5a9c5e;
+}
+
+.btn-success:hover {
+  background: linear-gradient(135deg, #5a9c5e, var(--tavern-success));
+  box-shadow: 0 0 15px rgba(74, 124, 78, 0.4);
+}
+
+.btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.tavern-game .hint {
-  color: rgba(245, 235, 210, 0.75);
-}
+/* ============================================
+   History Panel
+   ============================================ */
 
-.dice-picks {
+.tavern-history {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  height: 100%;
+  padding: var(--tavern-gap-md);
+}
+
+.tavern-history h3 {
+  margin: 0 0 var(--tavern-gap-sm);
+  font-size: 14px;
+  color: var(--tavern-gold);
+  display: flex;
+  align-items: center;
   gap: 8px;
-  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  flex-shrink: 0;
 }
 
-.turn-info {
-  margin-top: 12px;
-}
-
-.twenty-status {
-  margin-top: 12px;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+.history-entries {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
   gap: 8px;
 }
 
-.player-status {
+.history-entry {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  background: rgba(0,0,0,0.2);
+  border-radius: var(--tavern-radius-sm);
+  border-left: 3px solid var(--tavern-wood-highlight);
+}
+
+.history-entry.round_start { border-left-color: var(--tavern-success); }
+.history-entry.roll { border-left-color: var(--tavern-info); }
+.history-entry.hold { border-left-color: var(--tavern-warning); }
+.history-entry.bust { border-left-color: var(--tavern-danger); }
+.history-entry.round_end { border-left-color: var(--tavern-gold); }
+
+.entry-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.entry-icon i {
+  font-size: 12px;
+  color: var(--tavern-parchment-dark);
+}
+
+.entry-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.entry-message {
+  display: block;
+  font-size: 12px;
+  color: var(--tavern-parchment);
+  line-height: 1.4;
+}
+
+.entry-time {
+  display: block;
+  font-size: 10px;
+  color: var(--tavern-parchment-dark);
+  margin-top: 2px;
+}
+
+.history-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--tavern-parchment-dark);
+}
+
+.history-empty i {
+  font-size: 24px;
+  margin-bottom: 8px;
+  opacity: 0.5;
+}
+
+.history-empty p {
+  margin: 0;
+  font-style: italic;
+}
+
+/* ============================================
+   Footer
+   ============================================ */
+
+.tavern-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 6px 10px;
-  border-radius: 10px;
-  background: rgba(76, 44, 24, 0.6);
-  border: 1px solid rgba(210, 166, 90, 0.25);
+  padding: 8px var(--tavern-gap-lg);
+  background: rgba(0,0,0,0.3);
+  border-top: 1px solid var(--tavern-wood-highlight);
+  font-size: 11px;
 }
 
-.player-status.current {
-  border-color: var(--tavern-gold);
-  box-shadow: 0 0 12px rgba(210, 166, 90, 0.35);
-}
-
-.bid-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+.gm-status {
+  display: flex;
+  align-items: center;
   gap: 6px;
 }
 
-.tavern-card {
-  border: 1px solid rgba(210, 166, 90, 0.5);
-  background: rgba(28, 16, 9, 0.85);
-  color: var(--tavern-parchment);
+.gm-status i {
+  font-size: 8px;
 }
 
-.tavern-sidebar-button,
-.tavern-floating-button {
-  background: rgba(26, 14, 7, 0.7);
-  border: 1px solid var(--tavern-gold);
-  color: var(--tavern-parchment);
-  padding: 4px 8px;
-  border-radius: 8px;
+.gm-status.online { color: var(--tavern-success); }
+.gm-status.offline { color: var(--tavern-danger); }
+
+.game-status {
+  color: var(--tavern-parchment-dark);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.reset-btn {
+  background: transparent;
+  border: 1px solid var(--tavern-wood-highlight);
+  color: var(--tavern-parchment-dark);
+  width: 28px;
+  height: 28px;
+  border-radius: var(--tavern-radius-sm);
   cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.tavern-sidebar-button:hover,
-.tavern-floating-button:hover {
-  box-shadow: 0 0 8px rgba(210, 166, 90, 0.5);
+.reset-btn:hover {
+  border-color: var(--tavern-danger);
+  color: var(--tavern-danger);
 }
 
-.tavern-floating-button {
-  position: fixed;
-  right: 20px;
-  bottom: 20px;
-  z-index: 100;
+/* ============================================
+   Chat Cards
+   ============================================ */
+
+.tavern-card {
+  background: linear-gradient(135deg, var(--tavern-wood-dark) 0%, rgba(26, 15, 8, 0.95) 100%);
+  border: 2px solid var(--tavern-gold-dim);
+  border-radius: var(--tavern-radius-md);
+  color: var(--tavern-parchment);
+  overflow: hidden;
+}
+
+.tavern-card .card-header {
+  background: linear-gradient(180deg, var(--tavern-wood-medium), var(--tavern-wood-dark));
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--tavern-gold-dim);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tavern-card .card-header i {
+  font-size: 24px;
+  color: var(--tavern-gold);
+}
+
+.tavern-card .card-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: var(--tavern-gold);
+}
+
+.tavern-card .card-header .subtitle {
+  font-size: 12px;
+  color: var(--tavern-parchment-dark);
+  font-style: italic;
+}
+
+.tavern-card .card-content {
+  padding: 12px 16px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.tavern-results {
+  font-family: monospace;
+  background: rgba(0,0,0,0.2);
+  padding: 8px;
+  border-radius: var(--tavern-radius-sm);
+  margin-bottom: 8px;
+}
+
+.tavern-payout {
+  text-align: center;
+  font-size: 14px;
+}
+
+.tavern-payout strong {
+  color: var(--tavern-gold-bright);
+}
+
+/* ============================================
+   Scrollbar Styling
+   ============================================ */
+
+.tavern-dice-master ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.tavern-dice-master ::-webkit-scrollbar-track {
+  background: var(--tavern-wood-dark);
+  border-radius: 4px;
+}
+
+.tavern-dice-master ::-webkit-scrollbar-thumb {
+  background: var(--tavern-wood-highlight);
+  border-radius: 4px;
+}
+
+.tavern-dice-master ::-webkit-scrollbar-thumb:hover {
+  background: var(--tavern-brass);
+}
+
+/* ============================================
+   Animations
+   ============================================ */
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.player-seat {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.history-entry {
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* ============================================
+   Responsive
+   ============================================ */
+
+@media (max-width: 700px) {
+  .tavern-main {
+    grid-template-columns: 1fr;
+  }
+  
+  .tavern-sidebar {
+    flex-direction: row;
+  }
+  
+  .tavern-controls-panel,
+  .tavern-history-panel {
+    flex: 1;
+  }
 }

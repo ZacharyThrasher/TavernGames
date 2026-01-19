@@ -1,0 +1,24 @@
+<div class="tavern-history">
+  <h3><i class="fa-solid fa-scroll"></i> Game Log</h3>
+  
+  {{#if history.length}}
+    <div class="history-entries">
+      {{#each history}}
+        <div class="history-entry {{this.type}}">
+          <div class="entry-icon">
+            <i class="{{this.icon}}"></i>
+          </div>
+          <div class="entry-content">
+            <span class="entry-message">{{this.message}}</span>
+            <span class="entry-time">{{this.timeAgo}}</span>
+          </div>
+        </div>
+      {{/each}}
+    </div>
+  {{else}}
+    <div class="history-empty">
+      <i class="fa-solid fa-feather"></i>
+      <p>No entries yet</p>
+    </div>
+  {{/if}}
+</div>

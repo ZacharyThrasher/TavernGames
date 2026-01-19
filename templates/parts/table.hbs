@@ -1,0 +1,69 @@
+<div class="tavern-table">
+  {{#if hasPlayers}}
+    <div class="player-seats">
+      {{#each players}}
+        <div class="player-seat {{this.status}} {{#if this.isMe}}is-me{{/if}} {{#if this.isCurrent}}is-current{{/if}}">
+          {{!-- Avatar --}}
+          <div class="player-avatar">
+            <img src="{{this.avatar}}" alt="{{this.name}}" />
+            {{#if this.isCurrent}}
+              <div class="turn-indicator">
+                <i class="fa-solid fa-dice"></i>
+              </div>
+            {{/if}}
+          </div>
+
+          {{!-- Player info --}}
+          <div class="player-info">
+            <span class="player-name" title="{{this.userName}}">{{this.name}}</span>
+            <span class="player-status-label {{this.status}}">{{this.statusLabel}}</span>
+          </div>
+
+          {{!-- Dice display --}}
+          <div class="player-dice">
+            {{#each this.diceDisplay}}
+              {{#if this.hidden}}
+                <div class="die-face hidden">
+                  <i class="fa-solid fa-question"></i>
+                </div>
+              {{else}}
+                <div class="die-face d{{this.die}}" title="d{{this.die}}: {{this.result}}">
+                  <span class="die-type">d{{this.die}}</span>
+                  <span class="die-result">{{this.result}}</span>
+                </div>
+              {{/if}}
+            {{/each}}
+          </div>
+
+          {{!-- Total --}}
+          {{#if ../isPlaying}}
+            {{#if this.isMe}}
+              <div class="player-total {{#if this.isBusted}}busted{{/if}}">
+                <span class="total-label">Total:</span>
+                <span class="total-value">{{this.displayTotal}}</span>
+              </div>
+            {{/if}}
+          {{else if ../isRevealing}}
+            <div class="player-total {{#if this.isBusted}}busted{{/if}} revealing">
+              <span class="total-label">Total:</span>
+              <span class="total-value">{{this.displayTotal}}</span>
+            </div>
+          {{else if ../isPayout}}
+            <div class="player-total {{#if this.isBusted}}busted{{/if}}">
+              <span class="total-label">Total:</span>
+              <span class="total-value">{{this.displayTotal}}</span>
+            </div>
+          {{/if}}
+        </div>
+      {{/each}}
+    </div>
+  {{else}}
+    <div class="empty-table">
+      <div class="empty-table-content">
+        <i class="fa-solid fa-chair"></i>
+        <h3>The Table Awaits</h3>
+        <p>No players have joined yet. Take a seat to begin!</p>
+      </div>
+    </div>
+  {{/if}}
+</div>
