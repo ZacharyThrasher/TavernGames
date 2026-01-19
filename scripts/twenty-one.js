@@ -8,6 +8,13 @@ import { tavernSocket } from "./socket.js";
 const VALID_DICE = [20, 12, 10, 8, 6, 4];
 const OPENING_ROLLS_REQUIRED = 2;
 
+/**
+ * Get all GM user IDs for whispered notifications
+ */
+function getGMUserIds() {
+  return game.users.filter(u => u.isGM).map(u => u.id);
+}
+
 function emptyTableData() {
   return {
     totals: {},
@@ -19,11 +26,13 @@ function emptyTableData() {
     // Cheating system: track each cheat with its Deception roll
     // cheaters: { [userId]: { deceptionRolls: [{ dieIndex, oldValue, newValue, deception, isNat1, isNat20 }] } }
     cheaters: {},
+    // Bluffers: { [userId]: { deceptionRoll, isNat1, isNat20 } }
+    bluffers: {},
     // Track who was caught cheating (forfeits the round)
     caught: {},
-    // Track if inspection was called (only one allowed per round)
-    inspectionCalled: false,
-    // Track who called inspection and failed (forfeits winnings)
+    // Targeted accusation tracking: { accuserId, targetId, success }
+    accusation: null,
+    // Track who made a false accusation (forfeits winnings)
     failedInspector: null,
   };
 }
@@ -323,24 +332,21 @@ export async function hold(userId) {
 
 /**
  * Start the inspection phase - called when all players finish playing
+ * This is now the "Staredown" phase where players can make targeted accusations
  */
 export async function startInspection() {
   const state = getState();
-  const tableData = state.tableData ?? emptyTableData();
 
-  // Check if anyone cheated this round (players won't know for sure)
-  const hasCheaters = Object.keys(tableData.cheaters).length > 0;
-
-  // Calculate what inspection would cost
-  const inspectionCost = Math.floor(state.pot / 2);
+  // Calculate what accusation would cost
+  const accusationCost = Math.floor(state.pot / 2);
 
   await createChatCard({
-    title: "Showdown",
-    subtitle: "The moment of truth approaches...",
-    message: `All hands are in!<br><br>` +
-      `<strong>Call for Inspection?</strong> (Costs <strong>${inspectionCost}gp</strong> - half the pot)<br>` +
-      `<em>Roll Perception to catch cheaters. But if you find nothing, you forfeit your winnings!</em><br><br>` +
-      `Only one player may call for inspection.`,
+    title: "The Staredown",
+    subtitle: "A hush falls over the table...",
+    message: `All hands are in. The moment of truth approaches.<br><br>` +
+      `<strong>Make an Accusation?</strong> (Costs <strong>${accusationCost}gp</strong> - half the pot)<br>` +
+      `Point your finger at someone you suspect. If they cheated and you beat their Deception, they're caught!<br>` +
+      `<em>But accuse an innocent... and you forfeit your winnings.</em>`,
     icon: "fa-solid fa-eye",
   });
 
@@ -481,7 +487,7 @@ export async function returnToLobby() {
 /**
  * Get actor for a user (for skill checks)
  */
-function getActorForCheat(userId) {
+function getActorForUser(userId) {
   const user = game.users.get(userId);
   if (!user) return null;
   const actorId = user.character?.id;
@@ -490,10 +496,13 @@ function getActorForCheat(userId) {
 }
 
 /**
- * Cheat: Modify a die result. Rolls Deception to see if they get away with it.
+ * Cheat: Modify a die result. Rolls chosen skill to see if they get away with it.
  * - Nat 1: Instant caught (revealed at reveal phase)
- * - Nat 20: Cannot be caught by any inspection
- * - Otherwise: Deception score is stored for later comparison
+ * - Nat 20: Cannot be caught by any accusation
+ * - Otherwise: Skill roll is stored for later comparison
+ * 
+ * Player chooses between Deception (CHA) or Sleight of Hand (DEX).
+ * The GM is whispered with details so they can narrate tells to the table.
  */
 export async function cheat(payload, userId) {
   const state = getState();
@@ -503,7 +512,14 @@ export async function cheat(payload, userId) {
   }
 
   const tableData = state.tableData ?? emptyTableData();
-  const { dieIndex, newValue } = payload;
+  const { dieIndex, newValue, skill = "dec" } = payload;
+
+  // Skill name mapping
+  const skillNames = {
+    dec: "Deception",
+    slt: "Sleight of Hand",
+  };
+  const skillName = skillNames[skill] ?? "Deception";
 
   // Validate die index
   const rolls = tableData.rolls[userId] ?? [];
@@ -527,27 +543,38 @@ export async function cheat(payload, userId) {
     return state;
   }
 
-  // Roll Deception check for the player
-  const actor = getActorForCheat(userId);
-  let deceptionRoll = 10; // Default if no actor
+  // Roll the chosen skill check for the player
+  const actor = getActorForUser(userId);
+  let skillRoll = 10; // Default if no actor (flat d20)
   let isNat1 = false;
   let isNat20 = false;
-  let deceptionMod = 0;
+  let skillMod = 0;
   let d20Result = 10;
 
-  if (actor) {
-    // Get the deception skill modifier from D&D 5e actor
-    deceptionMod = actor.system?.skills?.dec?.total ?? 0;
-    const roll = await new Roll("1d20").evaluate();
-    d20Result = roll.total;
-    isNat1 = d20Result === 1;
-    isNat20 = d20Result === 20;
-    deceptionRoll = d20Result + deceptionMod;
+  // Roll d20 regardless of actor
+  const roll = await new Roll("1d20").evaluate();
+  d20Result = roll.total;
+  isNat1 = d20Result === 1;
+  isNat20 = d20Result === 20;
 
-    // Whisper the Deception roll to the player only
+  if (actor) {
+    // Get the chosen skill modifier from D&D 5e actor
+    skillMod = actor.system?.skills?.[skill]?.total ?? 0;
+    skillRoll = d20Result + skillMod;
+
+    // Whisper the skill roll to the player
     await roll.toMessage({
-      speaker: { alias: "Sleight of Hand" },
-      flavor: `<em>${actor.name} attempts to cheat...</em><br>Deception: ${d20Result} + ${deceptionMod} = <strong>${deceptionRoll}</strong>${isNat20 ? " <span style='color: gold;'>(Untouchable!)</span>" : ""}${isNat1 ? " <span style='color: red;'>(Fumbled!)</span>" : ""}`,
+      speaker: { alias: skillName },
+      flavor: `<em>${actor.name} attempts to cheat...</em><br>${skillName}: ${d20Result} + ${skillMod} = <strong>${skillRoll}</strong>${isNat20 ? " <span style='color: gold;'>(Untouchable!)</span>" : ""}${isNat1 ? " <span style='color: red;'>(Fumbled!)</span>" : ""}`,
+      whisper: [userId],
+    });
+  } else {
+    // No actor - flat d20 roll
+    skillRoll = d20Result;
+    
+    await roll.toMessage({
+      speaker: { alias: skillName },
+      flavor: `<em>Attempting to cheat...</em><br>${skillName}: <strong>${skillRoll}</strong>${isNat20 ? " <span style='color: gold;'>(Untouchable!)</span>" : ""}${isNat1 ? " <span style='color: red;'>(Fumbled!)</span>" : ""}`,
       whisper: [userId],
     });
   }
@@ -571,7 +598,7 @@ export async function cheat(payload, userId) {
     updatedBusts[userId] = false;
   }
 
-  // Track this cheat
+  // Track this cheat (store as "deception" for backwards compat with accusation logic)
   const cheaters = { ...tableData.cheaters };
   if (!cheaters[userId]) {
     cheaters[userId] = { deceptionRolls: [] };
@@ -580,7 +607,7 @@ export async function cheat(payload, userId) {
     dieIndex,
     oldValue,
     newValue,
-    deception: deceptionRoll,
+    deception: skillRoll, // Keep as "deception" for accusation comparison
     isNat1,
     isNat20,
   });
@@ -594,140 +621,197 @@ export async function cheat(payload, userId) {
   };
 
   const userName = game.users.get(userId)?.name ?? "Unknown";
-  console.log(`Tavern Twenty-One | ${userName} cheated: d${targetDie.die} ${oldValue} → ${newValue}, Deception: ${deceptionRoll} (nat1: ${isNat1}, nat20: ${isNat20})`);
+  const characterName = actor?.name ?? userName;
+  
+  // Notify the GM with cheat details so they can narrate tells
+  const gmIds = getGMUserIds();
+  if (gmIds.length > 0) {
+    const natStatus = isNat1 ? " (NAT 1 - FUMBLED!)" : isNat20 ? " (NAT 20 - UNTOUCHABLE!)" : "";
+    await ChatMessage.create({
+      content: `<div class="tavern-gm-alert tavern-gm-cheat">
+        <strong>CHEAT DETECTED</strong><br>
+        <em>${characterName}</em> changed their d${targetDie.die} from <strong>${oldValue}</strong> to <strong>${newValue}</strong><br>
+        ${skillName}: <strong>${skillRoll}</strong>${natStatus}<br>
+        <small>Narrate a tell to the table if appropriate.</small>
+      </div>`,
+      whisper: gmIds,
+      speaker: { alias: "Tavern Twenty-One" },
+    });
+  }
+
+  console.log(`Tavern Twenty-One | ${userName} cheated: d${targetDie.die} ${oldValue} → ${newValue}, ${skillName}: ${skillRoll} (nat1: ${isNat1}, nat20: ${isNat20})`);
 
   return updateState({ tableData: updatedTable });
 }
 
 /**
- * Call for inspection: Costs half the pot. Only one inspection per round.
- * If you catch no one, you forfeit your winnings.
- * If you catch a cheater, they forfeit instead.
+ * Accuse: Target a specific player and accuse them of cheating.
+ * Costs half the pot. If target cheated AND skill roll beats their skill roll, they're caught.
+ * If target didn't cheat OR skill roll fails, accuser forfeits their winnings.
+ * 
+ * Player chooses between Perception (WIS) or Insight (WIS).
  */
-export async function inspect(userId) {
+export async function accuse(payload, userId) {
   const state = getState();
   if (state.status !== "INSPECTION") {
-    ui.notifications.warn("Inspection can only be called at showdown.");
+    ui.notifications.warn("Accusations can only be made during the showdown.");
     return state;
   }
 
   const tableData = state.tableData ?? emptyTableData();
+  const { targetId, skill = "prc" } = payload;
 
-  // Only one inspection allowed per round
-  if (tableData.inspectionCalled) {
-    ui.notifications.warn("An inspection has already been called this round.");
+  // Skill name mapping
+  const skillNames = {
+    prc: "Perception",
+    ins: "Insight",
+  };
+  const skillName = skillNames[skill] ?? "Perception";
+
+  // Validate target
+  if (!targetId || !state.turnOrder.includes(targetId)) {
+    ui.notifications.warn("Invalid accusation target.");
     return state;
   }
 
-  // Calculate inspection cost: half the pot
-  const inspectionCost = Math.floor(state.pot / 2);
+  // Can't accuse yourself
+  if (targetId === userId) {
+    ui.notifications.warn("You can't accuse yourself!");
+    return state;
+  }
+
+  // Only one accusation allowed per round
+  if (tableData.accusation) {
+    ui.notifications.warn("An accusation has already been made this round.");
+    return state;
+  }
+
+  // Calculate accusation cost: half the pot
+  const accusationCost = Math.floor(state.pot / 2);
   
   // Check if player can afford it (GM doesn't pay)
   const user = game.users.get(userId);
   if (!user?.isGM) {
-    const canAfford = await deductFromActor(userId, inspectionCost);
+    const canAfford = await deductFromActor(userId, accusationCost);
     if (!canAfford) {
-      ui.notifications.warn(`You need ${inspectionCost}gp (half the pot) to call for inspection.`);
+      ui.notifications.warn(`You need ${accusationCost}gp (half the pot) to make an accusation.`);
       return state;
     }
     await playSound("coins");
   }
 
-  // Roll Perception
-  const actor = getActorForCheat(userId);
-  let perceptionRoll = 10;
-  let perceptionMod = 0;
+  const accuserActor = getActorForUser(userId);
+  const accuserName = accuserActor?.name ?? game.users.get(userId)?.name ?? "Unknown";
+  const targetName = getActorForUser(targetId)?.name ?? game.users.get(targetId)?.name ?? "Unknown";
+
+  // Roll the chosen skill
+  let skillRoll = 10;
+  let skillMod = 0;
   let d20Result = 10;
 
-  if (actor) {
-    perceptionMod = actor.system?.skills?.prc?.total ?? 0;
-    const roll = await new Roll("1d20").evaluate();
-    d20Result = roll.total;
-    perceptionRoll = d20Result + perceptionMod;
+  // Roll d20 regardless of actor
+  const roll = await new Roll("1d20").evaluate();
+  d20Result = roll.total;
 
-    // Show the Perception roll publicly
+  if (accuserActor) {
+    skillMod = accuserActor.system?.skills?.[skill]?.total ?? 0;
+    skillRoll = d20Result + skillMod;
+
+    // Show the skill roll publicly
     await roll.toMessage({
-      speaker: { alias: actor.name },
-      flavor: `<em>${actor.name} scrutinizes the table...</em><br>Perception: ${d20Result} + ${perceptionMod} = <strong>${perceptionRoll}</strong>`,
+      speaker: { alias: accuserActor.name },
+      flavor: `<em>${accuserName} stares down ${targetName}...</em><br>${skillName}: ${d20Result} + ${skillMod} = <strong>${skillRoll}</strong>`,
+    });
+  } else {
+    // No actor - flat d20 roll
+    skillRoll = d20Result;
+    
+    await roll.toMessage({
+      speaker: { alias: game.users.get(userId)?.name ?? "Unknown" },
+      flavor: `<em>Staring down ${targetName}...</em><br>${skillName}: <strong>${skillRoll}</strong>`,
     });
   }
 
-  // Check against all cheaters
+  // Check if target actually cheated
+  const targetCheaterData = tableData.cheaters[targetId];
   const caught = { ...tableData.caught };
-  const newlyCaughtNames = [];
+  let success = false;
 
-  for (const [cheaterId, cheaterData] of Object.entries(tableData.cheaters)) {
-    if (caught[cheaterId]) continue; // Already caught
-
-    // Check each deception roll - catch if ANY of their cheats are detected
-    for (const cheatRecord of cheaterData.deceptionRolls) {
+  if (targetCheaterData) {
+    // Target did cheat - check if skill roll beats their deception/sleight of hand
+    for (const cheatRecord of targetCheaterData.deceptionRolls) {
       // Nat 20 cannot be caught
       if (cheatRecord.isNat20) continue;
-      // Nat 1 will be caught at reveal regardless
-      if (cheatRecord.isNat1) continue;
-
-      // If perception beats deception, caught!
-      if (perceptionRoll > cheatRecord.deception) {
-        caught[cheaterId] = true;
-        const cheaterName = game.users.get(cheaterId)?.name ?? "Unknown";
-        newlyCaughtNames.push(cheaterName);
-        break; // Once caught, no need to check other cheats
+      // Nat 1 will be caught at reveal regardless, but accusation can still catch them
+      
+      // If skill roll beats their cheat roll, caught!
+      if (skillRoll > cheatRecord.deception) {
+        caught[targetId] = true;
+        success = true;
+        break;
       }
     }
   }
+  // If target didn't cheat at all, success remains false
 
-  const inspectorName = game.users.get(userId)?.name ?? "Unknown";
-  const foundCheaters = newlyCaughtNames.length > 0;
-
-  // Track that inspection was called, and if failed, who called it
+  // Track the accusation
   const updatedTableData = {
     ...tableData,
     caught,
-    inspectionCalled: true,
-    failedInspector: foundCheaters ? null : userId,
+    accusation: {
+      accuserId: userId,
+      targetId: targetId,
+      success: success,
+    },
+    failedInspector: success ? null : userId,
   };
 
   await addHistoryEntry({
-    type: "inspection",
-    inspector: inspectorName,
-    perception: perceptionRoll,
-    cost: inspectionCost,
-    success: foundCheaters,
-    message: `${inspectorName} called for inspection (${inspectionCost}gp, Perception: ${perceptionRoll}).`,
+    type: "accusation",
+    accuser: accuserName,
+    target: targetName,
+    skill: skillName,
+    skillRoll: skillRoll,
+    cost: accusationCost,
+    success: success,
+    message: `${accuserName} accused ${targetName} of cheating! (${accusationCost}gp, ${skillName}: ${skillRoll})`,
   });
 
-  if (foundCheaters) {
+  if (success) {
     await playSound("reveal");
     await createChatCard({
       title: "Cheater Caught!",
-      subtitle: `${inspectorName}'s suspicions were correct!`,
-      message: `<strong>${newlyCaughtNames.join(", ")}</strong> ${newlyCaughtNames.length > 1 ? "were" : "was"} caught cheating and will forfeit the round!<br><em>${inspectorName}'s vigilance pays off.</em>`,
+      subtitle: `${accuserName}'s suspicions were correct!`,
+      message: `<strong>${targetName}</strong> was caught cheating and will forfeit the round!<br><em>"I knew it!" ${accuserName} exclaims.</em>`,
       icon: "fa-solid fa-gavel",
     });
 
     await addHistoryEntry({
       type: "cheat_caught",
-      inspector: inspectorName,
-      caught: newlyCaughtNames.join(", "),
-      message: `${inspectorName} caught ${newlyCaughtNames.join(", ")} cheating!`,
+      accuser: accuserName,
+      caught: targetName,
+      message: `${accuserName} caught ${targetName} cheating!`,
     });
   } else {
     await playSound("lose");
+    const flavorText = `${targetName} is innocent. ${accuserName} jumped to conclusions.`;
+    
     await createChatCard({
       title: "False Accusation!",
-      subtitle: `${inspectorName} found nothing.`,
-      message: `The inspection revealed no cheaters. <strong>${inspectorName}</strong> looks paranoid and forfeits their claim to the pot!`,
+      subtitle: `${accuserName} was wrong.`,
+      message: `<strong>${targetName}</strong> wasn't cheating! ${accuserName} forfeits their claim to the pot!<br><em>${flavorText}</em>`,
       icon: "fa-solid fa-face-frown",
     });
 
     await addHistoryEntry({
-      type: "inspection_failed",
-      inspector: inspectorName,
-      message: `${inspectorName} found no cheaters and forfeits their winnings.`,
+      type: "accusation_failed",
+      accuser: accuserName,
+      target: targetName,
+      message: `${accuserName} falsely accused ${targetName} and forfeits their winnings.`,
     });
   }
 
-  // After inspection, proceed directly to reveal
+  // After accusation, proceed directly to reveal
   await updateState({ tableData: updatedTableData });
   return revealResults();
 }

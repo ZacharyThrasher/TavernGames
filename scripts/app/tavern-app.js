@@ -24,7 +24,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       roll: TavernApp.onRoll,
       hold: TavernApp.onHold,
       cheat: TavernApp.onCheat,
-      inspect: TavernApp.onInspect,
+      accuse: TavernApp.onAccuse,
       skipInspection: TavernApp.onSkipInspection,
       reveal: TavernApp.onReveal,
       newRound: TavernApp.onNewRound,
@@ -162,11 +162,16 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       maxValue: r.die,
     })) : [];
 
-    // Inspection context
+    // Inspection/Staredown context
     const isInspection = state.status === "INSPECTION";
-    const inspectionCalled = tableData.inspectionCalled ?? false;
-    const inspectionCost = Math.floor(state.pot / 2);
-    const canInspect = isInspection && state.players?.[userId] && !inspectionCalled;
+    const accusationMade = tableData.accusation !== null;
+    const accusationCost = Math.floor(state.pot / 2);
+    
+    // Build list of players that can be accused (not self, not busted)
+    const accuseTargets = isInspection && !accusationMade ? players
+      .filter(p => p.id !== userId && !tableData.busts?.[p.id])
+      .map(p => ({ id: p.id, name: p.name })) : [];
+    const canAccuse = isInspection && state.players?.[userId] && !accusationMade && accuseTargets.length > 0;
 
     // Build history entries with formatting
     const history = (state.history ?? []).slice().reverse().map(entry => ({
@@ -183,7 +188,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       userId,
       ante,
       pot: state.pot,
-      inspectionCost,
+      accusationCost,
       status: state.status,
       isLobby: state.status === "LOBBY",
       isPlaying: state.status === "PLAYING",
@@ -199,8 +204,9 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       canHold,
       canCheat,
       myDiceForCheat,
-      canInspect,
-      inspectionCalled,
+      canAccuse,
+      accusationMade,
+      accuseTargets,
       isOpeningPhase,
       isBettingPhase,
       openingRollsRemaining,
@@ -233,10 +239,23 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       case "hold": return "fa-solid fa-hand";
       case "bust": return "fa-solid fa-skull";
       case "round_end": return "fa-solid fa-flag-checkered";
-      case "inspection": return "fa-solid fa-magnifying-glass";
+      case "accusation": return "fa-solid fa-hand-point-right";
       case "cheat_caught": return "fa-solid fa-gavel";
-      case "inspection_failed": return "fa-solid fa-face-frown";
+      case "accusation_failed": return "fa-solid fa-face-frown";
       default: return "fa-solid fa-circle";
+    }
+  }
+
+  _onRender(context, options) {
+    super._onRender(context, options);
+    
+    // Enable/disable accuse button based on target selection
+    const accuseSelect = this.element.querySelector('#accuse-target');
+    const accuseBtn = this.element.querySelector('[data-action="accuse"]');
+    if (accuseSelect && accuseBtn) {
+      accuseSelect.addEventListener('change', (e) => {
+        accuseBtn.disabled = !e.target.value;
+      });
     }
   }
 
@@ -278,6 +297,15 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       return ui.notifications.warn("You have no dice to cheat with!");
     }
 
+    // Get skill modifiers from character sheet
+    const actor = game.user.character;
+    const decMod = actor?.system?.skills?.dec?.total ?? 0;
+    const sltMod = actor?.system?.skills?.slt?.total ?? 0;
+    const hasActor = !!actor;
+
+    // Determine which skill has higher modifier for default selection
+    const defaultSkill = sltMod > decMod ? "slt" : "dec";
+
     // Build a dialog for selecting which die to cheat and the new value
     const diceOptions = myRolls.map((r, idx) => 
       `<option value="${idx}" data-max="${r.die}">Die ${idx + 1}: d${r.die} (current: ${r.result})</option>`
@@ -298,8 +326,15 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
           <label>New Value: <span id="cheat-max-label">(1-${initialMax})</span></label>
           <input type="number" name="newValue" id="cheat-new-value" min="1" max="${initialMax}" value="1" style="width: 100%;" />
         </div>
+        <div class="form-group">
+          <label>Skill Check:</label>
+          <select name="skill" style="width: 100%;">
+            <option value="dec" ${defaultSkill === "dec" ? "selected" : ""}>Deception (CHA) ${hasActor ? `(+${decMod})` : ""}</option>
+            <option value="slt" ${defaultSkill === "slt" ? "selected" : ""}>Sleight of Hand (DEX) ${hasActor ? `(+${sltMod})` : ""}</option>
+          </select>
+        </div>
         <p class="hint" style="font-size: 0.9em; color: #666; margin-top: 10px;">
-          <i class="fa-solid fa-warning"></i> You'll roll Deception. Nat 1 = auto-caught at reveal. Nat 20 = untouchable!
+          <i class="fa-solid fa-warning"></i> Nat 1 = auto-caught at reveal. Nat 20 = untouchable!
         </p>
       </form>
       <script>
@@ -318,13 +353,66 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       callback: (html) => {
         const dieIndex = parseInt(html.find('[name="dieIndex"]').val());
         const newValue = parseInt(html.find('[name="newValue"]').val());
-        return { dieIndex, newValue };
+        const skill = html.find('[name="skill"]').val();
+        return { dieIndex, newValue, skill };
       },
       rejectClose: false,
     });
 
     if (result) {
       await tavernSocket.executeAsGM("playerAction", "cheat", result, game.user.id);
+    }
+  }
+
+  static async onAccuse(event, target) {
+    const state = getState();
+    const accusationCost = Math.floor(state.pot / 2);
+    
+    // Get selected target from dropdown
+    const selectEl = document.getElementById('accuse-target');
+    const targetId = selectEl?.value;
+    
+    if (!targetId) {
+      return ui.notifications.warn("Select a player to accuse.");
+    }
+    
+    const targetName = selectEl.selectedOptions[0]?.text ?? "Unknown";
+    
+    // Get skill modifiers from character sheet
+    const actor = game.user.character;
+    const prcMod = actor?.system?.skills?.prc?.total ?? 0;
+    const insMod = actor?.system?.skills?.ins?.total ?? 0;
+    const hasActor = !!actor;
+    
+    // Determine which skill has higher modifier for default selection
+    const defaultSkill = insMod > prcMod ? "ins" : "prc";
+    
+    const content = `
+      <form>
+        <p>Accuse <strong>${targetName}</strong> of cheating?</p>
+        <p><strong>Cost:</strong> ${accusationCost}gp (half the pot)</p>
+        <div class="form-group" style="margin-top: 10px;">
+          <label>Skill Check:</label>
+          <select name="skill" style="width: 100%;">
+            <option value="prc" ${defaultSkill === "prc" ? "selected" : ""}>Perception (WIS) ${hasActor ? `(+${prcMod})` : ""}</option>
+            <option value="ins" ${defaultSkill === "ins" ? "selected" : ""}>Insight (WIS) ${hasActor ? `(+${insMod})` : ""}</option>
+          </select>
+        </div>
+        <hr>
+        <p style="color: #c44; font-weight: bold;">If they're innocent, YOU forfeit your winnings!</p>
+      </form>
+    `;
+    
+    const result = await Dialog.prompt({
+      title: "Make Accusation",
+      content,
+      label: "Accuse!",
+      callback: (html) => ({ skill: html.find('[name="skill"]').val() }),
+      rejectClose: false,
+    });
+    
+    if (result) {
+      await tavernSocket.executeAsGM("playerAction", "accuse", { targetId, skill: result.skill }, game.user.id);
     }
   }
 

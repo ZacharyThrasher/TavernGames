@@ -33,7 +33,7 @@ export async function preloadTemplates() {
 
 export function defaultState() {
   return {
-    version: 2,
+    version: 3,
     status: "LOBBY", // LOBBY, PLAYING, INSPECTION, REVEALING, PAYOUT
     pot: 0,
     turnOrder: [],
@@ -47,9 +47,11 @@ export function defaultState() {
       currentPlayer: null,
       phase: "opening", // "opening" or "betting"
       cheaters: {},         // { [userId]: { deceptionRolls: [...] } }
+      bluffers: {},         // { [userId]: true } - players who bluffed (faked a tell)
+      tells: {},            // { [userId]: true } - players who triggered a tell (cheat OR bluff)
       caught: {},           // { [userId]: true } - caught cheaters
-      inspectionCalled: false, // Only one inspection per round
-      failedInspector: null,   // User who called inspection but found nothing
+      accusation: null,     // { accuserId, targetId, success } - targeted accusation
+      failedInspector: null,   // User who made false accusation (forfeits winnings)
     },
     history: [],
   };
@@ -62,7 +64,7 @@ export async function ensureStateMacro() {
     if (!current) {
       // No state at all, create fresh
       await existing.setFlag(MODULE_ID, "state", defaultState());
-    } else if (current.version < 2) {
+    } else if (current.version < 3) {
       // Migrate old state - preserve players if any
       const migrated = {
         ...defaultState(),

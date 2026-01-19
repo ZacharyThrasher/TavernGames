@@ -1,5 +1,5 @@
 import { MODULE_ID, getState, updateState } from "./state.js";
-import { startRound, submitRoll, hold, revealResults, returnToLobby, cheat, inspect, skipInspection } from "./twenty-one.js";
+import { startRound, submitRoll, hold, revealResults, returnToLobby, cheat, accuse, skipInspection } from "./twenty-one.js";
 import { playSound } from "./sounds.js";
 
 function ensureGM() {
@@ -72,8 +72,8 @@ export async function handlePlayerAction(action, payload, userId) {
       return hold(userId);
     case "cheat":
       return cheat(payload, userId);
-    case "inspect":
-      return inspect(userId);
+    case "accuse":
+      return accuse(payload, userId);
     case "skipInspection":
       return skipInspection();
     case "reveal":
@@ -87,7 +87,6 @@ export async function handlePlayerAction(action, payload, userId) {
 
 export async function handleResetTable() {
   ensureGM();
-  const state = getState();
   
   return updateState({
     status: "LOBBY",
@@ -102,8 +101,9 @@ export async function handleResetTable() {
       currentPlayer: null,
       phase: "opening",
       cheaters: {},
+      bluffers: {},
       caught: {},
-      inspectionCalled: false,
+      accusation: null,
       failedInspector: null,
     },
     history: [],

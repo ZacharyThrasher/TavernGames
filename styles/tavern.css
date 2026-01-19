@@ -1197,3 +1197,123 @@
 .history-entry.inspection { border-left-color: var(--tavern-info); }
 .history-entry.cheat_caught { border-left-color: #9a4a9a; }
 .history-entry.inspection_failed { border-left-color: var(--tavern-danger); }
+
+/* ============================================
+   GM Alert Styling (Whispered Messages)
+   ============================================ */
+
+.tavern-gm-alert {
+  background: rgba(42, 24, 16, 0.95);
+  border: 2px solid var(--tavern-wood-highlight);
+  border-radius: 8px;
+  padding: 12px;
+  margin: 4px 0;
+  font-family: "Signika", "Palatino Linotype", serif;
+}
+
+.tavern-gm-alert strong:first-child {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.tavern-gm-cheat {
+  border-color: #6a4a7a;
+  background: linear-gradient(135deg, rgba(58, 42, 74, 0.9), rgba(42, 26, 58, 0.95));
+}
+
+.tavern-gm-cheat strong:first-child {
+  color: #d4a0d4;
+}
+
+.tavern-gm-alert small {
+  display: block;
+  margin-top: 8px;
+  opacity: 0.8;
+  font-style: italic;
+}
+
+/* ============================================
+   Staredown / Accusation Phase
+   ============================================ */
+
+.control-section.staredown {
+  background: rgba(74, 107, 139, 0.15);
+  border: 1px solid var(--tavern-info);
+  border-radius: var(--tavern-radius-md);
+  padding: var(--tavern-gap-md);
+}
+
+.control-section.staredown h3 {
+  justify-content: center;
+  color: var(--tavern-info);
+}
+
+.staredown-text {
+  font-size: 13px;
+  color: var(--tavern-parchment);
+  margin-bottom: var(--tavern-gap-sm);
+  text-align: center;
+}
+
+.staredown-warning {
+  font-size: 11px;
+  color: var(--tavern-danger);
+  text-align: center;
+  margin-bottom: var(--tavern-gap-md);
+}
+
+/* Accuse Section */
+.accuse-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tavern-gap-sm);
+  margin-top: var(--tavern-gap-md);
+}
+
+.accuse-section label {
+  font-size: 12px;
+  color: var(--tavern-parchment-dark);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.accuse-target-select {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--tavern-wood-dark);
+  border: 1px solid var(--tavern-wood-highlight);
+  border-radius: var(--tavern-radius-sm);
+  color: var(--tavern-parchment);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.accuse-target-select:focus {
+  outline: none;
+  border-color: var(--tavern-gold-dim);
+}
+
+.btn-accuse {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, #8b3a3a, #6b2a2a);
+  border: 2px solid #ab4a4a;
+  color: white;
+  font-weight: 600;
+  border-radius: var(--tavern-radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-accuse:hover:not(:disabled) {
+  background: linear-gradient(135deg, #ab4a4a, #8b3a3a);
+  box-shadow: 0 0 15px rgba(139, 58, 58, 0.5);
+}
+
+.btn-accuse:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
