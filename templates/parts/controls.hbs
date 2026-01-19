@@ -119,18 +119,20 @@
         {{#if isInGame}}
           {{#if canAccuse}}
             <div class="accuse-section">
-              <label for="accuse-target">Accuse:</label>
-              <select id="accuse-target" class="accuse-target-select">
-                <option value="">Select a player...</option>
+              <label>Who do you suspect?</label>
+              <div class="accuse-portraits">
                 {{#each accuseTargets}}
-                  <option value="{{this.id}}">{{this.name}}</option>
+                  <div class="accuse-portrait" data-target-id="{{this.id}}" data-target-name="{{this.name}}" tabindex="0">
+                    <img src="{{this.img}}" alt="{{this.name}}" />
+                    <span class="portrait-name">{{this.name}}</span>
+                  </div>
                 {{/each}}
-              </select>
+              </div>
               <button type="button" class="btn btn-accuse" data-action="accuse" disabled>
                 <i class="fa-solid fa-hand-point-right"></i> Accuse ({{accusationCost}}gp)
               </button>
             </div>
-            <p class="hint">Cost: Half the pot. One accusation per round.</p>
+            <p class="hint">Click a portrait to select. Cost: Half the pot.</p>
           {{/if}}
         {{/if}}
         

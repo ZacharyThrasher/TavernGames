@@ -168,9 +168,16 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const accusationCost = Math.floor(state.pot / 2);
     
     // Build list of players that can be accused (not self, not busted)
+    // Include character artwork for portrait display
     const accuseTargets = isInspection && !accusationMade ? players
       .filter(p => p.id !== userId && !tableData.busts?.[p.id])
-      .map(p => ({ id: p.id, name: p.name })) : [];
+      .map(p => {
+        // Get the user's assigned character for artwork
+        const user = game.users.get(p.id);
+        const actor = user?.character;
+        const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
+        return { id: p.id, name: p.name, img };
+      }) : [];
     const isBusted = tableData.busts?.[userId] ?? false;
     const canAccuse = isInspection && state.players?.[userId] && !accusationMade && !isBusted && accuseTargets.length > 0;
 
@@ -250,12 +257,28 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
   _onRender(context, options) {
     super._onRender(context, options);
     
-    // Enable/disable accuse button based on target selection
-    const accuseSelect = this.element.querySelector('#accuse-target');
+    // Handle portrait selection for accusations
+    const portraits = this.element.querySelectorAll('.accuse-portrait');
     const accuseBtn = this.element.querySelector('[data-action="accuse"]');
-    if (accuseSelect && accuseBtn) {
-      accuseSelect.addEventListener('change', (e) => {
-        accuseBtn.disabled = !e.target.value;
+    
+    if (portraits.length && accuseBtn) {
+      portraits.forEach(portrait => {
+        portrait.addEventListener('click', () => {
+          // Deselect all others
+          portraits.forEach(p => p.classList.remove('selected'));
+          // Select this one
+          portrait.classList.add('selected');
+          // Enable accuse button
+          accuseBtn.disabled = false;
+        });
+        
+        // Keyboard support
+        portrait.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            portrait.click();
+          }
+        });
       });
     }
   }
@@ -369,15 +392,15 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const state = getState();
     const accusationCost = Math.floor(state.pot / 2);
     
-    // Get selected target from dropdown
-    const selectEl = document.getElementById('accuse-target');
-    const targetId = selectEl?.value;
+    // Get selected target from portrait
+    const selectedPortrait = document.querySelector('.accuse-portrait.selected');
+    const targetId = selectedPortrait?.dataset?.targetId;
     
     if (!targetId) {
       return ui.notifications.warn("Select a player to accuse.");
     }
     
-    const targetName = selectEl.selectedOptions[0]?.text ?? "Unknown";
+    const targetName = selectedPortrait.dataset.targetName ?? "Unknown";
     
     // Get skill modifiers from character sheet
     const actor = game.user.character;

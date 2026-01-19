@@ -1317,3 +1317,88 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* ============================================
+   Accusation Portrait Grid
+   ============================================ */
+
+.accuse-portraits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  margin: var(--tavern-gap-md) 0;
+}
+
+.accuse-portrait {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 3px solid var(--tavern-wood-highlight);
+  border-radius: var(--tavern-radius-md);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  min-width: 80px;
+}
+
+.accuse-portrait img {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 2px solid var(--tavern-brass);
+  object-fit: cover;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  transition: all 0.25s ease;
+}
+
+.accuse-portrait .portrait-name {
+  font-size: 11px;
+  color: var(--tavern-parchment-dark);
+  text-align: center;
+  max-width: 70px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 0.25s ease;
+}
+
+.accuse-portrait:hover {
+  border-color: var(--tavern-gold-dim);
+  background: rgba(212, 160, 74, 0.1);
+  transform: translateY(-2px);
+}
+
+.accuse-portrait:hover img {
+  border-color: var(--tavern-gold);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 10px var(--tavern-glow);
+}
+
+.accuse-portrait:hover .portrait-name {
+  color: var(--tavern-parchment);
+}
+
+.accuse-portrait.selected {
+  border-color: var(--tavern-danger);
+  background: rgba(139, 58, 58, 0.2);
+  box-shadow: 0 0 15px rgba(139, 58, 58, 0.4);
+}
+
+.accuse-portrait.selected img {
+  border-color: #ab4a4a;
+  box-shadow: 0 0 15px rgba(139, 58, 58, 0.6);
+}
+
+.accuse-portrait.selected .portrait-name {
+  color: #ffaaaa;
+  font-weight: 600;
+}
+
+/* Focus state for keyboard navigation */
+.accuse-portrait:focus {
+  outline: none;
+  border-color: var(--tavern-gold);
+  box-shadow: 0 0 0 2px var(--tavern-glow);
+}
