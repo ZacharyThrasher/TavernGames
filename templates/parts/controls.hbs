@@ -99,7 +99,7 @@
     {{#if isGM}}
       <div class="control-section gm-controls">
         <button type="button" class="btn btn-secondary btn-small" data-action="reveal">
-          <i class="fa-solid fa-eye"></i> Force Reveal
+          <i class="fa-solid fa-forward"></i> Skip to Staredown
         </button>
       </div>
     {{/if}}
@@ -112,9 +112,9 @@
       
       {{#if accusationMade}}
         <p class="staredown-text">An accusation has been made. The tension builds...</p>
-        <p class="staredown-hint"><i class="fa-solid fa-hourglass-half"></i> Awaiting the GM to reveal the truth.</p>
+        <p class="staredown-hint"><i class="fa-solid fa-hourglass-half"></i> Awaiting the GM to finish the round.</p>
       {{else}}
-        <p class="staredown-text">All hands are in. Who do you trust?</p>
+        <p class="staredown-text">The dice are revealed. But can you trust what you see?</p>
         <p class="staredown-warning"><i class="fa-solid fa-warning"></i> Accuse an innocent and you forfeit your winnings!</p>
         
         {{#if isInGame}}
@@ -140,7 +140,7 @@
       
       {{#if isGM}}
         <button type="button" class="btn btn-success" data-action="skipInspection">
-          <i class="fa-solid fa-eye"></i> Reveal Results
+          <i class="fa-solid fa-trophy"></i> Finish Round
         </button>
       {{/if}}
     </div>

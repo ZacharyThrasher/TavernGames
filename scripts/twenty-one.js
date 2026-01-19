@@ -276,7 +276,7 @@ export async function submitRoll(payload, userId) {
   });
 
   if (allPlayersFinished(state, updatedTable)) {
-    return startInspection();
+    return revealDice();
   }
 
   return next;
@@ -324,36 +324,17 @@ export async function hold(userId) {
   const next = await updateState({ tableData: updatedTable });
 
   if (allPlayersFinished(state, updatedTable)) {
-    return startInspection();
+    return revealDice();
   }
 
   return next;
 }
 
 /**
- * Start the inspection phase - called when all players finish playing
- * This is now the "Staredown" phase where players can make targeted accusations
+ * Reveal all dice - called when all players finish playing.
+ * After revealing, transitions to INSPECTION (The Staredown) where accusations can be made.
  */
-export async function startInspection() {
-  const state = getState();
-
-  // Calculate what accusation would cost
-  const accusationCost = Math.floor(state.pot / 2);
-
-  await createChatCard({
-    title: "The Staredown",
-    subtitle: "A hush falls over the table...",
-    message: `All hands are in. The moment of truth approaches.<br><br>` +
-      `<strong>Make an Accusation?</strong> (Costs <strong>${accusationCost}gp</strong> - half the pot)<br>` +
-      `Point your finger at someone you suspect. If they cheated and you beat their Deception, they're caught!<br>` +
-      `<em>But accuse an innocent... and you forfeit your winnings.</em>`,
-    icon: "fa-solid fa-eye",
-  });
-
-  return updateState({ status: "INSPECTION" });
-}
-
-export async function revealResults() {
+export async function revealDice() {
   const state = getState();
   const tableData = state.tableData ?? emptyTableData();
 
@@ -361,7 +342,56 @@ export async function revealResults() {
   await updateState({ status: "REVEALING" });
   await playSound("reveal");
 
-  // Check for nat 1 cheaters who weren't caught by inspection - reveal them now
+  // Show all rolls publicly - launch all dice animations in parallel for speed
+  const rollPromises = [];
+  for (const oduserId of state.turnOrder) {
+    const playerRolls = tableData.rolls[oduserId] ?? [];
+    for (const rollData of playerRolls) {
+      rollPromises.push((async () => {
+        const roll = await new Roll(`1d${rollData.die}`).evaluate();
+        // Override the result to show the actual value
+        if (roll.terms?.[0]?.results?.[0]) {
+          roll.terms[0].results[0].result = rollData.result;
+          roll._total = rollData.result;
+        }
+        await showPublicRoll(roll, oduserId);
+      })());
+    }
+  }
+  
+  // Wait for all dice to finish rolling
+  await Promise.all(rollPromises);
+  
+  // Brief pause for dramatic effect after all dice shown
+  await new Promise(r => setTimeout(r, 500));
+
+  // Now transition to The Staredown
+  const accusationCost = Math.floor(state.pot / 2);
+
+  await createChatCard({
+    title: "The Staredown",
+    subtitle: "All dice revealed. But can you trust what you see?",
+    message: `<strong>Make an Accusation?</strong> (Costs <strong>${accusationCost}gp</strong> - half the pot)<br>` +
+      `Point your finger at someone you suspect. If they cheated and you beat their skill, they're caught!<br>` +
+      `<em>But accuse an innocent... and you forfeit your winnings.</em>`,
+    icon: "fa-solid fa-eye",
+  });
+
+  return updateState({ status: "INSPECTION" });
+}
+
+/**
+ * Finish the round - called from INSPECTION phase.
+ * Resolves accusations and pays out winners.
+ */
+export async function finishRound() {
+  const state = getState();
+  const tableData = state.tableData ?? emptyTableData();
+
+  // Mark as revealing (brief transition state)
+  await updateState({ status: "REVEALING" });
+
+  // Check for nat 1 cheaters who weren't caught by accusation
   const caught = { ...tableData.caught };
   const nat1CaughtNames = [];
   for (const [cheaterId, cheaterData] of Object.entries(tableData.cheaters)) {
@@ -369,7 +399,8 @@ export async function revealResults() {
     for (const cheatRecord of cheaterData.deceptionRolls) {
       if (cheatRecord.isNat1) {
         caught[cheaterId] = true;
-        nat1CaughtNames.push(game.users.get(cheaterId)?.name ?? "Unknown");
+        const cheaterName = getActorForUser(cheaterId)?.name ?? game.users.get(cheaterId)?.name ?? "Unknown";
+        nat1CaughtNames.push(cheaterName);
         break;
       }
     }
@@ -429,29 +460,6 @@ export async function revealResults() {
     await new Promise(r => setTimeout(r, 500));
   }
 
-  // Show all rolls publicly - launch all dice animations in parallel for speed
-  const rollPromises = [];
-  for (const userId of state.turnOrder) {
-    const playerRolls = tableData.rolls[userId] ?? [];
-    for (const rollData of playerRolls) {
-      rollPromises.push((async () => {
-        const roll = await new Roll(`1d${rollData.die}`).evaluate();
-        // Override the result to show the actual value
-        if (roll.terms?.[0]?.results?.[0]) {
-          roll.terms[0].results[0].result = rollData.result;
-          roll._total = rollData.result;
-        }
-        await showPublicRoll(roll, userId);
-      })());
-    }
-  }
-  
-  // Wait for all dice to finish rolling
-  await Promise.all(rollPromises);
-  
-  // Brief pause for dramatic effect after all dice shown
-  await new Promise(r => setTimeout(r, 500));
-
   // Get the failed inspector (if any) - they forfeit their winnings
   const failedInspector = tableData.failedInspector;
 
@@ -509,7 +517,7 @@ export async function revealResults() {
   });
 
   await createChatCard({
-    title: "Results Revealed!",
+    title: "Round Complete!",
     subtitle: winners.length ? `Winner${winners.length > 1 ? "s" : ""}: ${winnerNames}` : "House Wins!",
     message: `<div class="tavern-results">${resultsMsg}</div>${winners.length ? `<div class="tavern-payout">Payout: <strong>${potShare}gp</strong> each</div>` : ""}`,
     icon: winners.length ? "fa-solid fa-trophy" : "fa-solid fa-skull",
@@ -875,12 +883,12 @@ export async function accuse(payload, userId) {
 }
 
 /**
- * Skip inspection and proceed to reveal
+ * Skip inspection and proceed to payout
  */
 export async function skipInspection() {
   const state = getState();
   if (state.status !== "INSPECTION") {
     return state;
   }
-  return revealResults();
+  return finishRound();
 }

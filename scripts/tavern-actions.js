@@ -1,5 +1,5 @@
 import { MODULE_ID, getState, updateState } from "./state.js";
-import { startRound, submitRoll, hold, revealResults, returnToLobby, cheat, accuse, skipInspection } from "./twenty-one.js";
+import { startRound, submitRoll, hold, revealDice, finishRound, returnToLobby, cheat, accuse, skipInspection } from "./twenty-one.js";
 import { playSound } from "./sounds.js";
 
 function ensureGM() {
@@ -76,8 +76,14 @@ export async function handlePlayerAction(action, payload, userId) {
       return accuse(payload, userId);
     case "skipInspection":
       return skipInspection();
-    case "reveal":
-      return revealResults();
+    case "reveal": {
+      // During PLAYING, skip to staredown; otherwise finish round
+      const currentState = getState();
+      if (currentState.status === "PLAYING") {
+        return revealDice();
+      }
+      return finishRound();
+    }
     case "newRound":
       return returnToLobby();
     default:
