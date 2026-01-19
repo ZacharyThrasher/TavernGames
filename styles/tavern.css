@@ -1,0 +1,164 @@
+:root {
+  --tavern-ink: #2b1a0f;
+  --tavern-gold: #d2a65a;
+  --tavern-umber: #7c4d2d;
+  --tavern-crimson: #7a1f1f;
+  --tavern-parchment: #f5ebd2;
+  --tavern-shadow: rgba(15, 8, 4, 0.35);
+}
+
+.tavern-dice-master .window-content {
+  padding: 0;
+  background: radial-gradient(circle at top, #c59b63 0%, #8a603d 45%, #5a3822 100%);
+  color: var(--tavern-parchment);
+  font-family: "Modesto Condensed", "Palatino Linotype", serif;
+}
+
+.tavern-shell {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 16px;
+  padding: 20px;
+}
+
+.tavern-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  border-bottom: 2px solid var(--tavern-gold);
+  padding-bottom: 12px;
+}
+
+.tavern-header h1 {
+  margin: 0;
+  font-size: 32px;
+  letter-spacing: 1px;
+}
+
+.tavern-header p {
+  margin: 4px 0 0;
+  color: rgba(245, 235, 210, 0.8);
+}
+
+.tavern-status {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.badge {
+  background: rgba(26, 14, 7, 0.6);
+  border: 1px solid var(--tavern-gold);
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.badge-warn {
+  border-color: #f3b562;
+  color: #fce0a5;
+}
+
+.tavern-main {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.tavern-panel {
+  background: rgba(28, 16, 9, 0.75);
+  border: 1px solid rgba(210, 166, 90, 0.4);
+  box-shadow: 0 12px 24px var(--tavern-shadow);
+  padding: 16px;
+  border-radius: 16px;
+}
+
+.tavern-panel h2 {
+  margin-top: 0;
+}
+
+.section {
+  margin-bottom: 18px;
+}
+
+.players {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.player {
+  background: rgba(85, 52, 30, 0.6);
+  border: 1px solid rgba(210, 166, 90, 0.3);
+  padding: 6px 10px;
+  border-radius: 10px;
+}
+
+.actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+}
+
+.games {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+button {
+  background: var(--tavern-crimson);
+  border: 1px solid var(--tavern-gold);
+  color: var(--tavern-parchment);
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.35);
+}
+
+button.secondary {
+  background: var(--tavern-umber);
+}
+
+button.active {
+  background: #29402b;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tavern-game .hint {
+  color: rgba(245, 235, 210, 0.75);
+}
+
+.dice-picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.turn-info {
+  margin-top: 12px;
+}
+
+.bid-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 6px;
+}
+
+.tavern-card {
+  border: 1px solid rgba(210, 166, 90, 0.5);
+  background: rgba(28, 16, 9, 0.85);
+  color: var(--tavern-parchment);
+}

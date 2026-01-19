@@ -1,0 +1,20 @@
+<section class="tavern-shell">
+  <header class="tavern-header">
+    <div class="title">
+      <h1>Tavern Dice Master</h1>
+      <p>Games for a roaring dnd5e tavern night.</p>
+    </div>
+    <div class="status">
+      {{> "templates/parts/status.hbs"}}
+    </div>
+  </header>
+
+  <main class="tavern-main">
+    <section class="tavern-panel">
+      {{> "templates/parts/lobby.hbs"}}
+    </section>
+    <section class="tavern-panel">
+      {{> "templates/parts/game.hbs"}}
+    </section>
+  </main>
+</section>

@@ -1,0 +1,41 @@
+<div class="tavern-lobby">
+  <div class="section">
+    <h2>Table</h2>
+    <div class="players">
+      {{#each players}}
+        <div class="player">
+          <span class="name">{{this.name}}</span>
+        </div>
+      {{/each}}
+    </div>
+
+    <div class="actions">
+      {{#if canJoin}}
+        <button type="button" data-action="join">Join Table</button>
+      {{/if}}
+      {{#if isInGame}}
+        <button type="button" data-action="leave">Leave Table</button>
+      {{/if}}
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Games</h2>
+    <div class="games">
+      {{#each games}}
+        <button
+          type="button"
+          class="{{#if this.active}}active{{/if}}"
+          data-action="setGame"
+          data-game="{{this.id}}"
+          {{#unless ../isGM}}disabled{{/unless}}
+        >
+          {{this.name}}
+        </button>
+      {{/each}}
+    </div>
+    {{#if isGM}}
+      <button type="button" class="start" data-action="start">Start Round</button>
+    {{/if}}
+  </div>
+</div>

@@ -1,0 +1,10 @@
+<div class="tavern-status">
+  {{#if hasGM}}
+    <span class="badge">GM Online</span>
+  {{else}}
+    <span class="badge badge-warn">GM Required</span>
+  {{/if}}
+  <span class="badge">Ante: {{ante}}gp</span>
+  <span class="badge">Pot: {{state.pot}}gp</span>
+  <span class="badge">Status: {{state.status}}</span>
+</div>
