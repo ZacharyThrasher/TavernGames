@@ -549,6 +549,72 @@ function getActorForUser(userId) {
 }
 
 /**
+ * Check if any other players' Passive Perception beats the cheat roll.
+ * If so, whisper them a subtle "gut feeling" hint about the cheater.
+ * 
+ * Passive Perception = 10 + Perception modifier (D&D 5e standard)
+ */
+async function checkPassivePerception(state, cheaterId, cheaterName, cheatRoll) {
+  const observerHints = [];
+  
+  for (const playerId of state.turnOrder) {
+    // Skip the cheater themselves
+    if (playerId === cheaterId) continue;
+    
+    // Skip GMs (they already get full info)
+    const user = game.users.get(playerId);
+    if (!user || user.isGM) continue;
+    
+    // Get the observer's actor and Passive Perception
+    const actor = getActorForUser(playerId);
+    if (!actor) continue;
+    
+    // Passive Perception = 10 + Perception skill total
+    const perceptionMod = actor.system?.skills?.prc?.total ?? 0;
+    const passivePerception = 10 + perceptionMod;
+    
+    // If their passive perception beats (or ties) the cheat roll, they notice something
+    if (passivePerception >= cheatRoll) {
+      observerHints.push({
+        oderId: playerId,
+        observerName: actor.name,
+        passivePerception,
+      });
+      
+      // Whisper the hint to this player
+      await ChatMessage.create({
+        content: `<div class="tavern-gut-feeling">
+          <div class="gut-feeling-icon"><i class="fa-solid fa-eye"></i></div>
+          <div class="gut-feeling-content">
+            <span class="gut-feeling-label">Gut Feeling</span>
+            <span class="gut-feeling-text">Something seems off about <strong>${cheaterName}</strong>'s dice...</span>
+          </div>
+        </div>`,
+        whisper: [playerId],
+        speaker: { alias: "Intuition" },
+      });
+    }
+  }
+  
+  // Also notify GM how many people noticed (for their awareness)
+  if (observerHints.length > 0) {
+    const gmIds = getGMUserIds();
+    if (gmIds.length > 0) {
+      const observerList = observerHints.map(o => o.observerName).join(", ");
+      await ChatMessage.create({
+        content: `<div class="tavern-gm-alert tavern-gm-perception">
+          <strong>PASSIVE PERCEPTION</strong><br>
+          <em>${observerList}</em> noticed something off about ${cheaterName}'s cheat attempt.<br>
+          <small>Cheat roll: ${cheatRoll} | They've been whispered a hint.</small>
+        </div>`,
+        whisper: gmIds,
+        speaker: { alias: "Tavern Twenty-One" },
+      });
+    }
+  }
+}
+
+/**
  * Cheat: Modify a die result. Rolls chosen skill to see if they get away with it.
  * - Nat 1: Instant caught (revealed at reveal phase)
  * - Nat 20: Cannot be caught by any accusation
@@ -712,6 +778,12 @@ export async function cheat(payload, userId) {
       icon: "fa-solid fa-hand-fist",
     });
     await playSound("lose");
+  }
+
+  // Check if any other players' Passive Perception beats the cheat roll
+  // They get a whispered "gut feeling" hint about the cheater
+  if (!isNat1 && !isNat20) {
+    await checkPassivePerception(state, userId, characterName, skillRoll);
   }
 
   console.log(`Tavern Twenty-One | ${userName} cheated: d${targetDie.die} ${oldValue} → ${newValue}, ${skillName}: ${skillRoll} (nat1: ${isNat1}, nat20: ${isNat20})`);

@@ -1483,3 +1483,89 @@
   border-color: var(--tavern-gold);
   box-shadow: 0 0 0 2px var(--tavern-glow);
 }
+
+/* ============================================
+   Gut Feeling (Passive Perception Hint)
+   ============================================ */
+
+.tavern-gut-feeling {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, rgba(74, 107, 139, 0.15), rgba(42, 58, 74, 0.25));
+  border: 1px solid rgba(74, 107, 139, 0.4);
+  border-left: 3px solid #5a8bab;
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin: 4px 0;
+  font-family: "Signika", "Palatino Linotype", serif;
+  animation: gut-feeling-fade-in 0.5s ease-out;
+}
+
+@keyframes gut-feeling-fade-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.gut-feeling-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(74, 107, 139, 0.3);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.gut-feeling-icon i {
+  font-size: 14px;
+  color: #7ab0d4;
+  animation: gut-feeling-pulse 2s ease-in-out infinite;
+}
+
+@keyframes gut-feeling-pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+.gut-feeling-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gut-feeling-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #7ab0d4;
+  font-weight: 600;
+}
+
+.gut-feeling-text {
+  font-size: 13px;
+  color: #c0d8e8;
+  font-style: italic;
+}
+
+.gut-feeling-text strong {
+  color: #ffcc88;
+  font-style: normal;
+}
+
+/* GM Perception Alert */
+.tavern-gm-perception {
+  border-color: #5a8bab;
+  background: linear-gradient(135deg, rgba(42, 58, 74, 0.9), rgba(32, 48, 64, 0.95));
+}
+
+.tavern-gm-perception strong:first-child {
+  color: #7ab0d4;
+}
