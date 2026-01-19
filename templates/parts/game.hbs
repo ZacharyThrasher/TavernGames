@@ -19,6 +19,14 @@
     <div class="turn-info">
       <span>Current turn: {{lookup (lookup state.players state.tableData.currentPlayer) "name"}}</span>
     </div>
+    <div class="twenty-status">
+      {{#each twentyOneStatus}}
+        <div class="player-status {{#if this.isCurrent}}current{{/if}}">
+          <span class="name">{{this.name}}</span>
+          <span class="state">{{this.status}}</span>
+        </div>
+      {{/each}}
+    </div>
   {{/if}}
 
   {{#if liarsDice}}

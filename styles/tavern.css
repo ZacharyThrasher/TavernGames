@@ -151,6 +151,28 @@ button:disabled {
   margin-top: 12px;
 }
 
+.twenty-status {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+}
+
+.player-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(76, 44, 24, 0.6);
+  border: 1px solid rgba(210, 166, 90, 0.25);
+}
+
+.player-status.current {
+  border-color: var(--tavern-gold);
+  box-shadow: 0 0 12px rgba(210, 166, 90, 0.35);
+}
+
 .bid-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));

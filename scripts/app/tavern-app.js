@@ -71,6 +71,25 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       ante: game.settings.get(MODULE_ID, "fixedAnte"),
       twentyOne: state.activeGame === TAVERN_GAMES.TWENTY_ONE,
       liarsDice: state.activeGame === TAVERN_GAMES.LIARS_DICE,
+      twentyOneStatus: players.map((player) => {
+        const tableData = state.tableData ?? {};
+        const holds = tableData.holds ?? {};
+        const busts = tableData.busts ?? {};
+        const totals = tableData.totals ?? {};
+        const rolls = tableData.rolls ?? {};
+        return {
+          id: player.id,
+          name: player.name,
+          isCurrent: tableData.currentPlayer === player.id,
+          status: busts[player.id]
+            ? "Bust"
+            : holds[player.id]
+            ? "Hold"
+            : totals[player.id] > 0 || (rolls[player.id] ?? []).length
+            ? "Rolling"
+            : "Waiting",
+        };
+      }),
     };
   }
 

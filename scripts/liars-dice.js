@@ -1,6 +1,6 @@
 import { getState, updateState } from "./state.js";
 import { createChatCard } from "./ui/chat.js";
-import { showSecretRoll } from "./dice.js";
+import { showPublicRoll, showSecretRoll } from "./dice.js";
 
 function emptyLiarsData() {
   return {
@@ -18,6 +18,18 @@ function nextPlayer(state, tableData) {
     : -1;
   const nextIndex = (currentIndex + 1) % order.length;
   return order[nextIndex];
+}
+
+async function buildFixedRoll(values) {
+  const roll = await new Roll(`${values.length}d6`).evaluate();
+  const term = roll.terms?.[0];
+  if (term?.results) {
+    term.results.forEach((result, index) => {
+      result.result = values[index] ?? result.result;
+    });
+  }
+  roll._total = values.reduce((sum, value) => sum + value, 0);
+  return roll;
 }
 
 export async function startLiarsDiceRound() {
@@ -107,6 +119,12 @@ export async function callLiarsDice(userId) {
 
   const bidderWins = count >= bid.quantity;
   const loser = bidderWins ? userId : bid.userId;
+
+  for (const [id, hand] of Object.entries(dice)) {
+    if (!hand.length) continue;
+    const roll = await buildFixedRoll(hand);
+    await showPublicRoll(roll, id);
+  }
 
   await createChatCard({
     title: "Liar's Dice called",
