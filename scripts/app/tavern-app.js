@@ -347,7 +347,6 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       canCheat,
       myDiceForCheat,
       canAccuse,
-      accusationMade,
       accuseTargets,
       canScan,
       scanCost,
