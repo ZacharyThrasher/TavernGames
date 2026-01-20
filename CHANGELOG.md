@@ -1,5 +1,9 @@
 # Changelog
 
+## [3.0.4] - 2026-01-20
+### Fixed
+- **App Crash**: Fixed `ReferenceError: accusationMade` by removing obsolete logic for delayed accusations.
+
 ## [3.0.3] - 2026-01-20
 ### Fixed
 - **App Crash**: Fixed a critical `ReferenceError: isInGame` that prevented the app from rendering.
