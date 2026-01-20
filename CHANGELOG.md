@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.1]2026-01-19
+### Fixed
+- **GM Payments**: GM clients no longer see the "Put it on the Tab" payment toggle (House plays for free).
+- **Cheat Visibility**: Cheating rolls now properly trigger 3D dice (Dice So Nice) visible to the GM and the cheater, but hidden from others.
+- **Retaliation**: Fixed a socket exception crash when handling bump retaliation.
+- **Disadvantage**: Fixed disadvantage roll formula for Sloppy condition (now correctly keeps lowest die).
+
 ## [2.1.0] - Iron Liver Patch
 
 ### Added

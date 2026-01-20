@@ -70,12 +70,14 @@
     </p>
     {{/if}}
 
+    {{#unless isGM}}
     <div class="liquid-mode-toggle">
       <button type="button" class="btn-toggle-liquid {{#if liquidMode}}active{{/if}}" data-action="toggleLiquidMode"
         title="Pay with your Liver! (Constitution Save)">
         <i class="fa-solid fa-beer-mug-empty"></i> Put it on the Tab {{#if liquidMode}}(ON){{/if}}
       </button>
     </div>
+    {{/unless}}
 
     <div class="dice-buttons premium">
       {{#each dice}}

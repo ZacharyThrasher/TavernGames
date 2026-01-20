@@ -1230,7 +1230,7 @@ export async function cheat(payload, userId) {
   let d20Result = 10;
 
   // Roll with disadvantage if Sloppy
-  const roll = await new Roll(isSloppy ? "2d20kl" : "1d20").evaluate();
+  const roll = await new Roll(isSloppy ? "2d20kl1" : "1d20").evaluate();
   d20Result = roll.total;
 
   if (actor) {
@@ -1261,15 +1261,20 @@ export async function cheat(payload, userId) {
     flavorText += ` <span style='color: #888;'>(${dcType}: ${rollTotal})</span>`;
   }
 
-  // Whisper to player only - use plain ChatMessage to avoid 3D dice visible to others
+  // Whisper to player AND GM - use rolls array to trigger 3D dice (Dice So Nice)
+  // But strictly whisper to keep it hidden from others.
+  const gmIds = getGMUserIds();
+  const whisperIds = [userId, ...gmIds];
+
   await ChatMessage.create({
     content: `<div class="dice-roll"><div class="dice-result">
       <div class="dice-formula">1d20 + ${modifier}</div>
       <h4 class="dice-total">${rollTotal}</h4>
     </div></div>`,
     flavor: flavorText,
-    whisper: [userId],
+    whisper: whisperIds,
     speaker: { alias: skillName },
+    rolls: [roll],
   });
 
   // Update the die value
@@ -1350,7 +1355,6 @@ export async function cheat(payload, userId) {
   const characterName = actor?.name ?? userName;
 
   // Notify the GM with cheat details
-  const gmIds = getGMUserIds();
   if (gmIds.length > 0) {
     const fumbleStatus = fumbled ? " <span style='color: red;'>(FUMBLED - AUTO-CAUGHT!)</span>" : "";
     const dieLocation = isHoleDie ? " (Hole Die)" : " (Visible)";
@@ -1469,7 +1473,7 @@ export async function scan(payload, userId) {
   const skillKey = scanType === "arcana" ? "arc" : "ins";
 
   // Roll d20 (with disadvantage if sloppy)
-  const roll = await new Roll(isScannerSloppy ? "2d20kl" : "1d20").evaluate();
+  const roll = await new Roll(isScannerSloppy ? "2d20kl1" : "1d20").evaluate();
   const d20Result = roll.total;
   const skillMod = scannerActor?.system?.skills?.[skillKey]?.total ?? 0;
   const scanRoll = d20Result + skillMod;
@@ -1772,14 +1776,14 @@ export async function goad(payload, userId) {
 
   // Roll attacker's chosen skill (Iron Liver: Sloppy = disadvantage)
   const isAttackerSloppy = tableData.sloppy?.[userId] ?? false;
-  const attackRoll = await new Roll(isAttackerSloppy ? "2d20kl" : "1d20").evaluate();
+  const attackRoll = await new Roll(isAttackerSloppy ? "2d20kl1" : "1d20").evaluate();
   const attackD20 = attackRoll.total;
   const attackMod = attackerActor?.system?.skills?.[attackerSkill]?.total ?? 0;
   const attackTotal = attackD20 + attackMod;
 
   // Roll defender's Insight (Iron Liver: Sloppy = disadvantage)
   const isDefenderSloppy = tableData.sloppy?.[targetId] ?? false;
-  const defendRoll = await new Roll(isDefenderSloppy ? "2d20kl" : "1d20").evaluate();
+  const defendRoll = await new Roll(isDefenderSloppy ? "2d20kl1" : "1d20").evaluate();
   const defendD20 = defendRoll.total;
   const defendMod = defenderActor?.system?.skills?.ins?.total ?? 0;
   const defendTotal = defendD20 + defendMod;
@@ -2227,7 +2231,7 @@ export async function bumpRetaliation(payload, userId) {
     return state;
   }
 
-  const { dieIndex } = payload;
+  const dieIndex = Number(payload?.dieIndex);
   const attackerId = pending.attackerId;
   const targetId = pending.targetId;
 
@@ -2238,7 +2242,7 @@ export async function bumpRetaliation(payload, userId) {
     return state;
   }
 
-  if (dieIndex < 0 || dieIndex >= attackerRolls.length) {
+  if (Number.isNaN(dieIndex) || dieIndex < 0 || dieIndex >= attackerRolls.length) {
     ui.notifications.warn("Invalid die selection.");
     return state;
   }
