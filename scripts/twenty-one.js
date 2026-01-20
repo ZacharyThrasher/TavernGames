@@ -34,6 +34,9 @@ function emptyTableData() {
     accusation: null,
     // Track who made a false accusation (forfeits winnings)
     failedInspector: null,
+    // Intimidation tracking
+    intimidatedThisRound: {},  // { [oderId]: true } - who has used their intimidation this round
+    intimidationBackfire: {},  // { [oderId]: true } - disadvantage on next cheat/accuse from failed intimidation
   };
 }
 
@@ -481,16 +484,49 @@ export async function finishRound() {
     if (failedInspector === id) return false;
     return (totals[id] ?? 0) === best && best > 0;
   });
-  const potShare = winners.length ? Math.floor(state.pot / winners.length) : 0;
 
+  // Calculate payouts with Natural 21 Bonus (Blackjack!)
+  // Players who hit exactly 21 WITHOUT cheating get 1.5x their share
+  const payouts = {};
+  const blackjackWinners = [];
+  
   if (winners.length) {
-    await payOutWinners(winners, potShare);
+    // Determine who gets the blackjack bonus
+    let totalShares = 0;
+    const winnerMultipliers = {};
+    
+    for (const id of winners) {
+      const total = totals[id] ?? 0;
+      const didCheat = tableData.cheaters[id]?.deceptionRolls?.length > 0;
+      
+      // Natural 21 (no cheating) = 1.5x multiplier
+      if (total === 21 && !didCheat) {
+        winnerMultipliers[id] = 1.5;
+        blackjackWinners.push(id);
+      } else {
+        winnerMultipliers[id] = 1.0;
+      }
+      totalShares += winnerMultipliers[id];
+    }
+    
+    // Calculate each winner's payout
+    const baseShare = state.pot / totalShares;
+    for (const id of winners) {
+      payouts[id] = Math.floor(baseShare * winnerMultipliers[id]);
+    }
+    
+    await payOutWinners(payouts);
     await playSound("win");
   } else {
     await playSound("lose");
   }
 
-  const winnerNames = winners.map(id => game.users.get(id)?.name).join(", ");
+  // Build winner names with blackjack indicator
+  const winnerNames = winners.map(id => {
+    const name = game.users.get(id)?.name ?? "Unknown";
+    return blackjackWinners.includes(id) ? `${name} (BLACKJACK!)` : name;
+  }).join(", ");
+  
   const resultsMsg = state.turnOrder.map(id => {
     const name = game.users.get(id)?.name ?? "Unknown";
     const total = totals[id] ?? 0;
@@ -501,17 +537,41 @@ export async function finishRound() {
     if (wasCaught) suffix = " (CHEATER!)";
     else if (wasFailedInspector) suffix = " (FALSE ACCUSER!)";
     else if (busted) suffix = " (BUST)";
-    if (winners.includes(id)) suffix += " ★";
+    if (winners.includes(id)) {
+      if (blackjackWinners.includes(id)) {
+        suffix += " ★ BLACKJACK!";
+      } else {
+        suffix += " ★";
+      }
+    }
     return `${name}: ${total}${suffix}`;
   }).join(" | ");
+
+  // Build payout message
+  let payoutMsg = "";
+  if (winners.length) {
+    if (blackjackWinners.length > 0) {
+      // Show individual payouts when there's a blackjack bonus
+      const payoutDetails = winners.map(id => {
+        const name = game.users.get(id)?.name ?? "Unknown";
+        const amount = payouts[id] ?? 0;
+        const isBlackjack = blackjackWinners.includes(id);
+        return `${name}: <strong>${amount}gp</strong>${isBlackjack ? " (1.5x)" : ""}`;
+      }).join(", ");
+      payoutMsg = `<div class="tavern-payout">Payouts: ${payoutDetails}</div>`;
+    } else {
+      const flatShare = Object.values(payouts)[0] ?? 0;
+      payoutMsg = `<div class="tavern-payout">Payout: <strong>${flatShare}gp</strong> each</div>`;
+    }
+  }
 
   await addHistoryEntry({
     type: "round_end",
     winners: winnerNames || "None",
     winningTotal: best,
-    payout: potShare,
+    payout: Object.values(payouts)[0] ?? 0,
     message: winners.length
-      ? `${winnerNames} wins with ${best}! Payout: ${potShare}gp each.`
+      ? `${winnerNames} wins with ${best}!`
       : "Everyone busted, got caught, or made false accusations! House wins.",
     results: resultsMsg,
   });
@@ -519,7 +579,7 @@ export async function finishRound() {
   await createChatCard({
     title: "Round Complete!",
     subtitle: winners.length ? `Winner${winners.length > 1 ? "s" : ""}: ${winnerNames}` : "House Wins!",
-    message: `<div class="tavern-results">${resultsMsg}</div>${winners.length ? `<div class="tavern-payout">Payout: <strong>${potShare}gp</strong> each</div>` : ""}`,
+    message: `<div class="tavern-results">${resultsMsg}</div>${payoutMsg}`,
     icon: winners.length ? "fa-solid fa-trophy" : "fa-solid fa-skull",
   });
 
@@ -677,11 +737,28 @@ export async function cheat(payload, userId) {
   let skillMod = 0;
   let d20Result = 10;
 
-  // Roll d20 regardless of actor
-  const roll = await new Roll("1d20").evaluate();
-  d20Result = roll.total;
+  // Check for disadvantage from failed intimidation
+  const hasDisadvantage = tableData.intimidationBackfire?.[userId] ?? false;
+
+  // Roll d20 regardless of actor (with disadvantage if applicable)
+  let roll;
+  let roll2 = null;
+  if (hasDisadvantage) {
+    roll = await new Roll("1d20").evaluate();
+    roll2 = await new Roll("1d20").evaluate();
+    d20Result = Math.min(roll.total, roll2.total);
+  } else {
+    roll = await new Roll("1d20").evaluate();
+    d20Result = roll.total;
+  }
   isNat1 = d20Result === 1;
   isNat20 = d20Result === 20;
+
+  // Clear the disadvantage flag after use
+  const updatedIntimidationBackfire = { ...tableData.intimidationBackfire };
+  if (hasDisadvantage) {
+    delete updatedIntimidationBackfire[userId];
+  }
 
   if (actor) {
     // Get the chosen skill modifier from D&D 5e actor
@@ -689,18 +766,20 @@ export async function cheat(payload, userId) {
     skillRoll = d20Result + skillMod;
 
     // Whisper the skill roll to the player
+    const disadvantageMsg = hasDisadvantage ? ` <span style='color: orange;'>(Disadvantage: ${roll.total}, ${roll2.total})</span>` : "";
     await roll.toMessage({
       speaker: { alias: skillName },
-      flavor: `<em>${actor.name} attempts to cheat...</em><br>${skillName}: ${d20Result} + ${skillMod} = <strong>${skillRoll}</strong>${isNat20 ? " <span style='color: gold;'>(Untouchable!)</span>" : ""}${isNat1 ? " <span style='color: red;'>(Fumbled!)</span>" : ""}`,
+      flavor: `<em>${actor.name} attempts to cheat...</em><br>${skillName}: ${d20Result} + ${skillMod} = <strong>${skillRoll}</strong>${disadvantageMsg}${isNat20 ? " <span style='color: gold;'>(Untouchable!)</span>" : ""}${isNat1 ? " <span style='color: red;'>(Fumbled!)</span>" : ""}`,
       whisper: [userId],
     });
   } else {
     // No actor - flat d20 roll
     skillRoll = d20Result;
     
+    const disadvantageMsg = hasDisadvantage ? ` <span style='color: orange;'>(Disadvantage: ${roll.total}, ${roll2.total})</span>` : "";
     await roll.toMessage({
       speaker: { alias: skillName },
-      flavor: `<em>Attempting to cheat...</em><br>${skillName}: <strong>${skillRoll}</strong>${isNat20 ? " <span style='color: gold;'>(Untouchable!)</span>" : ""}${isNat1 ? " <span style='color: red;'>(Fumbled!)</span>" : ""}`,
+      flavor: `<em>Attempting to cheat...</em><br>${skillName}: <strong>${skillRoll}</strong>${disadvantageMsg}${isNat20 ? " <span style='color: gold;'>(Untouchable!)</span>" : ""}${isNat1 ? " <span style='color: red;'>(Fumbled!)</span>" : ""}`,
       whisper: [userId],
     });
   }
@@ -748,6 +827,7 @@ export async function cheat(payload, userId) {
     totals: updatedTotals,
     busts: updatedBusts,
     cheaters,
+    intimidationBackfire: updatedIntimidationBackfire,
   };
 
   const userName = game.users.get(userId)?.name ?? "Unknown";
@@ -863,14 +943,33 @@ export async function accuse(payload, userId) {
   const accuserName = accuserActor?.name ?? game.users.get(userId)?.name ?? "Unknown";
   const targetName = getActorForUser(targetId)?.name ?? game.users.get(targetId)?.name ?? "Unknown";
 
+  // Check for disadvantage from failed intimidation
+  const hasDisadvantage = tableData.intimidationBackfire?.[userId] ?? false;
+
   // Roll the chosen skill
   let skillRoll = 10;
   let skillMod = 0;
   let d20Result = 10;
 
-  // Roll d20 regardless of actor
-  const roll = await new Roll("1d20").evaluate();
-  d20Result = roll.total;
+  // Roll d20 regardless of actor (with disadvantage if applicable)
+  let roll;
+  let roll2 = null;
+  if (hasDisadvantage) {
+    roll = await new Roll("1d20").evaluate();
+    roll2 = await new Roll("1d20").evaluate();
+    d20Result = Math.min(roll.total, roll2.total);
+  } else {
+    roll = await new Roll("1d20").evaluate();
+    d20Result = roll.total;
+  }
+
+  // Clear the disadvantage flag after use
+  const clearedIntimidationBackfire = { ...tableData.intimidationBackfire };
+  if (hasDisadvantage) {
+    delete clearedIntimidationBackfire[userId];
+  }
+
+  const disadvantageNote = hasDisadvantage ? ` <span style="color: orange;">(Disadvantage: ${roll.total}, ${roll2.total})</span>` : "";
 
   if (accuserActor) {
     skillMod = accuserActor.system?.skills?.[skill]?.total ?? 0;
@@ -879,7 +978,7 @@ export async function accuse(payload, userId) {
     // Show the skill roll publicly (not as GM whisper)
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor: accuserActor }),
-      flavor: `<em>${accuserName} stares down ${targetName}...</em><br>${skillName}`,
+      flavor: `<em>${accuserName} stares down ${targetName}...</em><br>${skillName}${disadvantageNote}`,
       content: `<div class="dice-roll"><div class="dice-result"><div class="dice-formula">1d20 + ${skillMod}</div><div class="dice-tooltip"><section class="tooltip-part"><div class="dice"><ol class="dice-rolls"><li class="roll die d20">${d20Result}</li></ol></div></section></div><h4 class="dice-total">${skillRoll}</h4></div></div>`,
       rolls: [roll],
     });
@@ -889,7 +988,7 @@ export async function accuse(payload, userId) {
     
     await ChatMessage.create({
       speaker: { alias: game.users.get(userId)?.name ?? "Unknown" },
-      flavor: `<em>Staring down ${targetName}...</em><br>${skillName}`,
+      flavor: `<em>Staring down ${targetName}...</em><br>${skillName}${disadvantageNote}`,
       content: `<div class="dice-roll"><div class="dice-result"><div class="dice-formula">1d20</div><div class="dice-tooltip"><section class="tooltip-part"><div class="dice"><ol class="dice-rolls"><li class="roll die d20">${d20Result}</li></ol></div></section></div><h4 class="dice-total">${skillRoll}</h4></div></div>`,
       rolls: [roll],
     });
@@ -927,6 +1026,7 @@ export async function accuse(payload, userId) {
       success: success,
     },
     failedInspector: success ? null : userId,
+    intimidationBackfire: clearedIntimidationBackfire,
   };
 
   await addHistoryEntry({
@@ -951,6 +1051,206 @@ export async function accuse(payload, userId) {
 
   // Update state but stay in INSPECTION - GM will trigger reveal
   return updateState({ tableData: updatedTableData });
+}
+
+/**
+ * Intimidate: Try to force another player to hold.
+ * - Only during betting phase
+ * - Once per round per player
+ * - Attacker rolls Intimidation (CHA)
+ * - Defender chooses Wisdom Save or Insight
+ * - If attacker wins: target forced to hold
+ * - If attacker loses: attacker forced to hold + disadvantage on next cheat/accuse
+ */
+export async function intimidate(payload, userId) {
+  const state = getState();
+  if (state.status !== "PLAYING") {
+    ui.notifications.warn("Cannot intimidate outside of an active round.");
+    return state;
+  }
+
+  const tableData = state.tableData ?? emptyTableData();
+
+  // Must be in betting phase
+  if (tableData.phase !== "betting") {
+    ui.notifications.warn("Intimidation can only be used during the betting phase.");
+    return state;
+  }
+
+  // GM cannot intimidate - they're the house
+  const user = game.users.get(userId);
+  if (user?.isGM) {
+    ui.notifications.warn("The house does not intimidate.");
+    return state;
+  }
+
+  // Player must not have busted or held
+  if (tableData.busts?.[userId]) {
+    ui.notifications.warn("You busted - you can't intimidate anyone!");
+    return state;
+  }
+  if (tableData.holds?.[userId]) {
+    ui.notifications.warn("You've already held - you can't intimidate anyone!");
+    return state;
+  }
+
+  // Player can only intimidate once per round
+  if (tableData.intimidatedThisRound?.[userId]) {
+    ui.notifications.warn("You've already used your intimidation this round.");
+    return state;
+  }
+
+  const { targetId, defenderSkill = "wis" } = payload;
+
+  // Validate target
+  if (!targetId || !state.turnOrder.includes(targetId)) {
+    ui.notifications.warn("Invalid intimidation target.");
+    return state;
+  }
+
+  // Can't intimidate yourself
+  if (targetId === userId) {
+    ui.notifications.warn("You can't intimidate yourself!");
+    return state;
+  }
+
+  // Can't intimidate the GM
+  const targetUser = game.users.get(targetId);
+  if (targetUser?.isGM) {
+    ui.notifications.warn("You can't intimidate the house!");
+    return state;
+  }
+
+  // Target must not have busted or held
+  if (tableData.busts?.[targetId]) {
+    ui.notifications.warn("That player has already busted.");
+    return state;
+  }
+  if (tableData.holds?.[targetId]) {
+    ui.notifications.warn("That player has already held.");
+    return state;
+  }
+
+  // Get actors
+  const attackerActor = getActorForUser(userId);
+  const defenderActor = getActorForUser(targetId);
+  const attackerName = attackerActor?.name ?? game.users.get(userId)?.name ?? "Unknown";
+  const defenderName = defenderActor?.name ?? game.users.get(targetId)?.name ?? "Unknown";
+
+  // Defender skill names
+  const defenderSkillNames = {
+    wis: "Wisdom Save",
+    ins: "Insight",
+  };
+  const defenderSkillName = defenderSkillNames[defenderSkill] ?? "Wisdom Save";
+
+  // Roll attacker's Intimidation (CHA)
+  const attackRoll = await new Roll("1d20").evaluate();
+  const attackD20 = attackRoll.total;
+  const attackMod = attackerActor?.system?.skills?.itm?.total ?? 0;
+  const attackTotal = attackD20 + attackMod;
+
+  // Roll defender's chosen skill
+  const defendRoll = await new Roll("1d20").evaluate();
+  const defendD20 = defendRoll.total;
+  let defendMod = 0;
+  
+  if (defenderActor) {
+    if (defenderSkill === "wis") {
+      // Wisdom saving throw
+      defendMod = defenderActor.system?.abilities?.wis?.save ?? 0;
+    } else {
+      // Insight skill
+      defendMod = defenderActor.system?.skills?.ins?.total ?? 0;
+    }
+  }
+  const defendTotal = defendD20 + defendMod;
+
+  // Determine winner: attacker must beat (not tie) defender
+  const attackerWins = attackTotal > defendTotal;
+
+  // Post the public intimidation roll
+  await ChatMessage.create({
+    content: `<div class="tavern-intimidation-card">
+      <div class="intimidation-header">
+        <i class="fa-solid fa-comment-dots"></i>
+        <span class="intimidation-title">${attackerName} glares at ${defenderName}...</span>
+      </div>
+      <div class="intimidation-rolls">
+        <div class="intimidation-roll attacker">
+          <span class="roll-label">${attackerName} (Intimidation)</span>
+          <span class="roll-result">${attackD20} + ${attackMod} = <strong>${attackTotal}</strong></span>
+        </div>
+        <div class="intimidation-vs">VS</div>
+        <div class="intimidation-roll defender">
+          <span class="roll-label">${defenderName} (${defenderSkillName})</span>
+          <span class="roll-result">${defendD20} + ${defendMod} = <strong>${defendTotal}</strong></span>
+        </div>
+      </div>
+      <div class="intimidation-result ${attackerWins ? "success" : "failure"}">
+        ${attackerWins 
+          ? `<i class="fa-solid fa-face-fearful"></i> ${defenderName} backs down and holds!`
+          : `<i class="fa-solid fa-face-meh"></i> ${defenderName} stands firm! ${attackerName} loses their nerve and holds.`
+        }
+      </div>
+    </div>`,
+    speaker: { alias: "Tavern Twenty-One" },
+    rolls: [attackRoll, defendRoll],
+  });
+
+  // Apply results
+  const updatedHolds = { ...tableData.holds };
+  const updatedIntimidatedThisRound = { ...tableData.intimidatedThisRound, [userId]: true };
+  const updatedIntimidationBackfire = { ...tableData.intimidationBackfire };
+
+  if (attackerWins) {
+    // Target is forced to hold
+    updatedHolds[targetId] = true;
+    await playSound("reveal");
+  } else {
+    // Attacker is forced to hold AND gets disadvantage on next cheat/accuse
+    updatedHolds[userId] = true;
+    updatedIntimidationBackfire[userId] = true;
+    await playSound("lose");
+  }
+
+  // Update current player if needed (someone just held)
+  let updatedCurrentPlayer = tableData.currentPlayer;
+  const forcedHoldId = attackerWins ? targetId : userId;
+  if (tableData.currentPlayer === forcedHoldId) {
+    // The person whose turn it was just held, advance to next player
+    const tempTableData = { ...tableData, holds: updatedHolds };
+    updatedCurrentPlayer = getNextActivePlayer(state, tempTableData);
+  }
+
+  const updatedTableData = {
+    ...tableData,
+    holds: updatedHolds,
+    intimidatedThisRound: updatedIntimidatedThisRound,
+    intimidationBackfire: updatedIntimidationBackfire,
+    currentPlayer: updatedCurrentPlayer,
+  };
+
+  await addHistoryEntry({
+    type: "intimidation",
+    attacker: attackerName,
+    defender: defenderName,
+    attackRoll: attackTotal,
+    defendRoll: defendTotal,
+    success: attackerWins,
+    message: attackerWins
+      ? `${attackerName} intimidated ${defenderName} into holding!`
+      : `${attackerName} failed to intimidate ${defenderName} and held instead.`,
+  });
+
+  const next = await updateState({ tableData: updatedTableData });
+
+  // Check if all players are now finished
+  if (allPlayersFinished(state, updatedTableData)) {
+    return revealDice();
+  }
+
+  return next;
 }
 
 /**

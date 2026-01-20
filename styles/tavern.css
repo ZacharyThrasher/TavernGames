@@ -1569,3 +1569,216 @@
 .tavern-gm-perception strong:first-child {
   color: #7ab0d4;
 }
+
+/* ============================================
+   Intimidation System Styles
+   ============================================ */
+
+/* Intimidate section in controls */
+.intimidate-section {
+  border-top: 1px dashed var(--tavern-wood-highlight);
+  padding-top: var(--tavern-gap-md);
+  margin-top: var(--tavern-gap-md);
+}
+
+/* Intimidate button - dark threatening style */
+.btn-intimidate {
+  width: 100%;
+  padding: 10px;
+  background: linear-gradient(135deg, #4a2a2a 0%, #2a1a1a 100%);
+  border: 2px solid #6a3a3a;
+  color: #ffaaaa;
+  font-weight: 600;
+  border-radius: var(--tavern-radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-intimidate:hover {
+  background: linear-gradient(135deg, #5a3a3a 0%, #3a2a2a 100%);
+  border-color: #8a4a4a;
+  box-shadow: 0 0 15px rgba(170, 74, 74, 0.4);
+}
+
+.btn-intimidate i {
+  margin-right: 6px;
+}
+
+.intimidate-hint {
+  font-size: 11px;
+  color: #aa8888;
+  text-align: center;
+}
+
+/* Intimidation chat card */
+.tavern-intimidation-card {
+  background: linear-gradient(135deg, #3a2020, #2a1515);
+  border: 2px solid #6a3a3a;
+  border-radius: var(--tavern-radius-md);
+  color: var(--tavern-parchment);
+  overflow: hidden;
+}
+
+.intimidation-header {
+  background: linear-gradient(180deg, #4a2a2a, #3a1a1a);
+  padding: 12px 16px;
+  border-bottom: 1px solid #6a3a3a;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.intimidation-header i {
+  font-size: 24px;
+  color: #ffaaaa;
+}
+
+.intimidation-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #ffaaaa;
+}
+
+.intimidation-header .subtitle {
+  font-size: 12px;
+  color: #cc9999;
+  font-style: italic;
+}
+
+.intimidation-content {
+  padding: 12px 16px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.intimidation-rolls {
+  display: flex;
+  justify-content: space-around;
+  gap: 16px;
+  margin: 12px 0;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: var(--tavern-radius-sm);
+}
+
+.intimidation-roll {
+  text-align: center;
+}
+
+.intimidation-roll .roll-label {
+  font-size: 11px;
+  color: #cc9999;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.intimidation-roll .roll-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--tavern-gold-bright);
+}
+
+.intimidation-result {
+  text-align: center;
+  padding: 10px;
+  margin-top: 8px;
+  border-radius: var(--tavern-radius-sm);
+  font-weight: 600;
+}
+
+.intimidation-result.success {
+  background: rgba(74, 124, 78, 0.3);
+  border: 1px solid var(--tavern-success);
+  color: #aaffaa;
+}
+
+.intimidation-result.failure {
+  background: rgba(139, 58, 58, 0.3);
+  border: 1px solid var(--tavern-danger);
+  color: #ffaaaa;
+}
+
+/* History entry for intimidation */
+.history-entry.intimidation { border-left-color: #8a4a4a; }
+
+/* ============================================
+   Blackjack (Natural 21) Bonus Styles
+   ============================================ */
+
+/* Blackjack winner highlight in results */
+.blackjack-winner {
+  color: var(--tavern-gold-bright) !important;
+  text-shadow: 0 0 8px var(--tavern-glow), 0 0 15px rgba(255, 215, 0, 0.5);
+  font-weight: 700;
+}
+
+/* Star indicator for blackjack */
+.blackjack-star {
+  color: gold;
+  text-shadow: 0 0 5px gold, 0 0 10px rgba(255, 215, 0, 0.8);
+  animation: blackjack-sparkle 1.5s ease-in-out infinite;
+}
+
+@keyframes blackjack-sparkle {
+  0%, 100% { 
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% { 
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+}
+
+/* Blackjack banner in chat card */
+.tavern-blackjack-banner {
+  background: linear-gradient(135deg, rgba(212, 160, 74, 0.3), rgba(255, 215, 0, 0.2));
+  border: 1px solid var(--tavern-gold);
+  border-radius: var(--tavern-radius-sm);
+  padding: 8px 12px;
+  margin: 8px 0;
+  text-align: center;
+  animation: blackjack-glow 2s ease-in-out infinite;
+}
+
+@keyframes blackjack-glow {
+  0%, 100% { 
+    box-shadow: 0 0 10px rgba(212, 160, 74, 0.3);
+  }
+  50% { 
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+  }
+}
+
+.tavern-blackjack-banner strong {
+  color: var(--tavern-gold-bright);
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+
+/* Player seat blackjack indicator */
+.player-seat.blackjack {
+  border-color: var(--tavern-gold-bright);
+  box-shadow: 
+    0 0 20px var(--tavern-glow),
+    0 0 40px rgba(255, 215, 0, 0.3),
+    inset 0 0 30px rgba(212, 160, 74, 0.1);
+}
+
+.player-status-label.blackjack {
+  background: linear-gradient(135deg, var(--tavern-gold), #ffcc00);
+  color: var(--tavern-wood-dark);
+  animation: blackjack-pulse 1s ease-in-out infinite;
+}
+
+@keyframes blackjack-pulse {
+  0%, 100% { 
+    box-shadow: 0 0 5px var(--tavern-glow);
+    transform: scale(1);
+  }
+  50% { 
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
+    transform: scale(1.05);
+  }
+}

@@ -1,5 +1,5 @@
 import { MODULE_ID, getState, updateState } from "./state.js";
-import { startRound, submitRoll, hold, revealDice, finishRound, returnToLobby, cheat, accuse, skipInspection } from "./twenty-one.js";
+import { startRound, submitRoll, hold, revealDice, finishRound, returnToLobby, cheat, accuse, skipInspection, intimidate } from "./twenty-one.js";
 import { playSound } from "./sounds.js";
 
 function ensureGM() {
@@ -74,6 +74,8 @@ export async function handlePlayerAction(action, payload, userId) {
       return cheat(payload, userId);
     case "accuse":
       return accuse(payload, userId);
+    case "intimidate":
+      return intimidate(payload, userId);
     case "skipInspection":
       return skipInspection();
     case "reveal": {

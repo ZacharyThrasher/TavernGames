@@ -110,6 +110,18 @@
       </div>
     {{/if}}
 
+    {{!-- Intimidate button - available during betting phase --}}
+    {{#if canIntimidate}}
+      {{#if intimidateTargets.length}}
+        <div class="control-section intimidate-section">
+          <button type="button" class="btn btn-intimidate" data-action="intimidate">
+            <i class="fa-solid fa-comment-dots"></i> Intimidate
+          </button>
+          <p class="hint intimidate-hint">Force someone to hold. Once per round.</p>
+        </div>
+      {{/if}}
+    {{/if}}
+
     {{#if isGM}}
       <div class="control-section gm-controls">
         <button type="button" class="btn btn-secondary btn-small" data-action="reveal">

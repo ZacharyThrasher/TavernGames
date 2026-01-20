@@ -25,6 +25,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       hold: TavernApp.onHold,
       cheat: TavernApp.onCheat,
       accuse: TavernApp.onAccuse,
+      intimidate: TavernApp.onIntimidate,
       skipInspection: TavernApp.onSkipInspection,
       reveal: TavernApp.onReveal,
       newRound: TavernApp.onNewRound,
@@ -179,7 +180,23 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         return { id: p.id, name: p.name, img };
       }) : [];
     const isBusted = tableData.busts?.[userId] ?? false;
+    const isHolding = tableData.holds?.[userId] ?? false;
     const canAccuse = isInspection && state.players?.[userId] && !accusationMade && !isBusted && accuseTargets.length > 0 && !isGM;
+
+    // Intimidation context - can intimidate during betting phase if not busted/held, and haven't used it this round
+    const hasIntimidatedThisRound = tableData.intimidatedThisRound?.[userId] ?? false;
+    const isInGame = Boolean(state.players?.[userId]);
+    const canIntimidate = isBettingPhase && isInGame && !isBusted && !isHolding && !isGM && !hasIntimidatedThisRound;
+    
+    // Valid intimidation targets: other players not busted/held, not GM
+    const intimidateTargets = canIntimidate ? players
+      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !tableData.holds?.[p.id] && !game.users.get(p.id)?.isGM)
+      .map(p => {
+        const user = game.users.get(p.id);
+        const actor = user?.character;
+        const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
+        return { id: p.id, name: p.name, img };
+      }) : [];
 
     // Build history entries with formatting
     const history = (state.history ?? []).slice().reverse().map(entry => ({
@@ -215,6 +232,8 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       canAccuse,
       accusationMade,
       accuseTargets,
+      canIntimidate,
+      intimidateTargets,
       isOpeningPhase,
       isBettingPhase,
       openingRollsRemaining,
@@ -452,6 +471,98 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     
     if (result) {
       await tavernSocket.executeAsGM("playerAction", "accuse", { targetId, skill: result.skill }, game.user.id);
+    }
+  }
+
+  static async onIntimidate(event, target) {
+    const state = getState();
+    const tableData = state.tableData ?? {};
+    const userId = game.user.id;
+    const players = Object.values(state.players ?? {});
+    
+    // Build list of valid targets (not self, not busted, not holding, not GM)
+    const validTargets = players
+      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !tableData.holds?.[p.id] && !game.users.get(p.id)?.isGM)
+      .map(p => {
+        const user = game.users.get(p.id);
+        const actor = user?.character;
+        const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
+        return { id: p.id, name: p.name, img };
+      });
+    
+    if (validTargets.length === 0) {
+      return ui.notifications.warn("No valid targets to intimidate.");
+    }
+    
+    // Get intimidation modifier
+    const actor = game.user.character;
+    const itmMod = actor?.system?.skills?.itm?.total ?? 0;
+    const hasActor = !!actor;
+    
+    // Build target selection with portraits
+    const targetOptions = validTargets.map(t => 
+      `<div class="intimidate-portrait" data-target-id="${t.id}" data-target-name="${t.name}" tabindex="0" style="display: inline-block; text-align: center; padding: 8px; margin: 4px; border: 2px solid transparent; border-radius: 8px; cursor: pointer;">
+        <img src="${t.img}" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;" />
+        <div style="font-size: 0.85em; margin-top: 4px;">${t.name}</div>
+      </div>`
+    ).join("");
+    
+    const content = `
+      <form>
+        <p style="font-weight: bold; margin-bottom: 8px;">Select a target to intimidate:</p>
+        <div class="intimidate-targets" style="display: flex; flex-wrap: wrap; justify-content: center; margin-bottom: 12px;">
+          ${targetOptions}
+        </div>
+        <div class="form-group">
+          <label>Your Skill: Intimidation (CHA) ${hasActor ? `(+${itmMod})` : ""}</label>
+        </div>
+        <div class="form-group">
+          <label>Target defends with:</label>
+          <select name="defenseSkill" style="width: 100%;">
+            <option value="wis">Wisdom Save</option>
+            <option value="ins">Insight (WIS)</option>
+          </select>
+          <p class="hint" style="font-size: 0.85em; color: #666; margin-top: 4px;">(Target chooses their defense)</p>
+        </div>
+        <hr>
+        <p style="color: #c44; font-weight: bold;">WARNING: If you fail, YOU are forced to hold and get disadvantage on your next cheat or accuse roll!</p>
+      </form>
+      <style>
+        .intimidate-portrait:hover { border-color: #666; background: rgba(255,255,255,0.1); }
+        .intimidate-portrait.selected { border-color: #c44; background: rgba(200,50,50,0.2); }
+      </style>
+    `;
+    
+    let selectedTargetId = null;
+    
+    const result = await Dialog.prompt({
+      title: "Intimidate",
+      content,
+      label: "Intimidate!",
+      render: (html) => {
+        const portraits = html.find('.intimidate-portrait');
+        portraits.on('click', function() {
+          portraits.removeClass('selected');
+          $(this).addClass('selected');
+          selectedTargetId = $(this).data('target-id');
+        });
+        portraits.on('keydown', function(e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            $(this).click();
+          }
+        });
+      },
+      callback: (html) => {
+        if (!selectedTargetId) return null;
+        const defenseSkill = html.find('[name="defenseSkill"]').val();
+        return { targetId: selectedTargetId, defenseSkill };
+      },
+      rejectClose: false,
+    });
+    
+    if (result) {
+      await tavernSocket.executeAsGM("playerAction", "intimidate", result, game.user.id);
     }
   }
 
