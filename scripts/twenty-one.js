@@ -617,11 +617,20 @@ export async function submitRoll(payload, userId) {
         updatedTable.currentPlayer = getNextOpeningPlayer(state, updatedTable);
       }
     }
+    const rolling = { ...updatedTable.rolling };
+    delete rolling[userId];
+    updatedTable.rolling = rolling;
+
     return updateState({ tableData: updatedTable });
   } else {
     // Betting Phase: Pause for cheat decision
     // Do NOT advance turn yet
     updatedTable.pendingAction = "cheat_decision";
+
+    const rolling = { ...updatedTable.rolling };
+    delete rolling[userId];
+    updatedTable.rolling = rolling;
+
     return updateState({ tableData: updatedTable });
   }
 }
@@ -642,7 +651,7 @@ export async function finishTurn(userId) {
   const updatedTable = { ...tableData, pendingAction: null };
 
   const isBust = tableData.busts[userId];
-  
+
   if (isBust) {
     updatedTable.currentPlayer = getNextActivePlayer(state, updatedTable);
   } else {
@@ -2006,10 +2015,10 @@ export async function accuse(payload, userId) {
   // Look in tableData.cheaters for any record
   const targetCheaterData = tableData.cheaters?.[targetId];
   const hasCheated = targetCheaterData?.cheats?.length > 0 || targetCheaterData?.deceptionRolls?.length > 0;
-  
+
   // Also check if they were already caught (fumbled)
   const alreadyCaught = tableData.caught?.[targetId];
-  
+
   const success = hasCheated; // If they cheated at all, they are guilty (even if already caught, you can still point it out?)
   // Actually, if they are already caught, maybe you can't accuse them? 
   // "You can't accuse a player who has already been caught." - seems fair.
@@ -2022,7 +2031,7 @@ export async function accuse(payload, userId) {
 
   // Mark as accused
   const updatedAccusedThisRound = { ...tableData.accusedThisRound, [userId]: targetId };
-  
+
   // Prepare updates
   let updatedCaught = { ...tableData.caught };
   let newPot = state.pot;
@@ -2030,10 +2039,10 @@ export async function accuse(payload, userId) {
   if (success) {
     // SUCCESS
     updatedCaught[targetId] = true; // Mark as caught (disqualified from winning)
-    
+
     // Refund fee + Bounty (5x ante)
     const bounty = ante * 5;
-    
+
     // Attempt to collect bounty from cheater
     let actualBounty = 0;
     if (bounty > 0) {
@@ -2042,10 +2051,10 @@ export async function accuse(payload, userId) {
         actualBounty = bounty;
       }
     }
-    
+
     const totalReward = accusationCost + actualBounty;
     await payOutWinners({ [userId]: totalReward });
-    
+
     const bountyMsg = actualBounty > 0 ? `${actualBounty}gp bounty` : "no bounty (they're broke!)";
 
     await createChatCard({
@@ -2481,7 +2490,7 @@ export async function hunch(userId) {
 
   // V3: Mark as acted (affects Fold refund)
   tableData.hasActed = { ...tableData.hasActed, [userId]: true };
-  
+
   // Increment skill usage
   tableData.skillsUsed = { ...tableData.skillsUsed, [userId]: (tableData.skillsUsed?.[userId] ?? 0) + 1 };
 
@@ -2942,7 +2951,7 @@ export async function bumpTable(payload, userId) {
   const { targetId } = payload;
   const dieIndex = Number(payload.dieIndex);
 
-// ... (skipping down to die check) ...
+  const targetRolls = tableData.rolls[targetId] ?? [];
 
   if (Number.isNaN(dieIndex) || dieIndex < 0 || dieIndex >= targetRolls.length) {
     ui.notifications.warn("Invalid die selection.");
@@ -2957,7 +2966,7 @@ export async function bumpTable(payload, userId) {
   }
 
   // V3: Must be your turn (skill is bonus action)
-// ...
+  // ...
 
   // Mark that attacker has bumped this round
   const updatedBumpedThisRound = { ...tableData.bumpedThisRound, [userId]: true };
@@ -2967,7 +2976,7 @@ export async function bumpTable(payload, userId) {
   const updatedSkillsUsed = { ...tableData.skillsUsed, [userId]: (tableData.skillsUsed?.[userId] ?? 0) + 1 };
 
   if (success) {
-// ...
+    // ...
     const updatedTableData = {
       ...tableData,
       rolls: updatedRolls,
@@ -2977,7 +2986,7 @@ export async function bumpTable(payload, userId) {
       bumpedThisRound: updatedBumpedThisRound,
       skillsUsed: updatedSkillsUsed,
     };
-// ...
+    // ...
     await createChatCard({
       title: "Table Bump!",
       subtitle: `${attackerName} vs ${targetName}`,
@@ -3017,7 +3026,7 @@ export async function bumpTable(payload, userId) {
     };
 
     await addHistoryEntry({
-// ...
+      // ...
     });
 
     // Create failure chat card (awaiting retaliation)

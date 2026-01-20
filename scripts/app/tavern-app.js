@@ -236,7 +236,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
         return { id: p.id, name: p.name, img };
       }) : [];
-    
+
     // V3: Accuse available at all times during round
     const canAccuse = isInGame && !accusedThisRound && !isBusted && accuseTargets.length > 0 && !isGM;
 
@@ -558,7 +558,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const myRolls = updatedState.tableData?.rolls?.[game.user.id] ?? [];
     const lastDieIndex = myRolls.length - 1;
 
-    if (lastDieIndex >= 0 && !updatedState.tableData?.busts?.[game.user.id]) {
+    if (lastDieIndex >= 0 && !updatedState.tableData?.busts?.[game.user.id] && !game.user.isGM) {
       const lastDie = myRolls[lastDieIndex];
       const actor = game.user.character;
       const sltMod = actor?.system?.skills?.slt?.total ?? 0;
