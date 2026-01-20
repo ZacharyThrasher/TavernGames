@@ -9,6 +9,16 @@ import { tavernSocket } from "./socket.js";
 const VALID_DICE = [20, 10, 8, 6, 4];
 const OPENING_ROLLS_REQUIRED = 2;
 
+// Iron Liver Patch: Themed duel challenges
+const DUEL_CHALLENGES = {
+  str: { name: "Arm Wrestling", desc: "Lock hands and slam 'em down!", icon: "fa-solid fa-hand-fist" },
+  dex: { name: "Quick-Draw Dice Catch", desc: "Fastest hand on the table wins!", icon: "fa-solid fa-hand" },
+  con: { name: "Iron Liver Shot Contest", desc: "Last one standing takes all!", icon: "fa-solid fa-wine-bottle" },
+  int: { name: "Riddle-Off", desc: "Answer quick or lose your gold!", icon: "fa-solid fa-brain" },
+  wis: { name: "Staring Contest", desc: "First to blink loses the pot!", icon: "fa-solid fa-eye" },
+  cha: { name: "Crowd Cheering", desc: "Win the crowd, win the duel!", icon: "fa-solid fa-users" },
+};
+
 /**
  * V2.0 Economy: Get the cost for rolling a specific die
  * d20 = FREE, d10 = ½ ante, d6/d8 = 1x ante, d4 = 2x ante
@@ -29,6 +39,19 @@ export function getDieCost(die, ante) {
  */
 function getGMUserIds() {
   return game.users.filter(u => u.isGM).map(u => u.id);
+}
+
+/**
+ * Send a notification to a specific user (routes via socket to their client)
+ * This fixes notifications appearing on GM screen when actions run via executeAsGM
+ */
+async function notifyUser(userId, message, type = "warn") {
+  try {
+    await tavernSocket.executeAsUser("showNotification", userId, message, type);
+  } catch (e) {
+    // Fallback to local notification if socket fails
+    ui.notifications[type]?.(message) ?? ui.notifications.warn(message);
+  }
 }
 
 function emptyTableData() {
@@ -62,6 +85,93 @@ function emptyTableData() {
     scannedBy: {},             // { [targetId]: [scannerId, ...] } - who has been scanned by whom
     // V2.0: Duel state for ties
     duel: null,                // { participants: [], contestType, stat, rolls: {} } or null
+    // Iron Liver: Liquid Currency - drink tracking
+    drinkCount: {},            // { [userId]: number } - drinks taken this round
+    sloppy: {},                // { [userId]: true } - has Sloppy condition (disadvantage)
+  };
+}
+
+/**
+ * Iron Liver: Liquid Currency - Attempt to pay a cost by drinking instead of paying gold.
+ * @param {string} userId - The user attempting to drink
+ * @param {number} drinksNeeded - Number of drinks (1 drink = 1 ante value)
+ * @param {object} tableData - Current table data
+ * @returns {object} { success: boolean, tableData: updated, bust: boolean, sloppy: boolean }
+ */
+async function drinkForPayment(userId, drinksNeeded, tableData) {
+  const actor = getActorForUser(userId);
+  const playerName = actor?.name ?? game.users.get(userId)?.name ?? "Unknown";
+
+  // Calculate DC: 10 + (2 per drink this round)
+  const currentDrinks = tableData.drinkCount?.[userId] ?? 0;
+  const newDrinkTotal = currentDrinks + drinksNeeded;
+  const dc = 10 + (2 * newDrinkTotal);
+
+  // Roll CON save
+  const conMod = actor?.system?.abilities?.con?.mod ?? 0;
+  const roll = await new Roll("1d20").evaluate();
+  const d20 = roll.total;
+  const total = d20 + conMod;
+  const isNat1 = d20 === 1;
+  const success = !isNat1 && total >= dc;
+
+  // Update drink count
+  const updatedDrinkCount = { ...tableData.drinkCount, [userId]: newDrinkTotal };
+  let updatedSloppy = { ...tableData.sloppy };
+  let updatedBusts = { ...tableData.busts };
+  let bust = false;
+  let sloppy = false;
+
+  // Determine result
+  if (isNat1) {
+    // Critical failure - pass out = bust
+    bust = true;
+    updatedBusts[userId] = true;
+    await createChatCard({
+      title: "Passed Out!",
+      subtitle: `${playerName} had one too many...`,
+      message: `<strong>${playerName}</strong> tried to drink ${drinksNeeded} ${drinksNeeded === 1 ? 'drink' : 'drinks'} (DC ${dc})<br>
+        <span style="color: #ff6666;">Rolled: ${d20} + ${conMod} = ${total}</span><br>
+        <strong style="color: #ff4444;">NAT 1! They pass out cold!</strong>`,
+      icon: "fa-solid fa-skull",
+    });
+    await playSound("lose");
+  } else if (!success) {
+    // Failed save - gain Sloppy condition
+    sloppy = true;
+    updatedSloppy[userId] = true;
+    await createChatCard({
+      title: "Getting Sloppy...",
+      subtitle: `${playerName} can't hold their liquor!`,
+      message: `<strong>${playerName}</strong> tried to drink ${drinksNeeded} ${drinksNeeded === 1 ? 'drink' : 'drinks'} (DC ${dc})<br>
+        <span style="color: #ffaa66;">Rolled: ${d20} + ${conMod} = ${total}</span><br>
+        <em style="color: #ffaa66;">SLOPPY: Disadvantage on INT/WIS/CHA/DEX checks!</em>`,
+      icon: "fa-solid fa-wine-glass",
+    });
+    await playSound("coins");
+  } else {
+    // Success - handled it like a champ
+    await createChatCard({
+      title: "Iron Liver!",
+      subtitle: `${playerName} takes a drink...`,
+      message: `<strong>${playerName}</strong> downed ${drinksNeeded} ${drinksNeeded === 1 ? 'drink' : 'drinks'} (DC ${dc})<br>
+        <span style="color: #88ff88;">Rolled: ${d20} + ${conMod} = ${total}</span><br>
+        <em>"Put it on my tab!"</em>`,
+      icon: "fa-solid fa-beer-mug-empty",
+    });
+    await playSound("coins");
+  }
+
+  return {
+    success: true, // Payment always "succeeds" (they pay with their liver)
+    tableData: {
+      ...tableData,
+      drinkCount: updatedDrinkCount,
+      sloppy: updatedSloppy,
+      busts: updatedBusts,
+    },
+    bust,
+    sloppy,
   };
 }
 
@@ -198,12 +308,12 @@ export async function submitRoll(payload, userId) {
     return state;
   }
 
-  const tableData = state.tableData ?? emptyTableData();
+  let tableData = state.tableData ?? emptyTableData();
   const ante = game.settings.get(MODULE_ID, "fixedAnte");
   const isOpeningPhase = tableData.phase === "opening";
 
   if (tableData.currentPlayer !== userId) {
-    ui.notifications.warn("It's not your turn.");
+    await notifyUser(userId, "It's not your turn.");
     return state;
   }
 
@@ -228,14 +338,27 @@ export async function submitRoll(payload, userId) {
       rollCost = getDieCost(die, ante);
 
       if (rollCost > 0) {
-        // Check if player can afford to roll
-        const canAfford = await deductFromActor(userId, rollCost);
-        if (!canAfford) {
-          ui.notifications.warn(`You need ${rollCost}gp to roll a d${die}.`);
-          return state;
+        // Iron Liver: Check for drink payment
+        if (payload.payWithDrink) {
+          const drinksNeeded = Math.ceil(rollCost / ante);
+          const drinkResult = await drinkForPayment(userId, drinksNeeded, tableData);
+          tableData = drinkResult.tableData; // Update local state with drink/sloppy changes
+
+          if (drinkResult.bust) {
+            // Player passed out - end their turn immediately
+            return updateState({ tableData });
+          }
+          // Payment successful (via liver). Pot does NOT increase.
+        } else {
+          // Check if player can afford to roll (Gold)
+          const canAfford = await deductFromActor(userId, rollCost);
+          if (!canAfford) {
+            await notifyUser(userId, `You need ${rollCost}gp to roll a d${die}.`);
+            return state;
+          }
+          newPot = state.pot + rollCost;
+          await playSound("coins");
         }
-        newPot = state.pot + rollCost;
-        await playSound("coins");
       }
       // d20 is free, no deduction needed
     }
@@ -407,7 +530,7 @@ export async function hold(userId) {
   const tableData = state.tableData ?? emptyTableData();
 
   if (tableData.currentPlayer !== userId) {
-    ui.notifications.warn("It's not your turn.");
+    await notifyUser(userId, "It's not your turn.");
     return state;
   }
 
@@ -426,7 +549,7 @@ export async function hold(userId) {
 
   // Can't hold if goaded (must roll instead)
   if (tableData.goadBackfire?.[userId]?.mustRoll) {
-    ui.notifications.warn("You were goaded! You must roll instead.");
+    await notifyUser(userId, "You were goaded! You must roll instead.");
     return state;
   }
 
@@ -644,13 +767,16 @@ export async function finishRound() {
       getActorForUser(id)?.name ?? game.users.get(id)?.name ?? "Unknown"
     ).join(" vs ");
 
+    // Get themed challenge info
+    const challenge = DUEL_CHALLENGES[contestType] ?? { name: contestStat, desc: "May the best player win!", icon: "fa-solid fa-crossed-swords" };
+
     await createChatCard({
-      title: "The Duel!",
-      subtitle: "A tie demands resolution!",
+      title: challenge.name,
+      subtitle: "The Duel!",
       message: `<strong>${duelParticipantNames}</strong> are tied!<br>
-        <em>The contest is...</em> <strong style="font-size: 1.2em;">${contestStat.toUpperCase()}!</strong><br>
-        Each duelist must roll 1d20 + ${contestStat} modifier.`,
-      icon: "fa-solid fa-crossed-swords",
+        <em>${challenge.desc}</em><br>
+        <span style="font-size: 0.9em; color: #888;">Roll 1d20 + ${contestStat} modifier</span>`,
+      icon: challenge.icon,
     });
 
     await playSound("reveal");
@@ -877,12 +1003,15 @@ async function resolveDuel() {
 
     const tiedNames = winners.map(w => w.playerName).join(" vs ");
 
+    // Get themed challenge info for re-duel
+    const challenge = DUEL_CHALLENGES[newContestType] ?? { name: newContestStat, desc: "May the best player win!", icon: "fa-solid fa-repeat" };
+
     await createChatCard({
       title: "Still Tied!",
-      subtitle: `Round ${duel.round} ends in a draw!`,
+      subtitle: `Re-duel: ${challenge.name}`,
       message: `<strong>${tiedNames}</strong> are still tied at ${highestTotal}!<br>
-        <em>Re-duel in...</em> <strong style="font-size: 1.2em;">${newContestStat.toUpperCase()}!</strong>`,
-      icon: "fa-solid fa-repeat",
+        <em>${challenge.desc}</em>`,
+      icon: challenge.icon,
     });
 
     await playSound("reveal");
@@ -1047,6 +1176,13 @@ export async function cheat(payload, userId) {
     return state;
   }
 
+  // V2.0.2: Prevent cheating in 1v1 with GM (no one to detect you)
+  const nonGMPlayers = state.turnOrder.filter(id => !game.users.get(id)?.isGM);
+  if (nonGMPlayers.length <= 1) {
+    await notifyUser(userId, "Cheating requires at least 2 players (the GM always knows).");
+    return state;
+  }
+
   const tableData = state.tableData ?? emptyTableData();
   const { dieIndex, newValue, cheatType = "physical", skill = "slt" } = payload;
 
@@ -1086,13 +1222,15 @@ export async function cheat(payload, userId) {
     return state;
   }
 
-  // Roll the check
+  // Roll the check (Iron Liver: Sloppy = disadvantage)
   const actor = getActorForUser(userId);
+  const isSloppy = tableData.sloppy?.[userId] ?? false;
   let rollTotal = 10;
   let modifier = 0;
   let d20Result = 10;
 
-  const roll = await new Roll("1d20").evaluate();
+  // Roll with disadvantage if Sloppy
+  const roll = await new Roll(isSloppy ? "2d20kl" : "1d20").evaluate();
   d20Result = roll.total;
 
   if (actor) {
@@ -1316,17 +1454,22 @@ export async function scan(payload, userId) {
   }
   await playSound("coins");
 
-  // Get actors
+  const currentTableData = tableData;
+
+  // Get actors and roll with disadvantage if Sloppy
   const scannerActor = getActorForUser(userId);
   const scannerName = scannerActor?.name ?? game.users.get(userId)?.name ?? "Unknown";
   const targetActor = getActorForUser(targetId);
+
+  // Scan roll (Insight vs Tell DC // Arcana vs Residue DC)
+  const isScannerSloppy = currentTableData.sloppy?.[userId] ?? false;
   const targetName = targetActor?.name ?? game.users.get(targetId)?.name ?? "Unknown";
 
-  // Roll the scan skill
   const skillName = scanType === "arcana" ? "Arcana" : "Insight";
   const skillKey = scanType === "arcana" ? "arc" : "ins";
 
-  const roll = await new Roll("1d20").evaluate();
+  // Roll d20 (with disadvantage if sloppy)
+  const roll = await new Roll(isScannerSloppy ? "2d20kl" : "1d20").evaluate();
   const d20Result = roll.total;
   const skillMod = scannerActor?.system?.skills?.[skillKey]?.total ?? 0;
   const scanRoll = d20Result + skillMod;
@@ -1446,6 +1589,13 @@ export async function accuse(payload, userId) {
     return state;
   }
 
+  // Can't accuse the GM
+  const targetUser = game.users.get(targetId);
+  if (targetUser?.isGM) {
+    ui.notifications.warn("You can't accuse the house!");
+    return state;
+  }
+
   // Only one accusation allowed per round
   if (tableData.accusation) {
     ui.notifications.warn("An accusation has already been made this round.");
@@ -1464,10 +1614,15 @@ export async function accuse(payload, userId) {
   // Check if player can afford it
   const canAfford = await deductFromActor(userId, accusationCost);
   if (!canAfford) {
-    ui.notifications.warn(`You need ${accusationCost}gp (2x ante) to make an accusation.`);
+    await notifyUser(userId, `You need ${accusationCost}gp (2x ante) to make an accusation.`);
     return state;
   }
   await playSound("coins");
+
+  // V2.0: No skill roll - direct accusation
+  // Simply check if target is in cheaters list
+  const targetCheaterData = tableData.cheaters?.[targetId];
+  const caught = { ...tableData.caught };
 
   const accuserActor = getActorForUser(userId);
   const accuserName = accuserActor?.name ?? game.users.get(userId)?.name ?? "Unknown";
@@ -1475,8 +1630,6 @@ export async function accuse(payload, userId) {
 
   // V2.0: No skill roll - direct accusation
   // Simply check if target is in cheaters list
-  const targetCheaterData = tableData.cheaters?.[targetId];
-  const caught = { ...tableData.caught };
   const success = !!targetCheaterData; // If they have any cheat records, they cheated
 
   if (success) {
@@ -1617,14 +1770,16 @@ export async function goad(payload, userId) {
   };
   const attackerSkillName = attackerSkillNames[attackerSkill] ?? "Intimidation";
 
-  // Roll attacker's chosen skill
-  const attackRoll = await new Roll("1d20").evaluate();
+  // Roll attacker's chosen skill (Iron Liver: Sloppy = disadvantage)
+  const isAttackerSloppy = tableData.sloppy?.[userId] ?? false;
+  const attackRoll = await new Roll(isAttackerSloppy ? "2d20kl" : "1d20").evaluate();
   const attackD20 = attackRoll.total;
   const attackMod = attackerActor?.system?.skills?.[attackerSkill]?.total ?? 0;
   const attackTotal = attackD20 + attackMod;
 
-  // Roll defender's Insight
-  const defendRoll = await new Roll("1d20").evaluate();
+  // Roll defender's Insight (Iron Liver: Sloppy = disadvantage)
+  const isDefenderSloppy = tableData.sloppy?.[targetId] ?? false;
+  const defendRoll = await new Roll(isDefenderSloppy ? "2d20kl" : "1d20").evaluate();
   const defendD20 = defendRoll.total;
   const defendMod = defenderActor?.system?.skills?.ins?.total ?? 0;
   const defendTotal = defendD20 + defendMod;
@@ -1857,36 +2012,46 @@ export async function bumpTable(payload, userId) {
     });
   }
 
-  // Roll defender's Dex Save
-  let dexSaveRoll = 10;
-  let dexSaveMod = 0;
-  let dexSaveD20 = 10;
+  // Iron Liver: Immovable Object - auto-select best save for defender
+  // The defender's higher modifier between DEX and CON is used
+  const dexMod = targetActor?.system?.abilities?.dex?.mod ?? 0;
+  const conMod = targetActor?.system?.abilities?.con?.mod ?? 0;
+  const defenderSaveType = conMod > dexMod ? "con" : "dex";
+  const saveName = defenderSaveType === "con" ? "Constitution Save" : "Dexterity Save";
+  const saveFlavorDex = `${targetName} tries to catch their dice...`;
+  const saveFlavorCon = `${targetName} braces against the table...`;
+  const saveFlavor = defenderSaveType === "con" ? saveFlavorCon : saveFlavorDex;
+
+  // Roll defender's save (DEX or CON)
+  let defenderSaveRoll = 10;
+  let defenderSaveMod = 0;
+  let defenderSaveD20 = 10;
 
   const defenderRoll = await new Roll("1d20").evaluate();
-  dexSaveD20 = defenderRoll.total;
+  defenderSaveD20 = defenderRoll.total;
 
   if (targetActor) {
-    dexSaveMod = targetActor.system?.abilities?.dex?.mod ?? 0;
-    dexSaveRoll = dexSaveD20 + dexSaveMod;
+    defenderSaveMod = targetActor.system?.abilities?.[defenderSaveType]?.mod ?? 0;
+    defenderSaveRoll = defenderSaveD20 + defenderSaveMod;
 
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor: targetActor }),
-      flavor: `<em>${targetName} tries to catch their dice...</em><br>Dexterity Save`,
-      content: `<div class="dice-roll"><div class="dice-result"><div class="dice-formula">1d20 + ${dexSaveMod}</div><div class="dice-tooltip"><section class="tooltip-part"><div class="dice"><ol class="dice-rolls"><li class="roll die d20">${dexSaveD20}</li></ol></div></section></div><h4 class="dice-total">${dexSaveRoll}</h4></div></div>`,
+      flavor: `<em>${saveFlavor}</em><br>${saveName}`,
+      content: `<div class="dice-roll"><div class="dice-result"><div class="dice-formula">1d20 + ${defenderSaveMod}</div><div class="dice-tooltip"><section class="tooltip-part"><div class="dice"><ol class="dice-rolls"><li class="roll die d20">${defenderSaveD20}</li></ol></div></section></div><h4 class="dice-total">${defenderSaveRoll}</h4></div></div>`,
       rolls: [defenderRoll],
     });
   } else {
-    dexSaveRoll = dexSaveD20;
+    defenderSaveRoll = defenderSaveD20;
     await ChatMessage.create({
       speaker: { alias: game.users.get(targetId)?.name ?? "Unknown" },
-      flavor: `<em>Trying to catch the dice...</em><br>Dexterity Save`,
-      content: `<div class="dice-roll"><div class="dice-result"><div class="dice-formula">1d20</div><div class="dice-tooltip"><section class="tooltip-part"><div class="dice"><ol class="dice-rolls"><li class="roll die d20">${dexSaveD20}</li></ol></div></section></div><h4 class="dice-total">${dexSaveRoll}</h4></div></div>`,
+      flavor: `<em>${saveFlavor}</em><br>${saveName}`,
+      content: `<div class="dice-roll"><div class="dice-result"><div class="dice-formula">1d20</div><div class="dice-tooltip"><section class="tooltip-part"><div class="dice"><ol class="dice-rolls"><li class="roll die d20">${defenderSaveD20}</li></ol></div></section></div><h4 class="dice-total">${defenderSaveRoll}</h4></div></div>`,
       rolls: [defenderRoll],
     });
   }
 
   // Determine winner: attacker must beat defender
-  const success = athleticsRoll > dexSaveRoll;
+  const success = athleticsRoll > defenderSaveRoll;
 
   // Mark that attacker has bumped this round
   const updatedBumpedThisRound = { ...tableData.bumpedThisRound, [userId]: true };

@@ -35,6 +35,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       reveal: TavernApp.onReveal,
       newRound: TavernApp.onNewRound,
       reset: TavernApp.onReset,
+      toggleLiquidMode: TavernApp.onToggleLiquidMode,
     },
     classes: ["tavern-dice-master"],
   };
@@ -62,6 +63,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const players = Object.values(state.players ?? {});
     const tableData = state.tableData ?? {};
     const ante = game.settings.get(MODULE_ID, "fixedAnte");
+    const liquidMode = game.settings.get(MODULE_ID, "liquidMode");
 
     // Build rich player data for display
     const playerSeats = players.map((player) => {
@@ -283,6 +285,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       isGM,
       userId,
       ante,
+      liquidMode,
       pot: state.pot,
       accusationCost,
       status: state.status,
@@ -453,7 +456,44 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       console.warn("Tavern Twenty-One | No die value found on target");
       return;
     }
-    await tavernSocket.executeAsGM("playerAction", "roll", { die }, game.user.id);
+
+    // Iron Liver: Check payment
+    // Check toggle setting first
+    const liquidMode = game.settings.get(MODULE_ID, "liquidMode");
+
+    const state = getState();
+    const ante = game.settings.get(MODULE_ID, "fixedAnte");
+    const isBettingPhase = state.tableData?.phase === "betting";
+
+    // Cost only applies during betting phase
+    const cost = isBettingPhase ? getDieCost(parseInt(die), ante) : 0;
+
+    let payWithDrink = false;
+
+    // Check liquid mode or Fallback to prompt if broke
+    if (liquidMode) {
+      payWithDrink = true;
+    } else {
+      // Check if broke - prompt if necessary
+      const actor = game.user.character;
+      const gp = actor?.system?.currency?.gp ?? 0;
+      if (cost > 0 && gp < cost) {
+        const confirm = await Dialog.confirm({
+          title: "Insufficient Gold",
+          content: `<p>You don't have enough gold (${cost}gp).</p><p><strong>Put it on the Tab?</strong></p>`
+        });
+        if (!confirm) return;
+        payWithDrink = true;
+      }
+    }
+
+    await tavernSocket.executeAsGM("playerAction", "roll", { die, payWithDrink }, game.user.id);
+  }
+
+  static async onToggleLiquidMode(event, target) {
+    const current = game.settings.get(MODULE_ID, "liquidMode");
+    await game.settings.set(MODULE_ID, "liquidMode", !current);
+    if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
   }
 
   static async onHold() {
@@ -1045,5 +1085,92 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
   // V2.0: Handle duel roll submission
   static async onDuelRoll() {
     await tavernSocket.executeAsGM("playerAction", "duelRoll", {}, game.user.id);
+  }
+
+  /**
+   * Iron Liver: Liquid Currency - Prompt for payment method (Gold or Drink)
+   * @param {number} cost - The cost in GP
+   * @param {number} ante - The current ante size
+   * @param {string} purpose - Label for what is being bought (e.g. "Buy d8", "Scan")
+   * @returns {Promise<string|null>} "gold", "drink", or null (cancel)
+   */
+  static async promptPayment(cost, ante, purpose) {
+    if (cost <= 0) return "gold"; // Free actions don't need payment
+
+    const drinksNeeded = Math.ceil(cost / ante);
+
+    // Check gold
+    const actor = game.user.character;
+    const gp = actor?.system?.currency?.gp ?? 0;
+    const canAffordGold = gp >= cost;
+    const isGM = game.user.isGM;
+
+    // GM always "pays" with gold (house money)
+    if (isGM) return "gold";
+
+    // If holding Shift, force prompt even if they can afford it
+    // Or if they can't afford it, force prompt
+    if (!event.shiftKey && canAffordGold) return "gold";
+
+    // Build dialog
+    const content = `
+      <div class="tavern-payment-dialog">
+        <p class="payment-title">Payment Required: <strong>${cost}gp</strong></p>
+        <p class="payment-purpose">${purpose}</p>
+        <hr>
+        <div class="payment-options">
+          <button type="button" class="btn-payment gold ${!canAffordGold ? 'disabled' : ''}" data-method="gold" ${!canAffordGold ? 'disabled' : ''}>
+            <div class="payment-icon"><i class="fa-solid fa-coins"></i></div>
+            <div class="payment-details">
+              <span class="payment-label">Pay Gold</span>
+              <span class="payment-cost">${cost} gp</span>
+              <span class="payment-balance ${!canAffordGold ? 'insufficient' : ''}">(Have: ${gp} gp)</span>
+            </div>
+          </button>
+          
+          <button type="button" class="btn-payment drink" data-method="drink">
+            <div class="payment-icon"><i class="fa-solid fa-beer-mug-empty"></i></div>
+            <div class="payment-details">
+              <span class="payment-label">Put it on the Tab</span>
+              <span class="payment-cost">${drinksNeeded} Drink${drinksNeeded > 1 ? 's' : ''}</span>
+              <span class="payment-desc">Roll CON Save (DC 10+)</span>
+            </div>
+          </button>
+        </div>
+        <p class="hint" style="text-align: center; margin-top: 8px; font-size: 0.85em; color: #888;">
+          <i class="fa-solid fa-info-circle"></i> Hold SHIFT to show this menu when you have gold.
+        </p>
+      </div>
+      <style>
+        .tavern-payment-dialog .payment-options { display: flex; gap: 10px; margin: 10px 0; }
+        .btn-payment { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 10px; border: 2px solid #444; border-radius: 8px; background: rgba(0,0,0,0.2); cursor: pointer; transition: all 0.2s; }
+        .btn-payment:hover:not(.disabled) { border-color: #aaa; background: rgba(255,255,255,0.1); }
+        .btn-payment.gold:hover:not(.disabled) { border-color: #ffd700; box-shadow: 0 0 10px rgba(255, 215, 0, 0.2); }
+        .btn-payment.drink:hover { border-color: #ffaa00; box-shadow: 0 0 10px rgba(255, 170, 0, 0.2); }
+        .btn-payment.disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(1); }
+        .payment-icon { font-size: 2em; margin-bottom: 5px; }
+        .payment-label { font-weight: bold; font-size: 1.1em; }
+        .payment-cost { font-size: 1.2em; color: #fff; margin: 2px 0; }
+        .payment-balance { font-size: 0.85em; color: #888; }
+        .payment-balance.insufficient { color: #ff4444; }
+      </style>
+    `;
+
+    return new Promise((resolve) => {
+      const d = new Dialog({
+        title: "Payment Method",
+        content,
+        buttons: {},
+        render: (html) => {
+          html.find('.btn-payment').on('click', function () {
+            const method = $(this).data('method');
+            d.close();
+            resolve(method);
+          });
+        },
+        close: () => resolve(null)
+      });
+      d.render(true);
+    });
   }
 }

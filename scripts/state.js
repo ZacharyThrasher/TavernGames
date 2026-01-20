@@ -20,6 +20,16 @@ export function registerSettings() {
     type: Boolean,
     default: true,
   });
+
+  // V2.0.2: Liquid Mode Toggle (Client setting, UI controlled)
+  game.settings.register(MODULE_ID, "liquidMode", {
+    name: "Liquid Mode",
+    hint: "Pay with your liver instead of gold.",
+    scope: "client",
+    config: false,
+    type: Boolean,
+    default: false,
+  });
 }
 
 export async function preloadTemplates() {
@@ -102,7 +112,7 @@ export async function updateState(patch) {
     throw new Error("Tavern state macro not found.");
   }
   const current = getState();
-  
+
   // Manual merge to ensure arrays are replaced, not merged by index
   const next = {
     ...current,
@@ -120,10 +130,10 @@ export async function updateState(patch) {
       ? [...patch.turnOrder]
       : current.turnOrder,
   };
-  
+
   console.log("Tavern Twenty-One | Updating state:", { current, patch, next });
   console.log("Tavern Twenty-One | turnOrder after update:", next.turnOrder);
-  
+
   // IMPORTANT: Foundry's setFlag uses mergeObject which merges arrays by index.
   // To ensure clean replacement, unset the flag first, then set the new state.
   await macro.unsetFlag(MODULE_ID, "state");

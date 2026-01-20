@@ -2415,3 +2415,60 @@
 .history-entry.duel_end {
   border-left-color: var(--tavern-gold);
 }
+
+/* Liquid Mode Toggle */
+.liquid-mode-toggle {
+  margin-bottom: var(--tavern-gap-md);
+}
+
+.btn-toggle-liquid {
+  width: 100%;
+  padding: 10px;
+  background: var(--tavern-wood-medium);
+  border: 1px solid var(--tavern-wood-highlight);
+  color: var(--tavern-parchment-dark);
+  border-radius: var(--tavern-radius-md);
+  font-family: inherit;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-toggle-liquid:hover {
+  background: var(--tavern-wood-light);
+  color: var(--tavern-gold);
+}
+
+.btn-toggle-liquid.active {
+  background: linear-gradient(135deg, #7c2a2a 0%, #4a1a1a 100%);
+  border-color: #a63a3a;
+  color: #ffcccc;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 0 5px rgba(255, 50, 50, 0.4);
+}
+
+.btn-toggle-liquid.active i {
+  color: #ff5555;
+  animation: pulse-drink 2s infinite;
+}
+
+@keyframes pulse-drink {
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+    text-shadow: 0 0 8px red;
+  }
+}

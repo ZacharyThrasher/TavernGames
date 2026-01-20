@@ -165,6 +165,37 @@ When two or more players tie for the winning total:
 
 ---
 
+## Iron Liver Rules (V2.0.2)
+
+### Liquid Currency ("Put it on the Tab")
+High-constitution characters can use their liver to pay for actions when gold is tight.
+
+- **Action**: Toggle the **"Put it on the Tab"** button in your controls. When active, buying a die will charge your liver instead of gold.
+- **Restriction**: You must pay **gold** for Scans and Accusations.
+- **Cost**: 1 Drink per Ante required.
+- **The Roll**: Make a **Constitution Save**.
+  - **DC**: 10 + (2 × Drinks taken this round)
+  - **Success**: The drink goes down smooth. The action is free!
+  - **Failure**: You gain the **Sloppy** condition.
+  - **Natural 1**: You pass out immediately! This counts as a **Bust**.
+
+### The "Sloppy" Condition
+Alcohol impairs your judgment and fine motor skills.
+- **Effect**: You have **Disadvantage** on all Intelligence, Wisdom, Charisma, and Dexterity checks.
+- **Impacts**:
+  - **Cheating**: Roll 2d20 drop highest (harder to cheat).
+  - **Scanning**: Roll 2d20 drop highest (harder to spot cheaters).
+  - **Goading**: Roll 2d20 drop highest (harder to intimidate/persuade).
+  - **Resisting Goad**: Roll 2d20 drop highest (easier to be goaded).
+- **Duration**: Lasts until the end of the round.
+
+### Immovable Object (Bump Defense)
+When someone tries to **Bump the Table** against you:
+- You may defend with **Constitution Save** OR **Dexterity Save** (whichever modifier is higher is automatically used).
+- Being "Sloppy" gives disadvantage on Dexterity saves, but not Constitution saves!
+
+---
+
 ## Tips
 
 - **d20 is free but risky** - Use for opening or desperate plays

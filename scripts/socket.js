@@ -4,6 +4,11 @@ import { showRollToUser } from "./dice.js";
 
 export let tavernSocket;
 
+// Client-side function to show notification to specific user
+function showNotification(message, type = "warn") {
+  ui.notifications[type]?.(message) ?? ui.notifications.warn(message);
+}
+
 export function setupSockets() {
   tavernSocket = socketlib.registerModule(MODULE_ID);
   tavernSocket.register("joinTable", handleJoinTable);
@@ -11,7 +16,10 @@ export function setupSockets() {
   tavernSocket.register("startRound", handleStartRound);
   tavernSocket.register("playerAction", handlePlayerAction);
   tavernSocket.register("resetTable", handleResetTable);
-  
+
   // Register client-side function for showing dice rolls
   tavernSocket.register("showRoll", showRollToUser);
+
+  // Register client-side function for showing notifications to specific users
+  tavernSocket.register("showNotification", showNotification);
 }
