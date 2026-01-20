@@ -259,6 +259,28 @@
   {{/if}}
   {{/if}}
 
+  {{!-- Global Accuse Section (Available anytime during round) --}}
+  {{#if canAccuse}}
+  <div class="control-section accuse-section-global">
+    <h3><i class="fa-solid fa-hand-point-right"></i> Accuse</h3>
+    <div class="accuse-section">
+      <label>Who do you suspect?</label>
+      <div class="accuse-portraits">
+        {{#each accuseTargets}}
+        <div class="accuse-portrait" data-target-id="{{this.id}}" data-target-name="{{this.name}}" tabindex="0">
+          <img src="{{this.img}}" alt="{{this.name}}" />
+          <span class="portrait-name">{{this.name}}</span>
+        </div>
+        {{/each}}
+      </div>
+      <button type="button" class="btn btn-accuse" data-action="accuse" disabled>
+        <i class="fa-solid fa-hand-point-right"></i> Accuse ({{accusationCost}}gp)
+      </button>
+    </div>
+    <p class="hint">Click a portrait to select. Cost: 2× ante. Bounty: 5× ante if correct!</p>
+  </div>
+  {{/if}}
+
   {{!-- Staredown / Accusation state --}}
   {{#if isInspection}}
   <div class="control-section staredown">
@@ -285,23 +307,6 @@
     {{/if}}
     {{/if}}
 
-    {{#if canAccuse}}
-    <div class="accuse-section">
-      <label>Who do you suspect?</label>
-      <div class="accuse-portraits">
-        {{#each accuseTargets}}
-        <div class="accuse-portrait" data-target-id="{{this.id}}" data-target-name="{{this.name}}" tabindex="0">
-          <img src="{{this.img}}" alt="{{this.name}}" />
-          <span class="portrait-name">{{this.name}}</span>
-        </div>
-        {{/each}}
-      </div>
-      <button type="button" class="btn btn-accuse" data-action="accuse" disabled>
-        <i class="fa-solid fa-hand-point-right"></i> Accuse ({{accusationCost}}gp)
-      </button>
-    </div>
-    <p class="hint">Click a portrait to select. Cost: 2× ante. Bounty: 5× ante if correct!</p>
-    {{/if}}
     {{/if}}
     {{/if}}
 

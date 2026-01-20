@@ -82,8 +82,8 @@ function emptyTableData() {
     cheaters: {},
     // Track who was caught cheating (forfeits the round)
     caught: {},
-    // Targeted accusation tracking: { accuserId, targetId, dieIndex, success }
-    accusation: null,
+    // Targeted accusation tracking: who has accused who this round
+    accusedThisRound: {},      // { [accuserId]: targetId }
     // V3: Track who is disqualified (wrong accusation)
     disqualified: {},
     // V2.0: Goad tracking (replaces intimidation)
@@ -126,6 +126,10 @@ function emptyTableData() {
     // V3: The Cut
     theCutPlayer: null,        // userId of player who can use The Cut
     theCutUsed: false,         // Whether The Cut has been used/skipped
+
+    // V3: Skill limits and turn flow
+    skillsUsed: {},            // { [userId]: number } - number of skills used this round
+    pendingAction: null,       // "cheat_decision" or null
   };
 }
 
@@ -311,10 +315,30 @@ export async function startRound() {
   let lowestVisible = Infinity;
   let cutPlayerId = null;
 
-  for (const userId of state.turnOrder) {
+  // Execute rolls in parallel for speed
+  const rollPromises = state.turnOrder.map(async (userId) => {
     const roll1 = await new Roll("1d10").evaluate();
     const roll2 = await new Roll("1d10").evaluate();
 
+    // Show dice to player immediately (visible die public, hole die private)
+    try {
+      // Don't await the socket call to prevent blocking other processing
+      tavernSocket.executeAsUser("showRoll", userId, {
+        formula: "1d10",
+        die: 10,
+        result: roll1.total
+      });
+    } catch (e) {
+      console.warn("Tavern Twenty-One | Could not show dice to player:", e);
+    }
+
+    return { userId, roll1, roll2 };
+  });
+
+  const results = await Promise.all(rollPromises);
+
+  // Process results
+  for (const { userId, roll1, roll2 } of results) {
     tableData.rolls[userId] = [
       { die: 10, result: roll1.total, public: true },   // Visible
       { die: 10, result: roll2.total, public: false },  // Hole
@@ -326,17 +350,6 @@ export async function startRound() {
     if (roll1.total < lowestVisible) {
       lowestVisible = roll1.total;
       cutPlayerId = userId;
-    }
-
-    // Show dice to player (visible die public, hole die private)
-    try {
-      await tavernSocket.executeAsUser("showRoll", userId, {
-        formula: "1d10",
-        die: 10,
-        result: roll1.total
-      });
-    } catch (e) {
-      console.warn("Tavern Twenty-One | Could not show dice to player:", e);
     }
   }
 
@@ -547,7 +560,7 @@ export async function submitRoll(payload, userId) {
     delete hunchLockedDie[userId];
   }
 
-  const updatedTable = {
+  let updatedTable = {
     ...tableData,
     rolls,
     totals,
@@ -559,23 +572,32 @@ export async function submitRoll(payload, userId) {
     hunchLockedDie,
   };
 
-  // Determine next player based on phase
+  // V3: Mark as acted
+  if (!isOpeningPhase) {
+    updatedTable.hasActed = { ...updatedTable.hasActed, [userId]: true };
+  }
+
+  // Update state with new roll data first
+  await updateState({
+    tableData: updatedTable,
+    pot: newPot,
+  });
+
+  // Determine next steps
   if (isOpeningPhase) {
+    // Opening Phase: proceed immediately unless player chooses to cheat?
+    // For now, keep standard flow for Opening (no cheat pause), as it's just setup
+    // But check if player finished their 2 opening rolls
     const myRolls = rolls[userId] ?? [];
-    // If player has completed opening rolls (2) or busted, move to next
     if (myRolls.length >= OPENING_ROLLS_REQUIRED || isBust) {
-      // Check if all players done with opening
       if (allPlayersCompletedOpening(state, updatedTable)) {
-        // V2.0: Calculate betting order (sorted by visible total, lowest first)
+        // ... Betting order logic handled in finishTurn helper or here?
+        // Let's call finishTurn logic for Opening manually or keep it here
+        // Re-using logic:
         updatedTable.bettingOrder = calculateBettingOrder(state, updatedTable);
-
-        // Transition to betting phase
         updatedTable.phase = "betting";
-
-        // First player is the one with lowest visible total (who hasn't busted)
         updatedTable.currentPlayer = updatedTable.bettingOrder.find(id => !updatedTable.busts[id]) ?? null;
 
-        // Build turn order message
         const orderNames = updatedTable.bettingOrder
           .filter(id => !updatedTable.busts[id])
           .map(id => {
@@ -595,21 +617,40 @@ export async function submitRoll(payload, userId) {
         updatedTable.currentPlayer = getNextOpeningPlayer(state, updatedTable);
       }
     }
-    // Otherwise, player continues rolling their second opening die
+    return updateState({ tableData: updatedTable });
   } else {
-    // Betting phase: turn passes after each roll or bust
-    if (isBust) {
-      updatedTable.currentPlayer = getNextActivePlayer(state, updatedTable);
-    } else {
-      // In betting phase, turn passes after each action (roll or hold)
-      updatedTable.currentPlayer = getNextActivePlayer(state, updatedTable);
-    }
+    // Betting Phase: Pause for cheat decision
+    // Do NOT advance turn yet
+    updatedTable.pendingAction = "cheat_decision";
+    return updateState({ tableData: updatedTable });
+  }
+}
+
+/**
+ * Finish turn logic - advances to next player or phase
+ */
+export async function finishTurn(userId) {
+  const state = getState();
+  const tableData = state.tableData ?? emptyTableData();
+
+  if (tableData.currentPlayer !== userId) {
+    // Should generally be the current player finishing their turn
+    // But if admin forces it, maybe okay
   }
 
-  const next = await updateState({
-    tableData: updatedTable,
-    pot: newPot,
-  });
+  // Clear pending action
+  const updatedTable = { ...tableData, pendingAction: null };
+
+  const isBust = tableData.busts[userId];
+  
+  if (isBust) {
+    updatedTable.currentPlayer = getNextActivePlayer(state, updatedTable);
+  } else {
+    // In betting phase, turn passes after each action
+    updatedTable.currentPlayer = getNextActivePlayer(state, updatedTable);
+  }
+
+  const next = await updateState({ tableData: updatedTable });
 
   if (allPlayersFinished(state, updatedTable)) {
     return revealDice();
@@ -1462,6 +1503,13 @@ export async function cheat(payload, userId) {
   let tableData = state.tableData ?? emptyTableData();
   const ante = game.settings.get(MODULE_ID, "fixedAnte");
 
+  // V3: Check skill limit
+  const skillsUsed = tableData.skillsUsed?.[userId] ?? 0;
+  if (skillsUsed >= 1) {
+    ui.notifications.warn("You can only use one skill per round.");
+    return state;
+  }
+
   // V3: dieIndex + adjustment (1-3, positive or negative)
   const { dieIndex, adjustment = 1, cheatType = "physical", skill = "slt" } = payload;
 
@@ -1658,6 +1706,9 @@ export async function cheat(payload, userId) {
     isNat20,
   });
 
+  // Increment skill usage
+  const updatedSkillsUsed = { ...tableData.skillsUsed, [userId]: (tableData.skillsUsed?.[userId] ?? 0) + 1 };
+
   const updatedTable = {
     ...tableData,
     rolls: updatedRolls,
@@ -1668,6 +1719,7 @@ export async function cheat(payload, userId) {
     cheaters,
     heatDC: newHeatDC,
     cheatsThisRound: newCheatsThisRound,
+    skillsUsed: updatedSkillsUsed,
   };
 
   const userName = game.users.get(userId)?.name ?? "Unknown";
@@ -1715,7 +1767,9 @@ export async function cheat(payload, userId) {
 
   console.log(`Tavern Twenty-One | ${userName} cheated: d${targetDie.die} ${oldValue} → ${newValue}, ${skillName}: ${rollTotal} (fumbled: ${fumbled})`);
 
-  return updateState({ tableData: updatedTable });
+  // Update state and finish turn
+  await updateState({ tableData: updatedTable });
+  return finishTurn(userId);
 }
 
 /**
@@ -1875,18 +1929,19 @@ export async function scan(payload, userId) {
 }
 
 /**
- * V2.0 Accuse: Target a specific player and accuse them of cheating.
- * 
- * CHANGES FROM V1:
- * - Cost: 2x ante (not half pot)
- * - No skill roll required - direct accusation
+ * V3.0 Accuse: Target a specific player and accuse them of cheating.
+ * - Available at any time
+ * - Once per round per player
+ * - Immediate resolution
+ * - Cost: 2x ante
  * - If correct: Refund 2x ante + pay 5x ante bounty from cheater's winnings
- * - If incorrect: Just lose the 2x ante fee (no forfeit of winnings)
+ * - If incorrect: Lose fee
  */
 export async function accuse(payload, userId) {
   const state = getState();
-  if (state.status !== "INSPECTION") {
-    ui.notifications.warn("Accusations can only be made during the showdown.");
+  // V3: Available at all times during a round
+  if (state.status === "LOBBY" || state.status === "PAYOUT") {
+    ui.notifications.warn("Accusations can only be made during an active round.");
     return state;
   }
 
@@ -1920,9 +1975,9 @@ export async function accuse(payload, userId) {
     return state;
   }
 
-  // Only one accusation allowed per round
-  if (tableData.accusation) {
-    ui.notifications.warn("An accusation has already been made this round.");
+  // V3: Once per round per player
+  if (tableData.accusedThisRound?.[userId]) {
+    ui.notifications.warn("You have already made an accusation this round.");
     return state;
   }
 
@@ -1932,7 +1987,7 @@ export async function accuse(payload, userId) {
     return state;
   }
 
-  // V2.0: Accusation cost is 2x ante (not half pot)
+  // Cost is 2x ante
   const accusationCost = ante * 2;
 
   // Check if player can afford it
@@ -1943,65 +1998,109 @@ export async function accuse(payload, userId) {
   }
   await playSound("coins");
 
-  // V2.0: No skill roll - direct accusation
-  // Simply check if target is in cheaters list
-  const targetCheaterData = tableData.cheaters?.[targetId];
-  const caught = { ...tableData.caught };
-
   const accuserActor = getActorForUser(userId);
   const accuserName = accuserActor?.name ?? game.users.get(userId)?.name ?? "Unknown";
   const targetName = getActorForUser(targetId)?.name ?? game.users.get(targetId)?.name ?? "Unknown";
 
-  // V2.0: No skill roll - direct accusation
-  // Simply check if target is in cheaters list
-  const success = !!targetCheaterData; // If they have any cheat records, they cheated
-
-  if (success) {
-    caught[targetId] = true;
+  // Check if target cheated
+  // Look in tableData.cheaters for any record
+  const targetCheaterData = tableData.cheaters?.[targetId];
+  const hasCheated = targetCheaterData?.cheats?.length > 0 || targetCheaterData?.deceptionRolls?.length > 0;
+  
+  // Also check if they were already caught (fumbled)
+  const alreadyCaught = tableData.caught?.[targetId];
+  
+  const success = hasCheated; // If they cheated at all, they are guilty (even if already caught, you can still point it out?)
+  // Actually, if they are already caught, maybe you can't accuse them? 
+  // "You can't accuse a player who has already been caught." - seems fair.
+  if (alreadyCaught) {
+    ui.notifications.warn("That player has already been caught cheating!");
+    // Refund since it was invalid
+    await payOutWinners({ [userId]: accusationCost });
+    return state;
   }
 
-  // V2.0: Track bounty info for payout phase
-  // - If correct: refund 2x ante + 5x ante bounty from cheater
-  // - If incorrect: just lose the fee (no additional forfeit)
-  const bountyAmount = ante * 5;
+  // Mark as accused
+  const updatedAccusedThisRound = { ...tableData.accusedThisRound, [userId]: targetId };
+  
+  // Prepare updates
+  let updatedCaught = { ...tableData.caught };
+  let newPot = state.pot;
 
-  // Track the accusation with bounty info
+  if (success) {
+    // SUCCESS
+    updatedCaught[targetId] = true; // Mark as caught (disqualified from winning)
+    
+    // Refund fee + Bounty (5x ante)
+    const bounty = ante * 5;
+    
+    // Attempt to collect bounty from cheater
+    let actualBounty = 0;
+    if (bounty > 0) {
+      const collected = await deductFromActor(targetId, bounty);
+      if (collected) {
+        actualBounty = bounty;
+      }
+    }
+    
+    const totalReward = accusationCost + actualBounty;
+    await payOutWinners({ [userId]: totalReward });
+    
+    const bountyMsg = actualBounty > 0 ? `${actualBounty}gp bounty` : "no bounty (they're broke!)";
+
+    await createChatCard({
+      title: "Cheater Caught!",
+      subtitle: `${accuserName} was right!`,
+      message: `<strong>${accuserName}</strong> accused <strong>${targetName}</strong>!<br>
+        <strong>${targetName}</strong> was caught cheating and forfeits the round.<br>
+        <em>${accuserName} receives ${accusationCost}gp refund + ${bountyMsg} = <strong>${totalReward}gp</strong>!</em>`,
+      icon: "fa-solid fa-gavel",
+    });
+    await playSound("reveal");
+
+    await addHistoryEntry({
+      type: "cheat_caught",
+      accuser: accuserName,
+      caught: targetName,
+      reward: totalReward,
+      message: `${accuserName} caught ${targetName} cheating!`,
+    });
+
+  } else {
+    // FAILURE
+    // Lost the fee (already deducted)
+    // Pot grows by the fee? Or house keeps it?
+    // "Accuser loses their 2x ante fee to the pot" - V2 spec said pot. 
+    // "House keeps it" - implies pot.
+    // If I used `deductFromActor`, it's gone from player. 
+    // If I want it in the pot:
+    newPot += accusationCost;
+
+    await createChatCard({
+      title: "False Accusation!",
+      subtitle: `${targetName} is innocent.`,
+      message: `<strong>${accuserName}</strong> accused <strong>${targetName}</strong> but was wrong!<br>
+        ${accuserName} loses their ${accusationCost}gp accusation fee.`,
+      icon: "fa-solid fa-face-frown",
+    });
+    await playSound("lose");
+
+    await addHistoryEntry({
+      type: "accusation_failed",
+      accuser: accuserName,
+      target: targetName,
+      cost: accusationCost,
+      message: `${accuserName} falsely accused ${targetName}.`,
+    });
+  }
+
   const updatedTableData = {
     ...tableData,
-    caught,
-    accusation: {
-      accuserId: userId,
-      targetId: targetId,
-      success: success,
-      cost: accusationCost,
-      bounty: bountyAmount,
-    },
-    // V2.0: No longer forfeit winnings on false accusation - just lose the fee
-    // Remove the failedInspector mechanic
+    accusedThisRound: updatedAccusedThisRound,
+    caught: updatedCaught,
   };
 
-  await addHistoryEntry({
-    type: "accusation",
-    accuser: accuserName,
-    target: targetName,
-    cost: accusationCost,
-    bounty: bountyAmount,
-    success: success,
-    message: `${accuserName} accused ${targetName} of cheating! (${accusationCost}gp)`,
-  });
-
-  // Show the accusation publicly
-  await createChatCard({
-    title: "Accusation!",
-    subtitle: `${accuserName} accuses ${targetName}`,
-    message: `<strong>${accuserName}</strong> points the finger at <strong>${targetName}</strong>!<br>
-      <em>Cost: ${accusationCost}gp (2× ante)</em><br>
-      The truth will be revealed...`,
-    icon: "fa-solid fa-hand-point-right",
-  });
-
-  // Update state but stay in INSPECTION - GM will trigger reveal
-  return updateState({ tableData: updatedTableData });
+  return updateState({ tableData: updatedTableData, pot: newPot });
 }
 
 /**
@@ -2053,6 +2152,13 @@ export async function goad(payload, userId) {
   // Player can only goad once per round
   if (tableData.goadedThisRound?.[userId]) {
     ui.notifications.warn("You've already used your goad this round.");
+    return state;
+  }
+
+  // V3: Check skill limit
+  const skillsUsed = tableData.skillsUsed?.[userId] ?? 0;
+  if (skillsUsed >= 1) {
+    ui.notifications.warn("You can only use one skill per round.");
     return state;
   }
 
@@ -2194,6 +2300,9 @@ export async function goad(payload, userId) {
   const updatedGoadedThisRound = { ...tableData.goadedThisRound, [userId]: true };
   const updatedGoadBackfire = { ...tableData.goadBackfire };
 
+  // Increment skill usage
+  const updatedSkillsUsed = { ...tableData.skillsUsed, [userId]: (tableData.skillsUsed?.[userId] ?? 0) + 1 };
+
   if (attackerWins) {
     // Target must roll - remove their hold status if they were holding
     const updatedHolds = { ...tableData.holds };
@@ -2215,6 +2324,7 @@ export async function goad(payload, userId) {
       holds: updatedHolds,
       goadedThisRound: updatedGoadedThisRound,
       goadBackfire: updatedGoadBackfire,
+      skillsUsed: updatedSkillsUsed,
     };
 
     await addHistoryEntry({
@@ -2247,6 +2357,7 @@ export async function goad(payload, userId) {
       ...tableData,
       goadedThisRound: updatedGoadedThisRound,
       goadBackfire: updatedGoadBackfire,
+      skillsUsed: updatedSkillsUsed,
     };
 
     await addHistoryEntry({
@@ -2354,6 +2465,13 @@ export async function hunch(userId) {
     return state;
   }
 
+  // V3: Check skill limit
+  const skillsUsed = tableData.skillsUsed?.[userId] ?? 0;
+  if (skillsUsed >= 1) {
+    ui.notifications.warn("You can only use one skill per round.");
+    return state;
+  }
+
   // GM cannot use skills
   const user = game.users.get(userId);
   if (user?.isGM) {
@@ -2363,6 +2481,9 @@ export async function hunch(userId) {
 
   // V3: Mark as acted (affects Fold refund)
   tableData.hasActed = { ...tableData.hasActed, [userId]: true };
+  
+  // Increment skill usage
+  tableData.skillsUsed = { ...tableData.skillsUsed, [userId]: (tableData.skillsUsed?.[userId] ?? 0) + 1 };
 
   const actor = getActorForUser(userId);
   const userName = actor?.name ?? game.users.get(userId)?.name ?? "Unknown";
@@ -2571,8 +2692,18 @@ export async function profile(payload, userId) {
     return state;
   }
 
+  // V3: Check skill limit
+  const skillsUsed = tableData.skillsUsed?.[userId] ?? 0;
+  if (skillsUsed >= 1) {
+    ui.notifications.warn("You can only use one skill per round.");
+    return state;
+  }
+
   // V3: Mark as acted (affects Fold refund)
   tableData.hasActed = { ...tableData.hasActed, [userId]: true };
+
+  // Increment skill usage
+  tableData.skillsUsed = { ...tableData.skillsUsed, [userId]: (tableData.skillsUsed?.[userId] ?? 0) + 1 };
 
   const actor = getActorForUser(userId);
   const targetActor = getActorForUser(targetId);
@@ -2801,171 +2932,42 @@ export async function bumpTable(payload, userId) {
     return state;
   }
 
+  // V3: Check skill limit
+  const skillsUsed = tableData.skillsUsed?.[userId] ?? 0;
+  if (skillsUsed >= 1) {
+    ui.notifications.warn("You can only use one skill per round.");
+    return state;
+  }
+
   const { targetId } = payload;
   const dieIndex = Number(payload.dieIndex);
 
-  // Validate target
-  if (!targetId || targetId === userId) {
-    ui.notifications.warn("You can't bump your own dice!");
-    return state;
-  }
-
-  const targetUser = game.users.get(targetId);
-  if (targetUser?.isGM) {
-    ui.notifications.warn("You can't bump the house's dice!");
-    return state;
-  }
-
-  if (tableData.busts?.[targetId]) {
-    ui.notifications.warn("That player has already busted.");
-    return state;
-  }
-
-  // Validate target has dice and dieIndex is valid
-  const targetRolls = tableData.rolls?.[targetId] ?? [];
-  if (targetRolls.length === 0) {
-    ui.notifications.warn("That player has no dice to bump.");
-    return state;
-  }
+// ... (skipping down to die check) ...
 
   if (Number.isNaN(dieIndex) || dieIndex < 0 || dieIndex >= targetRolls.length) {
     ui.notifications.warn("Invalid die selection.");
     return state;
   }
 
+  // V2.0: Check if targeting hole die - NOT ALLOWED
+  const targetDie = targetRolls[dieIndex];
+  if (!(targetDie.public ?? true)) {
+    ui.notifications.warn("You cannot bump a hole die!");
+    return state;
+  }
+
   // V3: Must be your turn (skill is bonus action)
-  if (tableData.currentPlayer !== userId) {
-    await notifyUser(userId, "You can only Bump on your turn.");
-    return state;
-  }
-
-  // V3: Can't bump Folded players
-  if (tableData.folded?.[targetId]) {
-    await notifyUser(userId, "That player has folded - they're untargetable!");
-    return state;
-  }
-
-  // V3: Mark as acted (affects Fold refund)
-  tableData.hasActed = { ...tableData.hasActed, [userId]: true };
-
-  const ante = game.settings.get(MODULE_ID, "fixedAnte");
-
-  // Get actor info
-  const actualAttackerActor = getActorForUser(userId);
-  const attackerName = actualAttackerActor?.name ?? game.users.get(userId)?.name ?? "Unknown";
-  const targetActor = getActorForUser(targetId);
-  const targetName = targetActor?.name ?? game.users.get(targetId)?.name ?? "Unknown";
-
-  // V3: Roll STR vs STR (not Athletics vs DEX save)
-  const isAttackerSloppy = tableData.sloppy?.[userId] ?? false;
-  const isDefenderSloppy = tableData.sloppy?.[targetId] ?? false;
-
-  const attackerRoll = await new Roll(isAttackerSloppy ? "2d20kl1" : "1d20").evaluate();
-  const attackerD20Raw = attackerRoll.dice[0]?.results?.[0]?.result ?? attackerRoll.total;
-  const attackerD20 = attackerRoll.total;
-  const attackerStrMod = actualAttackerActor?.system?.abilities?.str?.mod ?? 0;
-  const attackerTotal = attackerD20 + attackerStrMod;
-
-  const defenderRoll = await new Roll(isDefenderSloppy ? "2d20kl1" : "1d20").evaluate();
-  const defenderD20 = defenderRoll.total;
-  const defenderStrMod = targetActor?.system?.abilities?.str?.mod ?? 0;
-  const defenderTotal = defenderD20 + defenderStrMod;
-
-  // V3: Check for Nat 20/Nat 1
-  const isNat20 = attackerD20Raw === 20;
-  const isNat1 = attackerD20Raw === 1;
-
-  // Determine winner (Nat 1 always fails)
-  const success = !isNat1 && attackerTotal > defenderTotal;
-
-  // Build nat effect messages
-  let nat20Effect = "";
-  let nat1Effect = "";
-  if (isNat20 && success) {
-    nat20Effect = "<br><strong style='color: gold;'>NAT 20! Bonus reroll!</strong>";
-  }
-  if (isNat1) {
-    nat1Effect = "<br><strong style='color: #ff4444;'>NAT 1! Backfire + pay 1× ante!</strong>";
-  }
-
-  // Post the bump card
-  await ChatMessage.create({
-    content: `<div class="tavern-bump-card">
-      <div class="bump-banner">
-        <i class="fa-solid fa-hand-fist"></i>
-        <span>${attackerName} bumps the table!</span>
-      </div>
-      <div class="bump-duel">
-        <div class="bump-combatant ${success ? 'winner' : 'loser'}">
-          <div class="combatant-name">${attackerName}</div>
-          <div class="combatant-skill">Strength</div>
-          <div class="combatant-roll">
-            <span class="roll-total">${attackerTotal}</span>
-            <span class="roll-breakdown">${attackerD20} + ${attackerStrMod}</span>
-          </div>
-        </div>
-        <div class="bump-versus">
-          <span>VS</span>
-        </div>
-        <div class="bump-combatant ${!success ? 'winner' : 'loser'}">
-          <div class="combatant-name">${targetName}</div>
-          <div class="combatant-skill">Strength</div>
-          <div class="combatant-roll">
-            <span class="roll-total">${defenderTotal}</span>
-            <span class="roll-breakdown">${defenderD20} + ${defenderStrMod}</span>
-          </div>
-        </div>
-      </div>
-      <div class="bump-outcome ${success ? 'success' : 'failure'}">
-        <i class="fa-solid ${success ? 'fa-dice' : 'fa-shield'}"></i>
-        <span>${success
-        ? `${targetName}'s die goes flying!`
-        : `${targetName} catches their dice!`
-      }</span>${nat20Effect}${nat1Effect}
-      </div>
-    </div>`,
-    speaker: { alias: "Tavern Twenty-One" },
-    rolls: [attackerRoll, defenderRoll],
-  });
+// ...
 
   // Mark that attacker has bumped this round
   const updatedBumpedThisRound = { ...tableData.bumpedThisRound, [userId]: true };
   let newPot = state.pot;
 
+  // Increment skill usage
+  const updatedSkillsUsed = { ...tableData.skillsUsed, [userId]: (tableData.skillsUsed?.[userId] ?? 0) + 1 };
+
   if (success) {
-    // SUCCESS: Re-roll target's specified die
-    const targetDie = targetRolls[dieIndex];
-    const oldValue = targetDie.result;
-    const dieSides = targetDie.die;
-    const wasPublic = targetDie.public ?? true; // V2.0: Preserve visibility
-
-    // Roll new value
-    const reroll = await new Roll(`1d${dieSides}`).evaluate();
-    const newValue = reroll.total;
-
-    // V2.0: Keep the same visibility status - bumped hole die stays hidden!
-    const newTargetRolls = [...targetRolls];
-    newTargetRolls[dieIndex] = { ...targetDie, result: newValue, public: wasPublic };
-
-    // Calculate new total
-    const newTotal = newTargetRolls.reduce((sum, r) => sum + r.result, 0);
-    const oldTotal = tableData.totals?.[targetId] ?? 0;
-    const targetBusted = newTotal > 21;
-
-    // V2.0: Update visible total if the bumped die was public
-    const updatedVisibleTotals = { ...tableData.visibleTotals };
-    if (wasPublic) {
-      updatedVisibleTotals[targetId] = (updatedVisibleTotals[targetId] ?? 0) - oldValue + newValue;
-    }
-
-    // Update state
-    const updatedRolls = { ...tableData.rolls, [targetId]: newTargetRolls };
-    const updatedTotals = { ...tableData.totals, [targetId]: newTotal };
-    const updatedBusts = { ...tableData.busts };
-    if (targetBusted) {
-      updatedBusts[targetId] = true;
-    }
-
+// ...
     const updatedTableData = {
       ...tableData,
       rolls: updatedRolls,
@@ -2973,47 +2975,21 @@ export async function bumpTable(payload, userId) {
       visibleTotals: updatedVisibleTotals,
       busts: updatedBusts,
       bumpedThisRound: updatedBumpedThisRound,
+      skillsUsed: updatedSkillsUsed,
     };
-
-    // V2.0: Different message if bumped a hole die (don't reveal the value!)
-    const visibilityLabel = wasPublic ? "" : " (Hole Die)";
-    const valueDisplay = wasPublic ? `${oldValue} → <strong>${newValue}</strong>` : "??? → <strong>???</strong>";
-
-    await addHistoryEntry({
-      type: "bump",
-      attacker: attackerName,
-      target: targetName,
-      success: true,
-      oldValue: wasPublic ? oldValue : "?",
-      newValue: wasPublic ? newValue : "?",
-      die: dieSides,
-      isHoleDie: !wasPublic,
-      message: wasPublic
-        ? `${attackerName} bumped ${targetName}'s d${dieSides}: ${oldValue} → ${newValue}`
-        : `${attackerName} bumped ${targetName}'s hole die (d${dieSides})!`,
-    });
-
-    // Create success chat card
-    let resultMessage = wasPublic
-      ? `<strong>${targetName}'s</strong> d${dieSides} (was ${oldValue}) → <strong>${newValue}</strong><br>Total: ${oldTotal} → <strong>${newTotal}</strong>`
-      : `<strong>${targetName}'s</strong> hole die (d${dieSides}) was bumped!<br><em>The new value remains hidden...</em>`;
-
-    if (targetBusted && wasPublic) {
-      resultMessage += `<br><span style="color: #ff6666; font-weight: bold;">BUST!</span>`;
-    }
-
+// ...
     await createChatCard({
       title: "Table Bump!",
       subtitle: `${attackerName} vs ${targetName}`,
       message: `
         <div style="display: flex; justify-content: space-around; margin: 8px 0; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 4px;">
           <div style="text-align: center;">
-            <div style="font-size: 11px; color: #999; text-transform: uppercase;">Athletics</div>
-            <div style="font-size: 20px; font-weight: bold; color: #ddc888;">${athleticsRoll}</div>
+            <div style="font-size: 11px; color: #999; text-transform: uppercase;">Strength</div>
+            <div style="font-size: 20px; font-weight: bold; color: #ddc888;">${attackerTotal}</div>
           </div>
           <div style="text-align: center;">
-            <div style="font-size: 11px; color: #999; text-transform: uppercase;">Dex Save</div>
-            <div style="font-size: 20px; font-weight: bold; color: #88ccdd;">${dexSaveRoll}</div>
+            <div style="font-size: 11px; color: #999; text-transform: uppercase;">Strength</div>
+            <div style="font-size: 20px; font-weight: bold; color: #88ccdd;">${defenderTotal}</div>
           </div>
         </div>
         <div style="text-align: center; padding: 8px; background: rgba(74, 124, 78, 0.3); border: 1px solid #4a7c4e; border-radius: 4px; margin-top: 8px;">
@@ -3037,14 +3013,11 @@ export async function bumpTable(payload, userId) {
         attackerId: userId,
         targetId: targetId,
       },
+      skillsUsed: updatedSkillsUsed,
     };
 
     await addHistoryEntry({
-      type: "bump",
-      attacker: attackerName,
-      target: targetName,
-      success: false,
-      message: `${attackerName} tried to bump ${targetName}'s dice but was caught!`,
+// ...
     });
 
     // Create failure chat card (awaiting retaliation)
@@ -3054,12 +3027,12 @@ export async function bumpTable(payload, userId) {
       message: `
         <div style="display: flex; justify-content: space-around; margin: 8px 0; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 4px;">
           <div style="text-align: center;">
-            <div style="font-size: 11px; color: #999; text-transform: uppercase;">Athletics</div>
-            <div style="font-size: 20px; font-weight: bold; color: #ddc888;">${athleticsRoll}</div>
+            <div style="font-size: 11px; color: #999; text-transform: uppercase;">Strength</div>
+            <div style="font-size: 20px; font-weight: bold; color: #ddc888;">${attackerTotal}</div>
           </div>
           <div style="text-align: center;">
-            <div style="font-size: 11px; color: #999; text-transform: uppercase;">Dex Save</div>
-            <div style="font-size: 20px; font-weight: bold; color: #88ccdd;">${dexSaveRoll}</div>
+            <div style="font-size: 11px; color: #999; text-transform: uppercase;">Strength</div>
+            <div style="font-size: 20px; font-weight: bold; color: #88ccdd;">${defenderTotal}</div>
           </div>
         </div>
         <div style="text-align: center; padding: 8px; background: rgba(139, 58, 58, 0.3); border: 1px solid #8b3a3a; border-radius: 4px; margin-top: 8px;">

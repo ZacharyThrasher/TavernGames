@@ -219,14 +219,15 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
     // Inspection/Staredown context
     const isInspection = state.status === "INSPECTION";
-    const accusationMade = tableData.accusation !== null;
+    const accusedThisRound = tableData.accusedThisRound?.[userId] ?? false;
     // V2.0: Accusation cost is 2x ante (not half pot)
     const accusationCost = ante * 2;
+    const isBusted = tableData.busts?.[userId] ?? false;
+    const isHolding = tableData.holds?.[userId] ?? false;
 
-    // Build list of players that can be accused (not self, not busted)
-    // Include character artwork for portrait display
-    const accuseTargets = isInspection && !accusationMade ? players
-      .filter(p => p.id !== userId && !tableData.busts?.[p.id])
+    // Build list of players that can be accused (not self, not busted, not GM)
+    const accuseTargets = !accusedThisRound ? players
+      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !game.users.get(p.id)?.isGM)
       .map(p => {
         // Get the user's assigned character for artwork
         const user = game.users.get(p.id);
@@ -234,9 +235,9 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
         return { id: p.id, name: p.name, img };
       }) : [];
-    const isBusted = tableData.busts?.[userId] ?? false;
-    const isHolding = tableData.holds?.[userId] ?? false;
-    const canAccuse = isInspection && state.players?.[userId] && !accusationMade && !isBusted && accuseTargets.length > 0 && !isGM;
+    
+    // V3: Accuse available at all times during round
+    const canAccuse = isInGame && !accusedThisRound && !isBusted && accuseTargets.length > 0 && !isGM;
 
     // V2.0: Scan context - can scan during staredown if you're in the game and not busted
     // Cost: 1x ante per target, cannot scan same target twice
@@ -288,7 +289,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
     // Bump table context - can bump during betting phase if not busted/held, and haven't used it this round
     const hasBumpedThisRound = tableData.bumpedThisRound?.[userId] ?? false;
-    const canBump = isBettingPhase && isInGame && !isBusted && !isHolding && !isGM && !hasBumpedThisRound;
+    const canBump = isBettingPhase && myTurn && isInGame && !isBusted && !isHolding && !isGM && !hasBumpedThisRound;
 
     // Valid bump targets: other players with dice, not self, not busted, not GM (holders ARE valid targets!)
     const bumpTargets = canBump ? players
