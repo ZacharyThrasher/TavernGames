@@ -1301,6 +1301,8 @@ export async function cheat(payload, userId) {
   if (fumbled) {
     // V2.0: Fumble = auto-caught immediately!
     updatedCaught[userId] = true;
+    updatedBusts[userId] = true;
+    await playSound("lose");
   }
 
   if (updatedTotals[userId] > 21) {
@@ -1951,7 +1953,8 @@ export async function bumpTable(payload, userId) {
     return state;
   }
 
-  const { targetId, dieIndex } = payload;
+  const { targetId } = payload;
+  const dieIndex = Number(payload.dieIndex);
 
   // Validate target
   if (!targetId || targetId === userId) {
@@ -1977,7 +1980,7 @@ export async function bumpTable(payload, userId) {
     return state;
   }
 
-  if (dieIndex < 0 || dieIndex >= targetRolls.length) {
+  if (Number.isNaN(dieIndex) || dieIndex < 0 || dieIndex >= targetRolls.length) {
     ui.notifications.warn("Invalid die selection.");
     return state;
   }

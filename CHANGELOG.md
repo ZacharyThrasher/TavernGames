@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.1.3]2026-01-19
+### Fixed
+- **Cheat Fumble**: Fumbling a cheat roll (rolling < 10 on physical cheat) now correctly results in an immediate Bust, as intended.
+- **Table Bump**: Added additional validation to bump actions to ensure the correct die is targeted.
+
 ## [2.1.2]2026-01-19
 ### Fixed
 - **Accusation Error**: Fixed "Yes is not a function" error when making an accusation (updated Dialog logic).
