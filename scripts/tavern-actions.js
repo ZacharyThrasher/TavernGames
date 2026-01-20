@@ -1,5 +1,5 @@
 import { MODULE_ID, getState, updateState } from "./state.js";
-import { startRound, submitRoll, hold, revealDice, finishRound, returnToLobby, cheat, accuse, skipInspection, intimidate, bumpTable, bumpRetaliation } from "./twenty-one.js";
+import { startRound, submitRoll, hold, revealDice, finishRound, returnToLobby, cheat, accuse, skipInspection, goad, bumpTable, bumpRetaliation, scan, submitDuelRoll } from "./twenty-one.js";
 import { playSound } from "./sounds.js";
 
 function ensureGM() {
@@ -34,9 +34,9 @@ export async function handleJoinTable(userId) {
   };
 
   const turnOrder = [...state.turnOrder, userId];
-  
+
   await playSound("join");
-  
+
   return updateState({ players, turnOrder });
 }
 
@@ -74,12 +74,16 @@ export async function handlePlayerAction(action, payload, userId) {
       return cheat(payload, userId);
     case "accuse":
       return accuse(payload, userId);
-    case "intimidate":
-      return intimidate(payload, userId);
+    case "goad":
+      return goad(payload, userId);
     case "bumpTable":
       return bumpTable(payload, userId);
     case "bumpRetaliation":
       return bumpRetaliation(payload, userId);
+    case "scan":
+      return scan(payload, userId);
+    case "duelRoll":
+      return submitDuelRoll(userId);
     case "skipInspection":
       return skipInspection();
     case "reveal": {
@@ -99,7 +103,7 @@ export async function handlePlayerAction(action, payload, userId) {
 
 export async function handleResetTable() {
   ensureGM();
-  
+
   return updateState({
     status: "LOBBY",
     pot: 0,
@@ -107,16 +111,24 @@ export async function handleResetTable() {
     players: {},
     tableData: {
       totals: {},
+      visibleTotals: {},       // V2.0
+      bettingOrder: null,      // V2.0
       holds: {},
       busts: {},
       rolls: {},
       currentPlayer: null,
       phase: "opening",
       cheaters: {},
-      bluffers: {},
       caught: {},
       accusation: null,
       failedInspector: null,
+      goadedThisRound: {},     // V2.0
+      goadBackfire: {},        // V2.0
+      bumpedThisRound: {},
+      pendingBumpRetaliation: null,
+      cleaningFees: {},        // V2.0
+      scannedBy: {},           // V2.0
+      duel: null,              // V2.0
     },
     history: [],
   });

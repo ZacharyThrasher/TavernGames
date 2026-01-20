@@ -7,7 +7,7 @@
       "name": "Zachary Thrasher"
     }
   ],
-  "version": "1.8.1",
+  "version": "2.0.0",
   "compatibility": {
     "minimum": "13",
     "verified": "13"
@@ -17,8 +17,12 @@
   "download": "https://github.com/ZacharyThrasher/TavernGames/releases/latest/download/tavern-dice-master.zip",
   "bugs": "https://github.com/ZacharyThrasher/TavernGames/issues",
   "socket": true,
-  "esmodules": ["scripts/main.js"],
-  "styles": ["styles/tavern.css"],
+  "esmodules": [
+    "scripts/main.js"
+  ],
+  "styles": [
+    "styles/tavern.css"
+  ],
   "languages": [
     {
       "lang": "en",

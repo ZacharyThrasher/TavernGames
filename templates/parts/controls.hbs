@@ -1,236 +1,285 @@
 <div class="tavern-controls">
   {{!-- Lobby state --}}
   {{#if isLobby}}
-    <div class="control-section">
-      <h3><i class="fa-solid fa-users"></i> Join the Game</h3>
-      {{#if canJoin}}
-        <button type="button" class="btn btn-primary btn-large" data-action="join">
-          <i class="fa-solid fa-chair"></i> Take a Seat
-        </button>
-      {{else if isInGame}}
-        <button type="button" class="btn btn-secondary" data-action="leave">
-          <i class="fa-solid fa-door-open"></i> Leave Table
-        </button>
-      {{/if}}
-    </div>
-
-    {{#if isGM}}
-      <div class="control-section house-rules">
-        <h3><i class="fa-solid fa-scroll"></i> House Rules</h3>
-        <div class="setting-row">
-          <label for="ante-input">
-            <i class="fa-solid fa-coins"></i> Ante
-          </label>
-          <div class="setting-input">
-            <input type="number" id="ante-input" name="ante" min="1" max="1000" value="{{ante}}" data-action="setAnte" />
-            <span class="setting-suffix">gp</span>
-          </div>
-        </div>
-        <p class="hint">Cost to join each round and roll extra dice.</p>
-      </div>
-
-      <div class="control-section">
-        <h3><i class="fa-solid fa-play"></i> Start Game</h3>
-        {{#if hasPlayers}}
-          <button type="button" class="btn btn-success btn-large" data-action="start">
-            <i class="fa-solid fa-dice"></i> Deal the Dice!
-          </button>
-          <p class="hint">{{players.length}} player{{#if (gt players.length 1)}}s{{/if}} at the table</p>
-        {{else}}
-          <p class="hint">Waiting for players to join...</p>
-        {{/if}}
-      </div>
+  <div class="control-section">
+    <h3><i class="fa-solid fa-users"></i> Join the Game</h3>
+    {{#if canJoin}}
+    <button type="button" class="btn btn-primary btn-large" data-action="join">
+      <i class="fa-solid fa-chair"></i> Take a Seat
+    </button>
+    {{else if isInGame}}
+    <button type="button" class="btn btn-secondary" data-action="leave">
+      <i class="fa-solid fa-door-open"></i> Leave Table
+    </button>
     {{/if}}
+  </div>
 
-    <div class="control-section rules">
-      <h3><i class="fa-solid fa-scroll"></i> Rules</h3>
-      <ul>
-        <li>Opening: everyone rolls <strong>2 dice</strong></li>
-        <li>Then take turns: roll (costs {{ante}}gp) or hold</li>
-        <li>Try to reach <strong>21</strong> without busting</li>
-        <li>Highest total ≤21 wins the pot!</li>
-      </ul>
+  {{#if isGM}}
+  <div class="control-section house-rules">
+    <h3><i class="fa-solid fa-scroll"></i> House Rules</h3>
+    <div class="setting-row">
+      <label for="ante-input">
+        <i class="fa-solid fa-coins"></i> Ante
+      </label>
+      <div class="setting-input">
+        <input type="number" id="ante-input" name="ante" min="1" max="1000" value="{{ante}}" data-action="setAnte" />
+        <span class="setting-suffix">gp</span>
+      </div>
     </div>
+    <p class="hint">Cost to join each round and roll extra dice.</p>
+  </div>
+
+  <div class="control-section">
+    <h3><i class="fa-solid fa-play"></i> Start Game</h3>
+    {{#if hasPlayers}}
+    <button type="button" class="btn btn-success btn-large" data-action="start">
+      <i class="fa-solid fa-dice"></i> Deal the Dice!
+    </button>
+    <p class="hint">{{players.length}} player{{#if (gt players.length 1)}}s{{/if}} at the table</p>
+    {{else}}
+    <p class="hint">Waiting for players to join...</p>
+    {{/if}}
+  </div>
+  {{/if}}
+
+  <div class="control-section rules">
+    <h3><i class="fa-solid fa-scroll"></i> Rules</h3>
+    <ul>
+      <li>Opening: everyone rolls <strong>2 dice</strong></li>
+      <li>Then take turns: roll (costs {{ante}}gp) or hold</li>
+      <li>Try to reach <strong>21</strong> without busting</li>
+      <li>Highest total ≤21 wins the pot!</li>
+    </ul>
+  </div>
   {{/if}}
 
   {{!-- Playing state --}}
   {{#if isPlaying}}
-    {{#if myTurn}}
-      <div class="control-section your-turn">
-        <h3><i class="fa-solid fa-dice"></i> Your Turn!</h3>
-        
-        {{#if isOpeningPhase}}
-          <p class="turn-hint phase-opening">
-            <strong>Opening Round:</strong> Roll {{openingRollsRemaining}} more {{#if (eq openingRollsRemaining 1)}}die{{else}}dice{{/if}}.
-          </p>
-        {{else}}
-          <p class="turn-hint phase-betting">
-            <strong>Betting Round:</strong> Roll ({{ante}}gp) or hold.
-          </p>
-        {{/if}}
-        
-        <div class="dice-buttons premium">
-          {{#each dice}}
-            <button type="button" class="btn-die-premium" data-action="roll" data-die="{{this.value}}" title="Roll {{this.label}}">
-              <img src="icons/svg/{{this.icon}}.svg" alt="{{this.label}}" class="die-icon" />
-              <span class="die-label">{{this.label}}</span>
-            </button>
-          {{/each}}
-        </div>
+  {{#if myTurn}}
+  <div class="control-section your-turn">
+    <h3><i class="fa-solid fa-dice"></i> Your Turn!</h3>
 
-        {{#if isBettingPhase}}
-          <button type="button" class="btn btn-hold" data-action="hold">
-            <i class="fa-solid fa-hand"></i> Hold
-          </button>
-        {{/if}}
-      </div>
+    {{#if isOpeningPhase}}
+    <p class="turn-hint phase-opening">
+      <strong>Opening Round:</strong> Roll {{openingRollsRemaining}} more {{#if (eq openingRollsRemaining
+      1)}}die{{else}}dice{{/if}}.
+    </p>
     {{else}}
-      <div class="control-section waiting">
-        <h3><i class="fa-solid fa-hourglass-half"></i> Waiting</h3>
-        {{#if currentPlayer}}
-          <p class="waiting-text">
-            <strong>{{currentPlayer.name}}</strong> is rolling...
-          </p>
+    <p class="turn-hint phase-betting">
+      <strong>Betting Round:</strong> Choose your die wisely!
+    </p>
+    {{/if}}
+
+    <div class="dice-buttons premium">
+      {{#each dice}}
+      <button type="button" class="btn-die-premium {{#if this.costLabel}}has-cost{{/if}}" data-action="roll"
+        data-die="{{this.value}}"
+        title="{{this.label}} - {{this.strategy}}{{#if this.costLabel}} ({{this.costLabel}}){{/if}}">
+        <img src="icons/svg/{{this.icon}}.svg" alt="{{this.label}}" class="die-icon" />
+        <span class="die-label">{{this.label}}</span>
+        {{#if this.costLabel}}
+        <span class="die-cost {{#if (eq this.costLabel 'FREE')}}free{{/if}}">{{this.costLabel}}</span>
         {{/if}}
-        {{#if isOpeningPhase}}
-          <p class="phase-label">Opening Round</p>
-        {{else}}
-          <p class="phase-label">Betting Round</p>
-        {{/if}}
-      </div>
-    {{/if}}
+      </button>
+      {{/each}}
+    </div>
 
-    {{!-- Cheat button - available when you have dice --}}
-    {{#if canCheat}}
-      <div class="control-section cheat-section">
-        <button type="button" class="btn btn-cheat" data-action="cheat">
-          <i class="fa-solid fa-mask"></i> Cheat
-        </button>
-        <p class="hint cheat-hint">Sleight of hand... Choose Deception or Sleight of Hand.</p>
-      </div>
+    {{#if isBettingPhase}}
+    <button type="button" class="btn btn-hold" data-action="hold">
+      <i class="fa-solid fa-hand"></i> Hold
+    </button>
     {{/if}}
+  </div>
+  {{else}}
+  <div class="control-section waiting">
+    <h3><i class="fa-solid fa-hourglass-half"></i> Waiting</h3>
+    {{#if currentPlayer}}
+    <p class="waiting-text">
+      <strong>{{currentPlayer.name}}</strong> is rolling...
+    </p>
+    {{/if}}
+    {{#if isOpeningPhase}}
+    <p class="phase-label">Opening Round</p>
+    {{else}}
+    <p class="phase-label">Betting Round</p>
+    {{/if}}
+  </div>
+  {{/if}}
 
-    {{!-- Intimidate button - available during betting phase --}}
-    {{#if canIntimidate}}
-      {{#if intimidateTargets.length}}
-        <div class="control-section intimidate-section">
-          <button type="button" class="btn btn-intimidate" data-action="intimidate">
-            <i class="fa-solid fa-comment-dots"></i> Intimidate
-          </button>
-          <p class="hint intimidate-hint">Force someone to hold. Once per round.</p>
-        </div>
-      {{/if}}
-    {{/if}}
+  {{!-- Cheat button - available when you have dice --}}
+  {{#if canCheat}}
+  <div class="control-section cheat-section">
+    <button type="button" class="btn btn-cheat" data-action="cheat">
+      <i class="fa-solid fa-mask"></i> Cheat
+    </button>
+    <p class="hint cheat-hint">Sleight of hand... Choose Deception or Sleight of Hand.</p>
+  </div>
+  {{/if}}
 
-    {{!-- Bump Table button - available during betting phase --}}
-    {{#if canBump}}
-      {{#if bumpTargets.length}}
-        <div class="control-section bump-section">
-          <button type="button" class="btn btn-bump" data-action="bumpTable">
-            <i class="fa-solid fa-hand-fist"></i> Bump Table
-          </button>
-          <p class="hint bump-hint">Force a re-roll. Once per round.</p>
-        </div>
-      {{/if}}
-    {{/if}}
+  {{!-- Goad button - V2.0: available during betting phase (can target holders!) --}}
+  {{#if canGoad}}
+  {{#if goadTargets.length}}
+  <div class="control-section goad-section">
+    <button type="button" class="btn btn-goad" data-action="goad">
+      <i class="fa-solid fa-comments"></i> Goad
+    </button>
+    <p class="hint goad-hint">Force someone to roll again. Once per round.</p>
+  </div>
+  {{/if}}
+  {{/if}}
 
-    {{!-- Pending Bump Retaliation --}}
-    {{#if canRetaliate}}
-      <div class="control-section bump-retaliation">
-        <h3><i class="fa-solid fa-hand"></i> Caught!</h3>
-        {{#if isRetaliationTarget}}
-          <p>You caught <strong>{{retaliationAttackerName}}</strong> bumping the table!</p>
-          <p>Choose one of their dice to re-roll:</p>
-        {{else}}
-          <p class="gm-override-note"><strong>{{retaliationAttackerName}}</strong> is waiting for retaliation.</p>
-          <p>Override and choose a die:</p>
-        {{/if}}
-        <div class="retaliation-dice">
-          {{#each retaliationAttackerDice}}
-            <button type="button" class="btn-retaliation-die" data-action="bumpRetaliation" data-die-index="{{this.index}}">
-              <img src="icons/svg/d{{this.die}}-grey.svg" alt="d{{this.die}}" class="retaliation-die-icon" />
-              <span class="die-type">d{{this.die}}</span>
-            </button>
-          {{/each}}
-        </div>
-      </div>
-    {{/if}}
+  {{!-- Bump Table button - available during betting phase --}}
+  {{#if canBump}}
+  {{#if bumpTargets.length}}
+  <div class="control-section bump-section">
+    <button type="button" class="btn btn-bump" data-action="bumpTable">
+      <i class="fa-solid fa-hand-fist"></i> Bump Table
+    </button>
+    <p class="hint bump-hint">Force a re-roll. Once per round.</p>
+  </div>
+  {{/if}}
+  {{/if}}
 
-    {{#if isGM}}
-      <div class="control-section gm-controls">
-        <button type="button" class="btn btn-secondary btn-small" data-action="reveal">
-          <i class="fa-solid fa-forward"></i> Skip to Staredown
-        </button>
-      </div>
+  {{!-- Pending Bump Retaliation --}}
+  {{#if canRetaliate}}
+  <div class="control-section bump-retaliation">
+    <h3><i class="fa-solid fa-hand"></i> Caught!</h3>
+    {{#if isRetaliationTarget}}
+    <p>You caught <strong>{{retaliationAttackerName}}</strong> bumping the table!</p>
+    <p>Choose one of their dice to re-roll:</p>
+    {{else}}
+    <p class="gm-override-note"><strong>{{retaliationAttackerName}}</strong> is waiting for retaliation.</p>
+    <p>Override and choose a die:</p>
     {{/if}}
+    <div class="retaliation-dice">
+      {{#each retaliationAttackerDice}}
+      <button type="button" class="btn-retaliation-die" data-action="bumpRetaliation" data-die-index="{{this.index}}">
+        <img src="icons/svg/d{{this.die}}-grey.svg" alt="d{{this.die}}" class="retaliation-die-icon" />
+        <span class="die-type">d{{this.die}}</span>
+      </button>
+      {{/each}}
+    </div>
+  </div>
+  {{/if}}
+
+  {{#if isGM}}
+  <div class="control-section gm-controls">
+    <button type="button" class="btn btn-secondary btn-small" data-action="reveal">
+      <i class="fa-solid fa-forward"></i> Skip to Staredown
+    </button>
+  </div>
+  {{/if}}
   {{/if}}
 
   {{!-- Staredown / Accusation state --}}
   {{#if isInspection}}
-    <div class="control-section staredown">
-      <h3><i class="fa-solid fa-eye"></i> The Staredown</h3>
-      
-      {{#if accusationMade}}
-        <p class="staredown-text">An accusation has been made. The tension builds...</p>
-        <p class="staredown-hint"><i class="fa-solid fa-hourglass-half"></i> Awaiting the GM to finish the round.</p>
-      {{else}}
-        <p class="staredown-text">The dice are revealed. But can you trust what you see?</p>
-        <p class="staredown-warning"><i class="fa-solid fa-warning"></i> Accuse an innocent and you forfeit your winnings!</p>
-        
-        {{#if isInGame}}
-          {{#if canAccuse}}
-            <div class="accuse-section">
-              <label>Who do you suspect?</label>
-              <div class="accuse-portraits">
-                {{#each accuseTargets}}
-                  <div class="accuse-portrait" data-target-id="{{this.id}}" data-target-name="{{this.name}}" tabindex="0">
-                    <img src="{{this.img}}" alt="{{this.name}}" />
-                    <span class="portrait-name">{{this.name}}</span>
-                  </div>
-                {{/each}}
-              </div>
-              <button type="button" class="btn btn-accuse" data-action="accuse" disabled>
-                <i class="fa-solid fa-hand-point-right"></i> Accuse ({{accusationCost}}gp)
-              </button>
-            </div>
-            <p class="hint">Click a portrait to select. Cost: Half the pot.</p>
-          {{/if}}
-        {{/if}}
-      {{/if}}
-      
-      {{#if isGM}}
-        <button type="button" class="btn btn-success" data-action="skipInspection">
-          <i class="fa-solid fa-trophy"></i> Finish Round
-        </button>
-      {{/if}}
+  <div class="control-section staredown">
+    <h3><i class="fa-solid fa-eye"></i> The Staredown</h3>
+
+    {{#if accusationMade}}
+    <p class="staredown-text">An accusation has been made. The tension builds...</p>
+    <p class="staredown-hint"><i class="fa-solid fa-hourglass-half"></i> Awaiting the GM to finish the round.</p>
+    {{else}}
+    <p class="staredown-text">The dice are revealed. But can you trust what you see?</p>
+    <p class="staredown-warning"><i class="fa-solid fa-warning"></i> Accuse an innocent and you forfeit your winnings!
+    </p>
+
+    {{#if isInGame}}
+    {{!-- V2.0: Scan action - investigate before accusing --}}
+    {{#if canScan}}
+    {{#if scanTargets.length}}
+    <div class="scan-section">
+      <button type="button" class="btn btn-scan" data-action="scan">
+        <i class="fa-solid fa-magnifying-glass"></i> Scan ({{scanCost}}gp)
+      </button>
+      <p class="hint scan-hint">Investigate a player for cheating. Costs {{scanCost}}gp per target.</p>
     </div>
+    {{/if}}
+    {{/if}}
+
+    {{#if canAccuse}}
+    <div class="accuse-section">
+      <label>Who do you suspect?</label>
+      <div class="accuse-portraits">
+        {{#each accuseTargets}}
+        <div class="accuse-portrait" data-target-id="{{this.id}}" data-target-name="{{this.name}}" tabindex="0">
+          <img src="{{this.img}}" alt="{{this.name}}" />
+          <span class="portrait-name">{{this.name}}</span>
+        </div>
+        {{/each}}
+      </div>
+      <button type="button" class="btn btn-accuse" data-action="accuse" disabled>
+        <i class="fa-solid fa-hand-point-right"></i> Accuse ({{accusationCost}}gp)
+      </button>
+    </div>
+    <p class="hint">Click a portrait to select. Cost: 2× ante. Bounty: 5× ante if correct!</p>
+    {{/if}}
+    {{/if}}
+    {{/if}}
+
+    {{#if isGM}}
+    <button type="button" class="btn btn-success" data-action="skipInspection">
+      <i class="fa-solid fa-trophy"></i> Finish Round
+    </button>
+    {{/if}}
+  </div>
   {{/if}}
 
   {{!-- Revealing state --}}
   {{#if isRevealing}}
-    <div class="control-section revealing">
-      <h3><i class="fa-solid fa-eye"></i> Revealing...</h3>
-      <p>All dice are being revealed!</p>
-      <div class="reveal-animation">
-        <i class="fa-solid fa-dice fa-spin"></i>
-      </div>
+  <div class="control-section revealing">
+    <h3><i class="fa-solid fa-eye"></i> Revealing...</h3>
+    <p>All dice are being revealed!</p>
+    <div class="reveal-animation">
+      <i class="fa-solid fa-dice fa-spin"></i>
     </div>
+  </div>
+  {{/if}}
+
+  {{!-- V2.0: Duel state --}}
+  {{#if isDuel}}
+  <div class="control-section duel">
+    <h3><i class="fa-solid fa-crossed-swords"></i> The Duel!</h3>
+    <p class="duel-announcement">Contest: <strong>{{duel.stat}}</strong></p>
+    <p class="duel-round">Round {{duel.round}}</p>
+
+    <div class="duel-participants">
+      {{#each duelParticipants}}
+      <div class="duel-participant {{#if this.hasRolled}}rolled{{/if}}">
+        <span class="participant-name">{{this.name}}</span>
+        {{#if this.hasRolled}}
+        <span class="participant-roll">{{this.roll}}</span>
+        {{else}}
+        <span class="participant-waiting">...</span>
+        {{/if}}
+      </div>
+      {{/each}}
+    </div>
+
+    {{#if isMyDuel}}
+    <button type="button" class="btn btn-primary btn-large" data-action="duelRoll">
+      <i class="fa-solid fa-dice-d20"></i> Roll {{duel.stat}}!
+    </button>
+    {{else}}
+    <p class="duel-waiting"><i class="fa-solid fa-hourglass-half"></i> Waiting for duelists...</p>
+    {{/if}}
+  </div>
   {{/if}}
 
   {{!-- Payout state --}}
   {{#if isPayout}}
-    <div class="control-section payout">
-      <h3><i class="fa-solid fa-trophy"></i> Round Complete!</h3>
-      {{#if isInGame}}
-        <button type="button" class="btn btn-secondary" data-action="leave">
-          <i class="fa-solid fa-door-open"></i> Leave Table
-        </button>
-      {{/if}}
-      {{#if isGM}}
-        <button type="button" class="btn btn-success btn-large" data-action="newRound">
-          <i class="fa-solid fa-rotate"></i> New Round
-        </button>
-      {{/if}}
-    </div>
+  <div class="control-section payout">
+    <h3><i class="fa-solid fa-trophy"></i> Round Complete!</h3>
+    {{#if isInGame}}
+    <button type="button" class="btn btn-secondary" data-action="leave">
+      <i class="fa-solid fa-door-open"></i> Leave Table
+    </button>
+    {{/if}}
+    {{#if isGM}}
+    <button type="button" class="btn btn-success btn-large" data-action="newRound">
+      <i class="fa-solid fa-rotate"></i> New Round
+    </button>
+    {{/if}}
+  </div>
   {{/if}}
 </div>

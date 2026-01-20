@@ -372,8 +372,40 @@
 .die-face.d6 { background: linear-gradient(135deg, #4a8b6e, #3a6b5e); color: white; }
 .die-face.d8 { background: linear-gradient(135deg, #8b8b3a, #6b6b2a); color: white; }
 .die-face.d10 { background: linear-gradient(135deg, #b5854a, #8b652a); color: white; }
-.die-face.d12 { background: linear-gradient(135deg, #8b5a3a, #6b3a2a); color: white; }
 .die-face.d20 { background: linear-gradient(135deg, #8b3a3a, #6b2a2a); color: white; }
+
+/* V2.0: Public vs Hole Die styling */
+.die-face.public-die {
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.die-face.hole-die {
+  border: 2px solid rgba(139, 58, 58, 0.6);
+  position: relative;
+}
+
+.die-face.hole-die.revealed::after {
+  content: "H";
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 14px;
+  height: 14px;
+  background: #6b2a2a;
+  border: 1px solid #8b3a3a;
+  border-radius: 50%;
+  font-size: 8px;
+  font-weight: bold;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.die-face.hidden.hole-die {
+  background: linear-gradient(135deg, #3a2a2a, #2a1a1a);
+  border: 2px dashed rgba(139, 58, 58, 0.6);
+}
 
 .die-type {
   font-size: 9px;
@@ -605,6 +637,38 @@
   letter-spacing: 1px;
   margin-top: 6px;
   opacity: 0.9;
+}
+
+/* V2.0: Dice Cost Labels */
+.btn-die-premium .die-cost {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: linear-gradient(135deg, #5a4a2a 0%, #3a2a1a 100%);
+  border: 1px solid var(--tavern-gold);
+  border-radius: 8px;
+  padding: 2px 6px;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--tavern-gold-bright);
+  text-transform: uppercase;
+  white-space: nowrap;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+}
+
+.btn-die-premium .die-cost.free {
+  background: linear-gradient(135deg, #2a5a2a 0%, #1a3a1a 100%);
+  border-color: var(--tavern-success);
+  color: #8fdf8f;
+}
+
+/* Center the last row if it has fewer items (5 dice = 3 + 2) */
+.dice-buttons.premium .btn-die-premium:nth-child(4) {
+  grid-column: 1;
+}
+
+.dice-buttons.premium .btn-die-premium:nth-child(5) {
+  grid-column: 2;
 }
 
 .btn-die-premium:hover {
@@ -1485,6 +1549,69 @@
 }
 
 /* ============================================
+   V2.0: Scan Section
+   ============================================ */
+
+.scan-section {
+  margin: var(--tavern-gap-md) 0;
+  padding: var(--tavern-gap-md);
+  background: rgba(74, 107, 139, 0.1);
+  border: 1px solid rgba(74, 107, 139, 0.3);
+  border-radius: var(--tavern-radius-md);
+}
+
+.btn-scan {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, #3a5a7b, #2a4a6b);
+  border: 2px solid #5a8bab;
+  color: white;
+  font-weight: 600;
+  border-radius: var(--tavern-radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-scan:hover:not(:disabled) {
+  background: linear-gradient(135deg, #4a6b8b, #3a5a7b);
+  box-shadow: 0 0 15px rgba(74, 107, 139, 0.5);
+  transform: translateY(-1px);
+}
+
+.btn-scan:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-scan i {
+  font-size: 1.1em;
+}
+
+.scan-hint {
+  text-align: center;
+  font-size: 0.85em;
+  color: var(--tavern-info);
+  margin-top: 8px;
+}
+
+/* Scan result whisper styling (in chat) */
+.tavern-scan-result {
+  padding: 8px 12px;
+  background: rgba(74, 107, 139, 0.15);
+  border-left: 3px solid #5a8bab;
+  border-radius: 4px;
+  font-family: "Signika", "Palatino Linotype", serif;
+}
+
+.tavern-scan-result strong {
+  color: #8ab8d8;
+}
+
+/* ============================================
    Gut Feeling (Passive Perception Hint)
    ============================================ */
 
@@ -1571,136 +1698,143 @@
 }
 
 /* ============================================
-   Intimidation System Styles
+   V2.0: Goad System Styles (replaces Intimidation)
    ============================================ */
 
-/* Intimidate section in controls */
-.intimidate-section {
+/* Goad section in controls */
+.goad-section {
   border-top: 1px dashed var(--tavern-wood-highlight);
   padding-top: var(--tavern-gap-md);
   margin-top: var(--tavern-gap-md);
 }
 
-/* Intimidate button - dark threatening style */
-.btn-intimidate {
+/* Goad button - taunting green/gold style */
+.btn-goad {
   width: 100%;
   padding: 10px;
-  background: linear-gradient(135deg, #4a2a2a 0%, #2a1a1a 100%);
-  border: 2px solid #6a3a3a;
-  color: #ffaaaa;
+  background: linear-gradient(135deg, #2a4a2a 0%, #1a2a1a 100%);
+  border: 2px solid #3a6a3a;
+  color: #aaffaa;
   font-weight: 600;
   border-radius: var(--tavern-radius-md);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.btn-intimidate:hover {
-  background: linear-gradient(135deg, #5a3a3a 0%, #3a2a2a 100%);
-  border-color: #8a4a4a;
-  box-shadow: 0 0 15px rgba(170, 74, 74, 0.4);
+.btn-goad:hover {
+  background: linear-gradient(135deg, #3a5a3a 0%, #2a3a2a 100%);
+  border-color: #4a8a4a;
+  box-shadow: 0 0 15px rgba(74, 170, 74, 0.4);
 }
 
-.btn-intimidate i {
+.btn-goad i {
   margin-right: 6px;
 }
 
-.intimidate-hint {
+.goad-hint {
   font-size: 11px;
-  color: #aa8888;
+  color: #88aa88;
   text-align: center;
 }
 
-/* Intimidation chat card */
-.tavern-intimidation-card {
-  background: linear-gradient(135deg, #3a2020, #2a1515);
-  border: 2px solid #6a3a3a;
+/* Goad chat card */
+.tavern-goad-card {
+  background: linear-gradient(135deg, #203a20, #152a15);
+  border: 2px solid #3a6a3a;
   border-radius: var(--tavern-radius-md);
   color: var(--tavern-parchment);
   overflow: hidden;
 }
 
-.intimidation-header {
-  background: linear-gradient(180deg, #4a2a2a, #3a1a1a);
+.goad-header {
+  background: linear-gradient(180deg, #2a4a2a, #1a3a1a);
   padding: 12px 16px;
-  border-bottom: 1px solid #6a3a3a;
+  border-bottom: 1px solid #3a6a3a;
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.intimidation-header i {
+.goad-header i {
   font-size: 24px;
-  color: #ffaaaa;
+  color: #aaffaa;
 }
 
-.intimidation-header h3 {
-  margin: 0;
-  font-size: 16px;
-  color: #ffaaaa;
+.goad-title {
+  font-size: 14px;
+  color: #aaffaa;
+  font-weight: 600;
 }
 
-.intimidation-header .subtitle {
-  font-size: 12px;
-  color: #cc9999;
-  font-style: italic;
-}
-
-.intimidation-content {
-  padding: 12px 16px;
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.intimidation-rolls {
+.goad-rolls {
   display: flex;
   justify-content: space-around;
+  align-items: center;
   gap: 16px;
-  margin: 12px 0;
+  margin: 12px;
   padding: 10px;
   background: rgba(0, 0, 0, 0.3);
   border-radius: var(--tavern-radius-sm);
 }
 
-.intimidation-roll {
+.goad-roll {
   text-align: center;
+  flex: 1;
 }
 
-.intimidation-roll .roll-label {
+.goad-roll .roll-label {
+  display: block;
   font-size: 11px;
-  color: #cc9999;
+  color: #99cc99;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 4px;
 }
 
-.intimidation-roll .roll-value {
-  font-size: 20px;
-  font-weight: 700;
+.goad-roll .roll-result {
+  font-size: 14px;
+  color: var(--tavern-parchment);
+}
+
+.goad-roll .roll-result strong {
+  font-size: 18px;
   color: var(--tavern-gold-bright);
 }
 
-.intimidation-result {
-  text-align: center;
-  padding: 10px;
-  margin-top: 8px;
-  border-radius: var(--tavern-radius-sm);
-  font-weight: 600;
+.goad-vs {
+  font-size: 12px;
+  font-weight: 700;
+  color: #666;
+  padding: 0 8px;
 }
 
-.intimidation-result.success {
+.goad-result {
+  text-align: center;
+  padding: 10px 12px;
+  margin: 0 12px 12px;
+  border-radius: var(--tavern-radius-sm);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.goad-result i {
+  margin-right: 6px;
+}
+
+.goad-result.success {
   background: rgba(74, 124, 78, 0.3);
   border: 1px solid var(--tavern-success);
   color: #aaffaa;
 }
 
-.intimidation-result.failure {
+.goad-result.failure {
   background: rgba(139, 58, 58, 0.3);
   border: 1px solid var(--tavern-danger);
   color: #ffaaaa;
 }
 
-/* History entry for intimidation */
-.history-entry.intimidation { border-left-color: #8a4a4a; }
+/* History entry for goad */
+.history-entry.goad { border-left-color: #4a8a4a; }
 
 /* ============================================
    Blackjack (Natural 21) Bonus Styles
@@ -1953,3 +2087,123 @@
   height: 36px;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
 }
+
+/* ============================================
+   V2.0: Duel System Styles (Tie-Breaking)
+   ============================================ */
+
+/* Duel section in controls */
+.control-section.duel {
+  background: linear-gradient(135deg, rgba(139, 58, 58, 0.15), rgba(74, 42, 42, 0.25));
+  border: 2px solid #ab4a4a;
+  border-radius: var(--tavern-radius-md);
+  padding: var(--tavern-gap-md);
+  text-align: center;
+  animation: duel-pulse 2s ease-in-out infinite;
+}
+
+@keyframes duel-pulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(171, 74, 74, 0.3); }
+  50% { box-shadow: 0 0 25px rgba(171, 74, 74, 0.6); }
+}
+
+.control-section.duel h3 {
+  color: #ffaaaa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: var(--tavern-gap-sm);
+}
+
+.control-section.duel h3 i {
+  color: #ab4a4a;
+  font-size: 1.2em;
+}
+
+.duel-announcement {
+  font-size: 16px;
+  color: var(--tavern-gold-bright);
+  margin: 8px 0;
+}
+
+.duel-announcement strong {
+  font-size: 20px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px var(--tavern-glow);
+}
+
+.duel-round {
+  font-size: 12px;
+  color: var(--tavern-parchment-dark);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: var(--tavern-gap-md);
+}
+
+/* Duel participants display */
+.duel-participants {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: var(--tavern-gap-md) 0;
+  padding: var(--tavern-gap-sm);
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--tavern-radius-sm);
+}
+
+.duel-participant {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, var(--tavern-wood-medium), var(--tavern-wood-dark));
+  border: 2px solid var(--tavern-wood-highlight);
+  border-radius: var(--tavern-radius-md);
+  min-width: 80px;
+  transition: all 0.3s ease;
+}
+
+.duel-participant.rolled {
+  border-color: var(--tavern-gold);
+  box-shadow: 0 0 10px var(--tavern-glow);
+}
+
+.duel-participant .participant-name {
+  font-size: 13px;
+  color: var(--tavern-parchment);
+  font-weight: 600;
+}
+
+.duel-participant .participant-roll {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--tavern-gold-bright);
+  text-shadow: 0 0 8px var(--tavern-glow);
+}
+
+.duel-participant .participant-waiting {
+  font-size: 24px;
+  color: var(--tavern-parchment-dark);
+  animation: duel-waiting-dots 1.5s ease-in-out infinite;
+}
+
+@keyframes duel-waiting-dots {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+.duel-waiting {
+  font-size: 13px;
+  color: var(--tavern-parchment-dark);
+  font-style: italic;
+  margin-top: var(--tavern-gap-sm);
+}
+
+/* History entry for duel */
+.history-entry.duel_start { border-left-color: #ab4a4a; }
+.history-entry.duel_tie { border-left-color: #8b6a4a; }
+.history-entry.duel_end { border-left-color: var(--tavern-gold); }

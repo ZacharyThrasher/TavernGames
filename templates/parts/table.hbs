@@ -23,11 +23,11 @@
           <div class="player-dice">
             {{#each this.diceDisplay}}
               {{#if this.hidden}}
-                <div class="die-face hidden">
+                <div class="die-face hidden hole-die" title="Hole Die">
                   <i class="fa-solid fa-question"></i>
                 </div>
               {{else}}
-                <div class="die-face d{{this.die}}" title="d{{this.die}}: {{this.result}}">
+                <div class="die-face d{{this.die}} {{#if this.isHole}}hole-die revealed{{/if}} {{#if this.isPublic}}public-die{{/if}}" title="d{{this.die}}: {{this.result}}{{#if this.isHole}} (Hole){{/if}}">
                   <span class="die-type">d{{this.die}}</span>
                   <span class="die-result">{{this.result}}</span>
                 </div>

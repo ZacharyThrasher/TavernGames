@@ -1,5 +1,6 @@
 import { MODULE_ID, getState } from "../state.js";
 import { tavernSocket } from "../socket.js";
+import { getDieCost } from "../twenty-one.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -25,9 +26,11 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       hold: TavernApp.onHold,
       cheat: TavernApp.onCheat,
       accuse: TavernApp.onAccuse,
-      intimidate: TavernApp.onIntimidate,
+      scan: TavernApp.onScan,
+      goad: TavernApp.onGoad,
       bumpTable: TavernApp.onBumpTable,
       bumpRetaliation: TavernApp.onBumpRetaliation,
+      duelRoll: TavernApp.onDuelRoll,
       skipInspection: TavernApp.onSkipInspection,
       reveal: TavernApp.onReveal,
       newRound: TavernApp.onNewRound,
@@ -45,7 +48,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
   // Dice display helper
   static DICE_ICONS = {
     4: "d4",
-    6: "d6", 
+    6: "d6",
     8: "d8",
     10: "d10",
     12: "d12",
@@ -114,21 +117,39 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         }
       }
 
-      // Show dice only to the player who owns them (or GM), or during reveal/inspection
-      const showDice = isMe || isGM || state.status === "REVEALING" || state.status === "PAYOUT" || state.status === "INSPECTION";
-      const diceDisplay = showDice ? rolls.map((r, idx) => ({
-        die: r.die,
-        result: r.result,
-        icon: TavernApp.DICE_ICONS[r.die] || "d6",
-        index: idx,
-      })) : rolls.map(() => ({ hidden: true }));
+      // V2.0: Show dice based on visibility (public vs hole)
+      // During play: Show public dice to everyone, hole dice only to owner/GM
+      // During reveal/inspection/payout: Show all dice
+      const isRevealPhase = state.status === "REVEALING" || state.status === "PAYOUT" || state.status === "INSPECTION";
+      const diceDisplay = rolls.map((r, idx) => {
+        const isPublicDie = r.public ?? false;
+        const canSeeThisDie = isMe || isGM || isRevealPhase || isPublicDie;
+
+        if (canSeeThisDie) {
+          return {
+            die: r.die,
+            result: r.result,
+            icon: TavernApp.DICE_ICONS[r.die] || "d6",
+            index: idx,
+            isPublic: isPublicDie,
+            isHole: !isPublicDie,
+          };
+        } else {
+          return { hidden: true, isHole: true };
+        }
+      });
+
+      // V2.0: Calculate visible total for display to other players
+      const visibleTotal = tableData.visibleTotals?.[player.id] ?? 0;
+      const showFullTotal = isMe || isGM || isRevealPhase;
 
       return {
         ...player,
         rolls,
         diceDisplay,
         total,
-        displayTotal: showDice ? total : "?",
+        visibleTotal,
+        displayTotal: showFullTotal ? total : (visibleTotal > 0 ? `${visibleTotal}+?` : "?"),
         isHolding,
         isBusted,
         isCaught,
@@ -145,12 +166,12 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     // Determine current player info
     const currentPlayer = players.find(p => p.id === tableData.currentPlayer);
     const myTurn = tableData.currentPlayer === userId;
-    
+
     // Game phase tracking
     const phase = tableData.phase ?? "opening";
     const isOpeningPhase = phase === "opening";
     const isBettingPhase = phase === "betting";
-    
+
     // Check if player can hold (only in betting phase)
     const myRolls = tableData.rolls?.[userId] ?? [];
     const canHold = myTurn && isBettingPhase;
@@ -168,8 +189,9 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     // Inspection/Staredown context
     const isInspection = state.status === "INSPECTION";
     const accusationMade = tableData.accusation !== null;
-    const accusationCost = Math.floor(state.pot / 2);
-    
+    // V2.0: Accusation cost is 2x ante (not half pot)
+    const accusationCost = ante * 2;
+
     // Build list of players that can be accused (not self, not busted)
     // Include character artwork for portrait display
     const accuseTargets = isInspection && !accusationMade ? players
@@ -185,14 +207,16 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const isHolding = tableData.holds?.[userId] ?? false;
     const canAccuse = isInspection && state.players?.[userId] && !accusationMade && !isBusted && accuseTargets.length > 0 && !isGM;
 
-    // Intimidation context - can intimidate during betting phase if not busted/held, and haven't used it this round
-    const hasIntimidatedThisRound = tableData.intimidatedThisRound?.[userId] ?? false;
-    const isInGame = Boolean(state.players?.[userId]);
-    const canIntimidate = isBettingPhase && isInGame && !isBusted && !isHolding && !isGM && !hasIntimidatedThisRound;
-    
-    // Valid intimidation targets: other players not busted/held, not GM
-    const intimidateTargets = canIntimidate ? players
-      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !tableData.holds?.[p.id] && !game.users.get(p.id)?.isGM)
+    // V2.0: Scan context - can scan during staredown if you're in the game and not busted
+    // Cost: 1x ante per target, cannot scan same target twice
+    const scannedBy = tableData.scannedBy ?? {};
+    const canScan = isInspection && state.players?.[userId] && !isBusted && !isGM;
+    const scanCost = ante;
+
+    // Build scan targets - players you haven't already scanned
+    const scanTargets = canScan ? players
+      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !game.users.get(p.id)?.isGM)
+      .filter(p => !scannedBy[p.id]?.includes(userId)) // Not already scanned by this player
       .map(p => {
         const user = game.users.get(p.id);
         const actor = user?.character;
@@ -200,10 +224,28 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         return { id: p.id, name: p.name, img };
       }) : [];
 
+    // V2.0: Goad context - can goad during betting phase if not busted, and haven't used it this round
+    // NOTE: You CAN goad even if you're holding! (Unlike old intimidate)
+    const hasGoadedThisRound = tableData.goadedThisRound?.[userId] ?? false;
+    const isInGame = Boolean(state.players?.[userId]);
+    const canGoad = isBettingPhase && isInGame && !isBusted && !isGM && !hasGoadedThisRound;
+
+    // V2.0: Valid goad targets: other players not busted, not GM
+    // HOLDERS ARE VALID TARGETS - that's the whole point of goad!
+    const goadTargets = canGoad ? players
+      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !game.users.get(p.id)?.isGM)
+      .map(p => {
+        const user = game.users.get(p.id);
+        const actor = user?.character;
+        const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
+        const isTargetHolding = tableData.holds?.[p.id] ?? false;
+        return { id: p.id, name: p.name, img, isHolding: isTargetHolding };
+      }) : [];
+
     // Bump table context - can bump during betting phase if not busted/held, and haven't used it this round
     const hasBumpedThisRound = tableData.bumpedThisRound?.[userId] ?? false;
     const canBump = isBettingPhase && isInGame && !isBusted && !isHolding && !isGM && !hasBumpedThisRound;
-    
+
     // Valid bump targets: other players with dice, not self, not busted, not GM (holders ARE valid targets!)
     const bumpTargets = canBump ? players
       .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !game.users.get(p.id)?.isGM)
@@ -220,10 +262,10 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const pendingRetaliation = tableData.pendingBumpRetaliation;
     const isRetaliationTarget = pendingRetaliation?.targetId === userId;
     const canRetaliate = isRetaliationTarget || (isGM && pendingRetaliation);
-    const retaliationAttackerName = pendingRetaliation 
-      ? (state.players?.[pendingRetaliation.attackerId]?.name ?? "Unknown") 
+    const retaliationAttackerName = pendingRetaliation
+      ? (state.players?.[pendingRetaliation.attackerId]?.name ?? "Unknown")
       : null;
-    const retaliationAttackerDice = pendingRetaliation 
+    const retaliationAttackerDice = pendingRetaliation
       ? (tableData.rolls?.[pendingRetaliation.attackerId] ?? []).map((r, idx) => ({ index: idx, die: r.die, result: r.result }))
       : [];
 
@@ -261,8 +303,11 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       canAccuse,
       accusationMade,
       accuseTargets,
-      canIntimidate,
-      intimidateTargets,
+      canScan,
+      scanCost,
+      scanTargets,
+      canGoad,
+      goadTargets,
       canBump,
       bumpTargets,
       canRetaliate,
@@ -273,15 +318,48 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       isBettingPhase,
       openingRollsRemaining,
       history,
-      dice: [
-        { value: 4, label: "d4", icon: "d4-grey" },
-        { value: 6, label: "d6", icon: "d6-grey" },
-        { value: 8, label: "d8", icon: "d8-grey" },
-        { value: 10, label: "d10", icon: "d10-grey" },
-        { value: 12, label: "d12", icon: "d12-grey" },
-        { value: 20, label: "d20", icon: "d20-grey" },
-      ],
+      // V2.0: Dice with variable costs (d12 removed)
+      dice: this._buildDiceArray(ante, isBettingPhase),
+      // V2.0: Duel state
+      isDuel: state.status === "DUEL",
+      duel: tableData.duel ?? null,
+      isMyDuel: (tableData.duel?.pendingRolls ?? []).includes(userId),
+      duelParticipants: (tableData.duel?.participants ?? []).map(id => ({
+        id,
+        name: game.users.get(id)?.character?.name ?? game.users.get(id)?.name ?? "Unknown",
+        hasRolled: !!tableData.duel?.rolls?.[id],
+        roll: tableData.duel?.rolls?.[id]?.total ?? null,
+      })),
     };
+  }
+
+  /**
+   * V2.0: Build dice array with costs
+   * d20=FREE, d10=½ ante, d6/d8=1x ante, d4=2x ante
+   */
+  _buildDiceArray(ante, isBettingPhase) {
+    const diceConfig = [
+      { value: 20, label: "d20", icon: "d20-grey", strategy: "Hail Mary" },
+      { value: 10, label: "d10", icon: "d10-grey", strategy: "Builder" },
+      { value: 8, label: "d8", icon: "d8-grey", strategy: "Standard" },
+      { value: 6, label: "d6", icon: "d6-grey", strategy: "Standard" },
+      { value: 4, label: "d4", icon: "d4-grey", strategy: "Precision" },
+    ];
+
+    return diceConfig.map(d => ({
+      ...d,
+      cost: getDieCost(d.value, ante),
+      costLabel: this._formatCostLabel(getDieCost(d.value, ante), ante, isBettingPhase),
+    }));
+  }
+
+  /**
+   * Format cost label for display
+   */
+  _formatCostLabel(cost, ante, isBettingPhase) {
+    if (!isBettingPhase) return ""; // No cost shown during opening
+    if (cost === 0) return "FREE";
+    return `${cost}gp`;
   }
 
   _formatTimeAgo(timestamp) {
@@ -304,17 +382,18 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       case "accusation": return "fa-solid fa-hand-point-right";
       case "cheat_caught": return "fa-solid fa-gavel";
       case "accusation_failed": return "fa-solid fa-face-frown";
+      case "goad": return "fa-solid fa-comments";
       default: return "fa-solid fa-circle";
     }
   }
 
   _onRender(context, options) {
     super._onRender(context, options);
-    
+
     // Handle portrait selection for accusations
     const portraits = this.element.querySelectorAll('.accuse-portrait');
     const accuseBtn = this.element.querySelector('[data-action="accuse"]');
-    
+
     if (portraits.length && accuseBtn) {
       portraits.forEach(portrait => {
         portrait.addEventListener('click', () => {
@@ -325,7 +404,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
           // Enable accuse button
           accuseBtn.disabled = false;
         });
-        
+
         // Keyboard support
         portrait.addEventListener('keydown', (e) => {
           if (e.key === 'Enter' || e.key === ' ') {
@@ -390,19 +469,24 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       return ui.notifications.warn("You have no dice to cheat with!");
     }
 
-    // Get skill modifiers from character sheet
+    // Get skill/ability modifiers from character sheet
     const actor = game.user.character;
-    const decMod = actor?.system?.skills?.dec?.total ?? 0;
-    const sltMod = actor?.system?.skills?.slt?.total ?? 0;
     const hasActor = !!actor;
 
-    // Determine which skill has higher modifier for default selection
-    const defaultSkill = sltMod > decMod ? "slt" : "dec";
+    // Physical skills
+    const sltMod = actor?.system?.skills?.slt?.total ?? 0;
+    const decMod = actor?.system?.skills?.dec?.total ?? 0;
+
+    // Magical abilities (use modifier, not total)
+    const intMod = actor?.system?.abilities?.int?.mod ?? 0;
+    const wisMod = actor?.system?.abilities?.wis?.mod ?? 0;
+    const chaMod = actor?.system?.abilities?.cha?.mod ?? 0;
 
     // Build a dialog for selecting which die to cheat and the new value
-    const diceOptions = myRolls.map((r, idx) => 
-      `<option value="${idx}" data-max="${r.die}">Die ${idx + 1}: d${r.die} (current: ${r.result})</option>`
-    ).join("");
+    const diceOptions = myRolls.map((r, idx) => {
+      const visibility = r.public ? "Visible" : "Hole";
+      return `<option value="${idx}" data-max="${r.die}">Die ${idx + 1}: d${r.die} (${visibility}, current: ${r.result})</option>`;
+    }).join("");
 
     // Get initial max value from first die
     const initialMax = myRolls[0]?.die ?? 20;
@@ -419,16 +503,50 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
           <label>New Value: <span id="cheat-max-label">(1-${initialMax})</span></label>
           <input type="number" name="newValue" id="cheat-new-value" min="1" max="${initialMax}" value="1" style="width: 100%;" />
         </div>
+        <hr>
         <div class="form-group">
-          <label>Skill Check:</label>
-          <select name="skill" style="width: 100%;">
-            <option value="dec" ${defaultSkill === "dec" ? "selected" : ""}>Deception (CHA) ${hasActor ? `(+${decMod})` : ""}</option>
-            <option value="slt" ${defaultSkill === "slt" ? "selected" : ""}>Sleight of Hand (DEX) ${hasActor ? `(+${sltMod})` : ""}</option>
+          <label style="font-weight: bold;">Cheat Type:</label>
+          <div style="display: flex; gap: 16px; margin-top: 8px;">
+            <label style="cursor: pointer;">
+              <input type="radio" name="cheatType" value="physical" checked />
+              <strong>Physical</strong>
+              <div style="font-size: 0.85em; color: #888;">Sleight of Hand / Deception</div>
+            </label>
+            <label style="cursor: pointer;">
+              <input type="radio" name="cheatType" value="magical" />
+              <strong>Magical</strong>
+              <div style="font-size: 0.85em; color: #888;">INT / WIS / CHA</div>
+            </label>
+          </div>
+        </div>
+        <div class="form-group" id="physical-skill-group">
+          <label>Physical Skill:</label>
+          <select name="physicalSkill" style="width: 100%;">
+            <option value="slt" ${sltMod >= decMod ? "selected" : ""}>Sleight of Hand (DEX) ${hasActor ? `(+${sltMod})` : ""}</option>
+            <option value="dec" ${decMod > sltMod ? "selected" : ""}>Deception (CHA) ${hasActor ? `(+${decMod})` : ""}</option>
           </select>
         </div>
-        <p class="hint" style="font-size: 0.9em; color: #666; margin-top: 10px;">
-          <i class="fa-solid fa-warning"></i> Nat 1 = auto-caught at reveal. Nat 20 = untouchable!
-        </p>
+        <div class="form-group" id="magical-skill-group" style="display: none;">
+          <label>Spellcasting Ability:</label>
+          <select name="magicalSkill" style="width: 100%;">
+            <option value="int" ${intMod >= wisMod && intMod >= chaMod ? "selected" : ""}>Intelligence ${hasActor ? `(+${intMod})` : ""}</option>
+            <option value="wis" ${wisMod > intMod && wisMod >= chaMod ? "selected" : ""}>Wisdom ${hasActor ? `(+${wisMod})` : ""}</option>
+            <option value="cha" ${chaMod > intMod && chaMod > wisMod ? "selected" : ""}>Charisma ${hasActor ? `(+${chaMod})` : ""}</option>
+          </select>
+        </div>
+        <hr>
+        <div id="cheat-warning-physical">
+          <p class="hint" style="font-size: 0.9em; color: #c44; margin-top: 10px;">
+            <i class="fa-solid fa-warning"></i> <strong>FUMBLE:</strong> Roll < 10 = auto-caught immediately!
+          </p>
+          <p class="hint" style="font-size: 0.85em; color: #888;">Sets Tell DC (detected by Insight during Scan)</p>
+        </div>
+        <div id="cheat-warning-magical" style="display: none;">
+          <p class="hint" style="font-size: 0.9em; color: #88f; margin-top: 10px;">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Magical cheats cannot fumble.
+          </p>
+          <p class="hint" style="font-size: 0.85em; color: #888;">Sets Residue DC (detected by Arcana during Scan)</p>
+        </div>
       </form>
       <script>
         document.getElementById('cheat-die-select')?.addEventListener('change', (e) => {
@@ -436,18 +554,30 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
           document.getElementById('cheat-new-value').max = max;
           document.getElementById('cheat-max-label').textContent = '(1-' + max + ')';
         });
+        document.querySelectorAll('[name="cheatType"]').forEach(radio => {
+          radio.addEventListener('change', (e) => {
+            const isPhysical = e.target.value === 'physical';
+            document.getElementById('physical-skill-group').style.display = isPhysical ? 'block' : 'none';
+            document.getElementById('magical-skill-group').style.display = isPhysical ? 'none' : 'block';
+            document.getElementById('cheat-warning-physical').style.display = isPhysical ? 'block' : 'none';
+            document.getElementById('cheat-warning-magical').style.display = isPhysical ? 'none' : 'block';
+          });
+        });
       </script>
     `;
 
     const result = await Dialog.prompt({
-      title: "Cheat - Sleight of Hand",
+      title: "Cheat - V2.0",
       content,
       label: "Attempt Cheat",
       callback: (html) => {
         const dieIndex = parseInt(html.find('[name="dieIndex"]').val());
         const newValue = parseInt(html.find('[name="newValue"]').val());
-        const skill = html.find('[name="skill"]').val();
-        return { dieIndex, newValue, skill };
+        const cheatType = html.find('[name="cheatType"]:checked').val();
+        const skill = cheatType === "physical"
+          ? html.find('[name="physicalSkill"]').val()
+          : html.find('[name="magicalSkill"]').val();
+        return { dieIndex, newValue, cheatType, skill };
       },
       rejectClose: false,
     });
@@ -459,129 +589,258 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static async onAccuse(event, target) {
     const state = getState();
-    const accusationCost = Math.floor(state.pot / 2);
-    
+    const ante = game.settings.get(MODULE_ID, "fixedAnte");
+    const accusationCost = ante * 2;
+
     // Get selected target from portrait
     const selectedPortrait = document.querySelector('.accuse-portrait.selected');
     const targetId = selectedPortrait?.dataset?.targetId;
-    
+
     if (!targetId) {
       return ui.notifications.warn("Select a player to accuse.");
     }
-    
+
     const targetName = selectedPortrait.dataset.targetName ?? "Unknown";
-    
-    // Get skill modifiers from character sheet
-    const actor = game.user.character;
-    const prcMod = actor?.system?.skills?.prc?.total ?? 0;
-    const insMod = actor?.system?.skills?.ins?.total ?? 0;
-    const hasActor = !!actor;
-    
-    // Determine which skill has higher modifier for default selection
-    const defaultSkill = insMod > prcMod ? "ins" : "prc";
-    
+
+    // V2.0: No skill selection - direct accusation
     const content = `
       <form>
         <p>Accuse <strong>${targetName}</strong> of cheating?</p>
-        <p><strong>Cost:</strong> ${accusationCost}gp (half the pot)</p>
-        <div class="form-group" style="margin-top: 10px;">
-          <label>Skill Check:</label>
-          <select name="skill" style="width: 100%;">
-            <option value="prc" ${defaultSkill === "prc" ? "selected" : ""}>Perception (WIS) ${hasActor ? `(+${prcMod})` : ""}</option>
-            <option value="ins" ${defaultSkill === "ins" ? "selected" : ""}>Insight (WIS) ${hasActor ? `(+${insMod})` : ""}</option>
-          </select>
-        </div>
+        <p><strong>Cost:</strong> ${accusationCost}gp (2× ante)</p>
         <hr>
-        <p style="color: #c44; font-weight: bold;">If they're innocent, YOU forfeit your winnings!</p>
+        <p style="color: #4a4; font-weight: bold;">✓ If correct: Refund + ${ante * 5}gp bounty!</p>
+        <p style="color: #c44; font-weight: bold;">✗ If wrong: Lose ${accusationCost}gp fee</p>
       </form>
     `;
-    
-    const result = await Dialog.prompt({
+
+    const result = await Dialog.confirm({
       title: "Make Accusation",
       content,
-      label: "Accuse!",
-      callback: (html) => ({ skill: html.find('[name="skill"]').val() }),
-      rejectClose: false,
+      yes: { label: "Accuse!", icon: '<i class="fa-solid fa-hand-point-right"></i>' },
+      no: { label: "Cancel", icon: '<i class="fa-solid fa-times"></i>' },
+      defaultYes: false,
     });
-    
+
     if (result) {
-      await tavernSocket.executeAsGM("playerAction", "accuse", { targetId, skill: result.skill }, game.user.id);
+      await tavernSocket.executeAsGM("playerAction", "accuse", { targetId }, game.user.id);
     }
   }
 
-  static async onIntimidate(event, target) {
+  /**
+   * V2.0: Scan - Investigate a player for cheating during Staredown.
+   * - Cost: 1x ante per target
+   * - Skill: Insight (vs Tell DC) for Physical cheats, Arcana (vs Residue DC) for Magical
+   * - Success: Whisper reveals cheat type + location (Public/Hole), NOT the actual number
+   */
+  static async onScan(event, target) {
     const state = getState();
     const tableData = state.tableData ?? {};
     const userId = game.user.id;
     const players = Object.values(state.players ?? {});
-    
-    // Build list of valid targets (not self, not busted, not holding, not GM)
+    const ante = game.settings.get(MODULE_ID, "fixedAnte");
+    const scannedBy = tableData.scannedBy ?? {};
+
+    // Build list of valid targets (not self, not busted, not GM, not already scanned by this user)
     const validTargets = players
-      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !tableData.holds?.[p.id] && !game.users.get(p.id)?.isGM)
+      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !game.users.get(p.id)?.isGM)
+      .filter(p => !scannedBy[p.id]?.includes(userId))
       .map(p => {
         const user = game.users.get(p.id);
         const actor = user?.character;
         const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
         return { id: p.id, name: p.name, img };
       });
-    
+
     if (validTargets.length === 0) {
-      return ui.notifications.warn("No valid targets to intimidate.");
+      return ui.notifications.warn("No valid targets to scan.");
     }
-    
-    // Get intimidation modifier
+
+    // Get skill modifiers
     const actor = game.user.character;
-    const itmMod = actor?.system?.skills?.itm?.total ?? 0;
+    const insMod = actor?.system?.skills?.ins?.total ?? 0;
+    const arcMod = actor?.system?.skills?.arc?.total ?? 0;
     const hasActor = !!actor;
-    
+
     // Build target selection with portraits
-    const targetOptions = validTargets.map(t => 
-      `<div class="intimidate-portrait" data-target-id="${t.id}" data-target-name="${t.name}" tabindex="0" style="display: inline-block; text-align: center; padding: 8px; margin: 4px; border: 2px solid transparent; border-radius: 8px; cursor: pointer;">
+    const targetOptions = validTargets.map(t =>
+      `<div class="scan-portrait" data-target-id="${t.id}" data-target-name="${t.name}" tabindex="0" style="display: inline-block; text-align: center; padding: 8px; margin: 4px; border: 2px solid transparent; border-radius: 8px; cursor: pointer;">
         <img src="${t.img}" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;" />
         <div style="font-size: 0.85em; margin-top: 4px;">${t.name}</div>
       </div>`
     ).join("");
-    
+
     const content = `
       <form>
-        <p style="font-weight: bold; margin-bottom: 8px;">Select a target to intimidate:</p>
-        <div class="intimidate-targets" style="display: flex; flex-wrap: wrap; justify-content: center; margin-bottom: 12px;">
+        <p style="font-weight: bold; margin-bottom: 8px;">Select a player to scan:</p>
+        <p><strong>Cost:</strong> ${ante}gp (1x ante)</p>
+        <div class="scan-targets" style="display: flex; flex-wrap: wrap; justify-content: center; margin-bottom: 12px;">
           ${targetOptions}
         </div>
+        <hr>
         <div class="form-group">
-          <label>Your Skill: Intimidation (CHA) ${hasActor ? `(+${itmMod})` : ""}</label>
-        </div>
-        <div class="form-group">
-          <label>Target defends with:</label>
-          <select name="defenseSkill" style="width: 100%;">
-            <option value="wis">Wisdom Save</option>
-            <option value="ins">Insight (WIS)</option>
-          </select>
-          <p class="hint" style="font-size: 0.85em; color: #666; margin-top: 4px;">(Target chooses their defense)</p>
+          <label style="font-weight: bold;">What are you looking for?</label>
+          <div style="display: flex; gap: 16px; margin-top: 8px;">
+            <label style="cursor: pointer; flex: 1; padding: 8px; border: 2px solid #555; border-radius: 8px; text-align: center;" class="scan-type-option" data-type="insight">
+              <input type="radio" name="scanType" value="insight" checked style="display: none;" />
+              <i class="fa-solid fa-eye" style="font-size: 1.5em; color: #a0a0ff;"></i>
+              <div><strong>Physical Tells</strong></div>
+              <div style="font-size: 0.85em; color: #888;">Insight ${hasActor ? `(+${insMod})` : ""}</div>
+              <div style="font-size: 0.75em; color: #666; margin-top: 4px;">Sleight of Hand / Deception</div>
+            </label>
+            <label style="cursor: pointer; flex: 1; padding: 8px; border: 2px solid #555; border-radius: 8px; text-align: center;" class="scan-type-option" data-type="arcana">
+              <input type="radio" name="scanType" value="arcana" style="display: none;" />
+              <i class="fa-solid fa-wand-magic-sparkles" style="font-size: 1.5em; color: #a080ff;"></i>
+              <div><strong>Magical Residue</strong></div>
+              <div style="font-size: 0.85em; color: #888;">Arcana ${hasActor ? `(+${arcMod})` : ""}</div>
+              <div style="font-size: 0.75em; color: #666; margin-top: 4px;">INT / WIS / CHA magic</div>
+            </label>
+          </div>
         </div>
         <hr>
-        <p style="color: #c44; font-weight: bold;">WARNING: If you fail, YOU are forced to hold and get disadvantage on your next cheat or accuse roll!</p>
+        <p style="color: #aaf; font-size: 0.9em;">
+          <i class="fa-solid fa-info-circle"></i> Success reveals cheat <strong>type</strong> and <strong>location</strong> (visible/hole), but NOT the actual number.
+        </p>
       </form>
       <style>
-        .intimidate-portrait:hover { border-color: #666; background: rgba(255,255,255,0.1); }
-        .intimidate-portrait.selected { border-color: #c44; background: rgba(200,50,50,0.2); }
+        .scan-portrait:hover { border-color: #666; background: rgba(255,255,255,0.1); }
+        .scan-portrait.selected { border-color: #4a6b8b; background: rgba(74,107,139,0.2); }
+        .scan-type-option:hover { border-color: #777; }
+        .scan-type-option.selected { border-color: #4a6b8b; background: rgba(74,107,139,0.2); }
       </style>
     `;
-    
+
     let selectedTargetId = null;
-    
+
     const result = await Dialog.prompt({
-      title: "Intimidate",
+      title: "Scan for Cheating",
       content,
-      label: "Intimidate!",
+      label: "Scan",
       render: (html) => {
-        const portraits = html.find('.intimidate-portrait');
-        portraits.on('click', function() {
+        // Portrait selection
+        const portraits = html.find('.scan-portrait');
+        portraits.on('click', function () {
           portraits.removeClass('selected');
           $(this).addClass('selected');
           selectedTargetId = $(this).data('target-id');
         });
-        portraits.on('keydown', function(e) {
+        portraits.on('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            $(this).click();
+          }
+        });
+
+        // Scan type selection
+        const typeOptions = html.find('.scan-type-option');
+        typeOptions.on('click', function () {
+          typeOptions.removeClass('selected');
+          $(this).addClass('selected');
+          $(this).find('input[type="radio"]').prop('checked', true);
+        });
+        // Set initial selection
+        html.find('.scan-type-option[data-type="insight"]').addClass('selected');
+      },
+      callback: (html) => {
+        if (!selectedTargetId) return null;
+        const scanType = html.find('[name="scanType"]:checked').val();
+        return { targetId: selectedTargetId, scanType };
+      },
+      rejectClose: false,
+    });
+
+    if (result) {
+      await tavernSocket.executeAsGM("playerAction", "scan", result, game.user.id);
+    }
+  }
+
+  /**
+   * V2.0: Goad - Force someone to ROLL (even if they held!)
+   * Attacker chooses: Intimidation OR Persuasion
+   * Defender rolls: Insight
+   * Success: Target must roll a die of their choice
+   * Backfire: Attacker must roll a die of their choice
+   */
+  static async onGoad(event, target) {
+    const state = getState();
+    const tableData = state.tableData ?? {};
+    const userId = game.user.id;
+    const players = Object.values(state.players ?? {});
+
+    // V2.0: Valid goad targets - not self, not busted, not GM
+    // HOLDERS ARE VALID TARGETS - that's the whole point!
+    const validTargets = players
+      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !game.users.get(p.id)?.isGM)
+      .map(p => {
+        const user = game.users.get(p.id);
+        const actor = user?.character;
+        const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
+        const isHolding = tableData.holds?.[p.id] ?? false;
+        return { id: p.id, name: p.name, img, isHolding };
+      });
+
+    if (validTargets.length === 0) {
+      return ui.notifications.warn("No valid targets to goad.");
+    }
+
+    // Get skill modifiers
+    const actor = game.user.character;
+    const itmMod = actor?.system?.skills?.itm?.total ?? 0;
+    const perMod = actor?.system?.skills?.per?.total ?? 0;
+    const hasActor = !!actor;
+
+    // Default to whichever skill is higher
+    const defaultSkill = itmMod >= perMod ? "itm" : "per";
+
+    // Build target selection with portraits (mark holders!)
+    const targetOptions = validTargets.map(t =>
+      `<div class="goad-portrait${t.isHolding ? ' is-holding' : ''}" data-target-id="${t.id}" data-target-name="${t.name}" tabindex="0" style="display: inline-block; text-align: center; padding: 8px; margin: 4px; border: 2px solid transparent; border-radius: 8px; cursor: pointer;">
+        <img src="${t.img}" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; ${t.isHolding ? 'box-shadow: 0 0 8px #4a7c4e;' : ''}" />
+        <div style="font-size: 0.85em; margin-top: 4px;">${t.name}</div>
+        ${t.isHolding ? '<div style="font-size: 0.75em; color: #4a7c4e; font-weight: bold;">HOLDING</div>' : ''}
+      </div>`
+    ).join("");
+
+    const content = `
+      <form>
+        <p style="font-weight: bold; margin-bottom: 8px;">Select a target to goad into rolling:</p>
+        <div class="goad-targets" style="display: flex; flex-wrap: wrap; justify-content: center; margin-bottom: 12px;">
+          ${targetOptions}
+        </div>
+        <div class="form-group">
+          <label>Your Skill:</label>
+          <select name="attackerSkill" style="width: 100%;">
+            <option value="itm" ${defaultSkill === "itm" ? "selected" : ""}>Intimidation (CHA) ${hasActor ? `(+${itmMod})` : ""}</option>
+            <option value="per" ${defaultSkill === "per" ? "selected" : ""}>Persuasion (CHA) ${hasActor ? `(+${perMod})` : ""}</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label style="color: #666;">Target defends with: <strong>Insight (WIS)</strong></label>
+        </div>
+        <hr>
+        <p style="color: #4a7c4e; font-weight: bold;">SUCCESS: Target must roll a die of their choice!</p>
+        <p style="color: #c44; font-weight: bold;">BACKFIRE: YOU must roll a die of your choice!</p>
+      </form>
+      <style>
+        .goad-portrait:hover { border-color: #666; background: rgba(255,255,255,0.1); }
+        .goad-portrait.selected { border-color: #4a7c4e; background: rgba(74,124,78,0.2); }
+        .goad-portrait.is-holding { border-color: #4a7c4e; border-style: dashed; }
+      </style>
+    `;
+
+    let selectedTargetId = null;
+
+    const result = await Dialog.prompt({
+      title: "Goad",
+      content,
+      label: "Goad!",
+      render: (html) => {
+        const portraits = html.find('.goad-portrait');
+        portraits.on('click', function () {
+          portraits.removeClass('selected');
+          $(this).addClass('selected');
+          selectedTargetId = $(this).data('target-id');
+        });
+        portraits.on('keydown', function (e) {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             $(this).click();
@@ -590,14 +849,14 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       },
       callback: (html) => {
         if (!selectedTargetId) return null;
-        const defenseSkill = html.find('[name="defenseSkill"]').val();
-        return { targetId: selectedTargetId, defenseSkill };
+        const attackerSkill = html.find('[name="attackerSkill"]').val();
+        return { targetId: selectedTargetId, attackerSkill };
       },
       rejectClose: false,
     });
-    
+
     if (result) {
-      await tavernSocket.executeAsGM("playerAction", "intimidate", result, game.user.id);
+      await tavernSocket.executeAsGM("playerAction", "goad", result, game.user.id);
     }
   }
 
@@ -606,7 +865,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const tableData = state.tableData ?? {};
     const userId = game.user.id;
     const players = Object.values(state.players ?? {});
-    
+
     // Build list of valid targets (not self, not busted, not GM, has dice)
     const validTargets = players
       .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !game.users.get(p.id)?.isGM)
@@ -615,28 +874,35 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         const user = game.users.get(p.id);
         const actor = user?.character;
         const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
-        const dice = (tableData.rolls?.[p.id] ?? []).map((r, idx) => ({ index: idx, die: r.die, result: r.result }));
+        // V2.0: Include visibility info for each die
+        const dice = (tableData.rolls?.[p.id] ?? []).map((r, idx) => ({
+          index: idx,
+          die: r.die,
+          result: r.result,
+          isPublic: r.public ?? true,
+          isHole: idx === 1 && tableData.phase !== "betting" ? false : !r.public // 2nd opening die is hole
+        }));
         const isHolding = tableData.holds?.[p.id] ?? false;
         return { id: p.id, name: p.name, img, dice, isHolding };
       });
-    
+
     if (validTargets.length === 0) {
       return ui.notifications.warn("No valid targets to bump.");
     }
-    
+
     // Get Athletics modifier
     const actor = game.user.character;
     const athMod = actor?.system?.skills?.ath?.total ?? 0;
     const hasActor = !!actor;
-    
+
     // Build target selection with portraits
-    const targetOptions = validTargets.map(t => 
+    const targetOptions = validTargets.map(t =>
       `<div class="bump-portrait" data-target-id="${t.id}" data-target-name="${t.name}" tabindex="0" style="display: inline-block; text-align: center; padding: 8px; margin: 4px; border: 2px solid transparent; border-radius: 8px; cursor: pointer;">
         <img src="${t.img}" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;" />
         <div style="font-size: 0.85em; margin-top: 4px;">${t.name}${t.isHolding ? ' <span style="color: #4a7c4e;">(Holding)</span>' : ''}</div>
       </div>`
     ).join("");
-    
+
     const content = `
       <form>
         <p style="font-weight: bold; margin-bottom: 8px;">Select a target to bump:</p>
@@ -648,6 +914,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         </div>
         <div class="form-group" id="bump-die-selection" style="display: none;">
           <label>Select which die to bump:</label>
+          <p class="hint" style="font-size: 0.8em; color: #888; margin: 4px 0;">V2.0: You can target visible dice OR the hole die!</p>
           <div id="bump-dice-container" style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 8px;"></div>
         </div>
         <hr>
@@ -656,15 +923,18 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       <style>
         .bump-portrait:hover { border-color: #666; background: rgba(255,255,255,0.1); }
         .bump-portrait.selected { border-color: #7a6a3a; background: rgba(122, 106, 58, 0.2); }
-        .bump-die-btn { padding: 8px 12px; border: 2px solid #555; border-radius: 4px; background: #333; color: #fff; cursor: pointer; }
+        .bump-die-btn { padding: 8px 12px; border: 2px solid #555; border-radius: 4px; background: #333; color: #fff; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; }
         .bump-die-btn:hover { border-color: #7a6a3a; background: #444; }
         .bump-die-btn.selected { border-color: #ddc888; background: #5a4a2a; }
+        .bump-die-btn.hole-die { border-style: dashed; border-color: #666; }
+        .bump-die-btn.hole-die .die-label { color: #888; font-style: italic; }
+        .bump-die-btn .die-visibility { font-size: 0.7em; color: #888; }
       </style>
     `;
-    
+
     let selectedTargetId = null;
     let selectedDieIndex = null;
-    
+
     const result = await Dialog.prompt({
       title: "Bump the Table",
       content,
@@ -673,20 +943,27 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         const portraits = html.find('.bump-portrait');
         const dieSelection = html.find('#bump-die-selection');
         const diceContainer = html.find('#bump-dice-container');
-        
-        portraits.on('click', function() {
+
+        portraits.on('click', function () {
           portraits.removeClass('selected');
           $(this).addClass('selected');
           selectedTargetId = $(this).data('target-id');
           selectedDieIndex = null;
-          
-          // Find target's dice and show selection
+
+          // Find target's dice and show selection with V2.0 visibility info
           const targetData = validTargets.find(t => t.id === selectedTargetId);
           if (targetData && targetData.dice.length > 0) {
             diceContainer.empty();
             targetData.dice.forEach((d, idx) => {
-              const btn = $(`<button type="button" class="bump-die-btn" data-die-index="${idx}"><img src="icons/svg/d${d.die}-grey.svg" class="bump-die-icon" /><span>d${d.die}</span></button>`);
-              btn.on('click', function(e) {
+              const isHole = !d.isPublic;
+              const visLabel = isHole ? "HOLE" : "Visible";
+              const holeClass = isHole ? "hole-die" : "";
+              const btn = $(`<button type="button" class="bump-die-btn ${holeClass}" data-die-index="${idx}">
+                <img src="icons/svg/d${d.die}-grey.svg" style="width: 24px; height: 24px;" />
+                <span class="die-label">d${d.die}</span>
+                <span class="die-visibility">${visLabel}</span>
+              </button>`);
+              btn.on('click', function (e) {
                 e.preventDefault();
                 diceContainer.find('.bump-die-btn').removeClass('selected');
                 $(this).addClass('selected');
@@ -697,8 +974,8 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
             dieSelection.show();
           }
         });
-        
-        portraits.on('keydown', function(e) {
+
+        portraits.on('keydown', function (e) {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             $(this).click();
@@ -711,7 +988,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       },
       rejectClose: false,
     });
-    
+
     if (result) {
       await tavernSocket.executeAsGM("playerAction", "bumpTable", result, game.user.id);
     }
@@ -763,5 +1040,10 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     if (confirm) {
       await tavernSocket.executeAsGM("resetTable");
     }
+  }
+
+  // V2.0: Handle duel roll submission
+  static async onDuelRoll() {
+    await tavernSocket.executeAsGM("playerAction", "duelRoll", {}, game.user.id);
   }
 }
