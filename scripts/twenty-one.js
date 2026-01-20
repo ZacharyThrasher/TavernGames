@@ -424,6 +424,12 @@ export async function hold(userId) {
     return state;
   }
 
+  // Can't hold if goaded (must roll instead)
+  if (tableData.goadBackfire?.[userId]?.mustRoll) {
+    ui.notifications.warn("You were goaded! You must roll instead.");
+    return state;
+  }
+
   const holds = { ...tableData.holds, [userId]: true };
   const updatedTable = { ...tableData, holds };
   updatedTable.currentPlayer = getNextActivePlayer(state, updatedTable);
@@ -543,28 +549,36 @@ export async function finishRound() {
     if (success) {
       await playSound("reveal");
 
-      // V2.0: Refund the 2x ante accusation fee + pay 5x ante bounty
+      // V2.0: Refund the 2x ante accusation fee + pay 5x ante bounty from cheater
       const refund = cost ?? 0;
       const bountyAmount = bounty ?? 0;
 
-      // Pay back the accusation cost to the accuser
-      if (refund > 0) {
-        await payOutWinners({ [accuserId]: refund });
-      }
-
-      // Pay the bounty from... we'll add it as bonus from the pot
-      // (In a real implementation, this would come from the cheater's share)
+      // Attempt to collect bounty from cheater
+      let actualBounty = 0;
       if (bountyAmount > 0) {
-        await payOutWinners({ [accuserId]: bountyAmount });
+        const collected = await deductFromActor(targetId, bountyAmount);
+        if (collected) {
+          actualBounty = bountyAmount;
+        } else {
+          // Cheater can't afford full bounty - they're broke
+          actualBounty = 0;
+        }
       }
 
-      const totalReward = refund + bountyAmount;
+      // Pay refund + whatever bounty was collected
+      const totalReward = refund + actualBounty;
+      if (totalReward > 0) {
+        await payOutWinners({ [accuserId]: totalReward });
+      }
+
+      // Show message with actual bounty collected (may be less if cheater was broke)
+      const bountyMsg = actualBounty > 0 ? `${actualBounty}gp bounty` : "no bounty (they're broke!)";
 
       await createChatCard({
         title: "Cheater Caught!",
         subtitle: `${accuserName} was right!`,
         message: `<strong>${targetName}</strong> was caught cheating and forfeits the round.<br>
-          <em>${accuserName} receives ${refund}gp refund + ${bountyAmount}gp bounty = <strong>${totalReward}gp</strong>!</em>`,
+          <em>${accuserName} receives ${refund}gp refund + ${bountyMsg} = <strong>${totalReward}gp</strong>!</em>`,
         icon: "fa-solid fa-gavel",
       });
 
@@ -1109,10 +1123,15 @@ export async function cheat(payload, userId) {
     flavorText += ` <span style='color: #888;'>(${dcType}: ${rollTotal})</span>`;
   }
 
-  await roll.toMessage({
-    speaker: { alias: skillName },
+  // Whisper to player only - use plain ChatMessage to avoid 3D dice visible to others
+  await ChatMessage.create({
+    content: `<div class="dice-roll"><div class="dice-result">
+      <div class="dice-formula">1d20 + ${modifier}</div>
+      <h4 class="dice-total">${rollTotal}</h4>
+    </div></div>`,
     flavor: flavorText,
     whisper: [userId],
+    speaker: { alias: skillName },
   });
 
   // Update the die value
@@ -1348,15 +1367,9 @@ export async function scan(payload, userId) {
     });
     whisperContent += `<br><em style="color: #888;">You don't know the exact value - but something was changed.</em>`;
   } else {
-    if (relevantCheats.length > 0) {
-      // They cheated but scan didn't beat the DC
-      whisperContent += `<span style="color: #888;">Nothing conclusive...</span><br>`;
-      whisperContent += `<em>Your ${skillName} wasn't high enough to detect anything.</em>`;
-    } else {
-      // No cheats of this type (or no cheats at all)
-      whisperContent += `<span style="color: #88ff88;">Clean!</span><br>`;
-      whisperContent += `<em>No ${scanType === "arcana" ? "magical residue" : "physical tells"} detected.</em>`;
-    }
+    // Same message whether they cheated (but failed DC) or didn't cheat - no info leak
+    whisperContent += `<span style="color: #88ff88;">Nothing detected.</span><br>`;
+    whisperContent += `<em>No ${scanType === "arcana" ? "magical residue" : "physical tells"} found.</em>`;
   }
   whisperContent += `</div>`;
 
@@ -1619,29 +1632,40 @@ export async function goad(payload, userId) {
   // Determine winner: attacker must beat (not tie) defender
   const attackerWins = attackTotal > defendTotal;
 
-  // Post the public goad roll
+  // Post the premium goad card
   await ChatMessage.create({
     content: `<div class="tavern-goad-card">
-      <div class="goad-header">
+      <div class="goad-banner">
         <i class="fa-solid fa-comments"></i>
-        <span class="goad-title">${attackerName} tries to goad ${defenderName}...</span>
+        <span>${attackerName} goads ${defenderName}...</span>
       </div>
-      <div class="goad-rolls">
-        <div class="goad-roll attacker">
-          <span class="roll-label">${attackerName} (${attackerSkillName})</span>
-          <span class="roll-result">${attackD20} + ${attackMod} = <strong>${attackTotal}</strong></span>
+      <div class="goad-duel">
+        <div class="goad-combatant ${attackerWins ? 'winner' : 'loser'}">
+          <div class="combatant-name">${attackerName}</div>
+          <div class="combatant-skill">${attackerSkillName}</div>
+          <div class="combatant-roll">
+            <span class="roll-total">${attackTotal}</span>
+            <span class="roll-breakdown">${attackD20} + ${attackMod}</span>
+          </div>
         </div>
-        <div class="goad-vs">VS</div>
-        <div class="goad-roll defender">
-          <span class="roll-label">${defenderName} (Insight)</span>
-          <span class="roll-result">${defendD20} + ${defendMod} = <strong>${defendTotal}</strong></span>
+        <div class="goad-versus">
+          <span>VS</span>
+        </div>
+        <div class="goad-combatant ${!attackerWins ? 'winner' : 'loser'}">
+          <div class="combatant-name">${defenderName}</div>
+          <div class="combatant-skill">Insight</div>
+          <div class="combatant-roll">
+            <span class="roll-total">${defendTotal}</span>
+            <span class="roll-breakdown">${defendD20} + ${defendMod}</span>
+          </div>
         </div>
       </div>
-      <div class="goad-result ${attackerWins ? "success" : "failure"}">
-        ${attackerWins
-        ? `<i class="fa-solid fa-dice"></i> ${defenderName} takes the bait! They must roll again!`
-        : `<i class="fa-solid fa-face-smile-wink"></i> ${defenderName} sees through it! ${attackerName} must roll instead!`
-      }
+      <div class="goad-outcome ${attackerWins ? 'success' : 'failure'}">
+        <i class="fa-solid ${attackerWins ? 'fa-dice' : 'fa-face-smile-wink'}"></i>
+        <span>${attackerWins
+        ? `${defenderName} takes the bait! They must roll!`
+        : `${defenderName} sees through it! ${attackerName} must roll!`
+      }</span>
       </div>
     </div>`,
     speaker: { alias: "Tavern Twenty-One" },
@@ -1842,7 +1866,7 @@ export async function bumpTable(payload, userId) {
   dexSaveD20 = defenderRoll.total;
 
   if (targetActor) {
-    dexSaveMod = targetActor.system?.abilities?.dex?.save ?? 0;
+    dexSaveMod = targetActor.system?.abilities?.dex?.mod ?? 0;
     dexSaveRoll = dexSaveD20 + dexSaveMod;
 
     await ChatMessage.create({
@@ -2064,18 +2088,25 @@ export async function bumpRetaliation(payload, userId) {
   const attackerDie = attackerRolls[dieIndex];
   const oldValue = attackerDie.result;
   const dieSides = attackerDie.die;
+  const wasPublic = attackerDie.public ?? true;
 
   const reroll = await new Roll(`1d${dieSides}`).evaluate();
   const newValue = reroll.total;
 
-  // Update attacker's rolls
+  // Update attacker's rolls - preserve visibility
   const newAttackerRolls = [...attackerRolls];
-  newAttackerRolls[dieIndex] = { ...attackerDie, result: newValue };
+  newAttackerRolls[dieIndex] = { ...attackerDie, result: newValue, public: wasPublic };
 
   // Calculate new total
   const newTotal = newAttackerRolls.reduce((sum, r) => sum + r.result, 0);
   const oldTotal = tableData.totals?.[attackerId] ?? 0;
   const attackerBusted = newTotal > 21;
+
+  // V2.0: Update visible total if the die was public
+  const updatedVisibleTotals = { ...tableData.visibleTotals };
+  if (wasPublic) {
+    updatedVisibleTotals[attackerId] = (updatedVisibleTotals[attackerId] ?? 0) - oldValue + newValue;
+  }
 
   // Update state
   const updatedRolls = { ...tableData.rolls, [attackerId]: newAttackerRolls };
@@ -2089,6 +2120,7 @@ export async function bumpRetaliation(payload, userId) {
     ...tableData,
     rolls: updatedRolls,
     totals: updatedTotals,
+    visibleTotals: updatedVisibleTotals,
     busts: updatedBusts,
     pendingBumpRetaliation: null,  // Clear the pending state
   };
@@ -2104,10 +2136,17 @@ export async function bumpRetaliation(payload, userId) {
   });
 
   // Create retaliation result chat card
-  let resultMessage = `<strong>${attackerName}'s</strong> d${dieSides} (was ${oldValue}) → <strong>${newValue}</strong><br>`;
-  resultMessage += `Total: ${oldTotal} → <strong>${newTotal}</strong>`;
-  if (attackerBusted) {
-    resultMessage += `<br><span style="color: #ff6666; font-weight: bold;">BUST!</span>`;
+  // V2.0: Don't reveal values if it was a hole die
+  let resultMessage;
+  if (wasPublic) {
+    resultMessage = `<strong>${attackerName}'s</strong> d${dieSides} (was ${oldValue}) → <strong>${newValue}</strong><br>`;
+    resultMessage += `Total: ${oldTotal} → <strong>${newTotal}</strong>`;
+    if (attackerBusted) {
+      resultMessage += `<br><span style="color: #ff6666; font-weight: bold;">BUST!</span>`;
+    }
+  } else {
+    resultMessage = `<strong>${attackerName}'s</strong> hole die (d${dieSides}) was re-rolled!<br>`;
+    resultMessage += `<em>The new value remains hidden...</em>`;
   }
 
   await createChatCard({

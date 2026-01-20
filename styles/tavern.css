@@ -9,34 +9,34 @@
   --tavern-wood-medium: #4a2c1a;
   --tavern-wood-light: #6b422a;
   --tavern-wood-highlight: #8b5a3c;
-  
+
   /* Accent colors */
   --tavern-gold: #d4a04a;
   --tavern-gold-bright: #f0c060;
   --tavern-gold-dim: #a67c32;
   --tavern-brass: #b5854a;
-  
+
   /* Parchment tones */
   --tavern-parchment: #f5e6c8;
   --tavern-parchment-dark: #dbc9a0;
   --tavern-ink: #1a0f08;
-  
+
   /* Status colors */
   --tavern-success: #4a7c4e;
   --tavern-danger: #8b3a3a;
   --tavern-warning: #a67c32;
   --tavern-info: #4a6b8b;
-  
+
   /* Effects */
   --tavern-glow: rgba(212, 160, 74, 0.4);
   --tavern-shadow: rgba(10, 5, 2, 0.6);
   --tavern-candle-glow: radial-gradient(ellipse at center, rgba(255, 180, 80, 0.15) 0%, transparent 70%);
-  
+
   /* Spacing */
   --tavern-gap-sm: 8px;
   --tavern-gap-md: 16px;
   --tavern-gap-lg: 24px;
-  
+
   /* Border radius */
   --tavern-radius-sm: 4px;
   --tavern-radius-md: 8px;
@@ -59,12 +59,12 @@
 
 .tavern-dice-master .window-title {
   color: var(--tavern-gold);
-  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .tavern-dice-master .window-content {
   padding: 0;
-  background: 
+  background:
     var(--tavern-candle-glow),
     linear-gradient(180deg, var(--tavern-wood-medium) 0%, var(--tavern-wood-dark) 100%);
   color: var(--tavern-parchment);
@@ -87,7 +87,7 @@
   justify-content: space-between;
   align-items: center;
   padding: var(--tavern-gap-md) var(--tavern-gap-lg);
-  background: linear-gradient(180deg, rgba(0,0,0,0.3) 0%, transparent 100%);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.3) 0%, transparent 100%);
   border-bottom: 1px solid var(--tavern-gold-dim);
 }
 
@@ -105,9 +105,9 @@
   justify-content: center;
   background: radial-gradient(circle, var(--tavern-gold) 0%, var(--tavern-gold-dim) 100%);
   border-radius: 50%;
-  box-shadow: 
+  box-shadow:
     0 0 20px var(--tavern-glow),
-    inset 0 2px 4px rgba(255,255,255,0.2);
+    inset 0 2px 4px rgba(255, 255, 255, 0.2);
 }
 
 .tavern-logo i {
@@ -120,7 +120,7 @@
   font-size: 28px;
   font-weight: 700;
   color: var(--tavern-gold);
-  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
   letter-spacing: 1px;
 }
 
@@ -136,7 +136,8 @@
   text-align: right;
 }
 
-.pot-display, .ante-display {
+.pot-display,
+.ante-display {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -148,14 +149,16 @@
   font-size: 18px;
 }
 
-.pot-amount, .ante-amount {
+.pot-amount,
+.ante-amount {
   font-size: 24px;
   font-weight: 700;
   color: var(--tavern-gold-bright);
   text-shadow: 0 0 10px var(--tavern-glow);
 }
 
-.pot-label, .ante-label {
+.pot-label,
+.ante-label {
   font-size: 11px;
   color: var(--tavern-parchment-dark);
   text-transform: uppercase;
@@ -176,14 +179,14 @@
 }
 
 .tavern-table-area {
-  background: 
+  background:
     radial-gradient(ellipse at 50% 30%, rgba(107, 66, 42, 0.5) 0%, transparent 60%),
     linear-gradient(180deg, var(--tavern-wood-light) 0%, var(--tavern-wood-medium) 100%);
   border-radius: var(--tavern-radius-lg);
   border: 2px solid var(--tavern-wood-highlight);
-  box-shadow: 
-    inset 0 4px 20px rgba(0,0,0,0.4),
-    0 4px 12px rgba(0,0,0,0.3);
+  box-shadow:
+    inset 0 4px 20px rgba(0, 0, 0, 0.4),
+    0 4px 12px rgba(0, 0, 0, 0.3);
   overflow: auto;
 }
 
@@ -199,7 +202,7 @@
   background: rgba(26, 15, 8, 0.8);
   border: 1px solid var(--tavern-wood-highlight);
   border-radius: var(--tavern-radius-md);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .tavern-controls-panel {
@@ -243,7 +246,7 @@
 
 .player-seat.is-current {
   border-color: var(--tavern-gold);
-  box-shadow: 
+  box-shadow:
     0 0 20px var(--tavern-glow),
     inset 0 0 30px rgba(212, 160, 74, 0.1);
 }
@@ -274,7 +277,7 @@
   border-radius: 50%;
   border: 3px solid var(--tavern-brass);
   object-fit: cover;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
 }
 
 .turn-indicator {
@@ -297,8 +300,17 @@
 }
 
 @keyframes pulse {
-  0%, 100% { transform: scale(1); box-shadow: 0 0 10px var(--tavern-glow); }
-  50% { transform: scale(1.1); box-shadow: 0 0 20px var(--tavern-glow); }
+
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 10px var(--tavern-glow);
+  }
+
+  50% {
+    transform: scale(1.1);
+    box-shadow: 0 0 20px var(--tavern-glow);
+  }
 }
 
 /* Player info */
@@ -328,12 +340,35 @@
   font-weight: 600;
 }
 
-.player-status-label.waiting { background: var(--tavern-wood-light); color: var(--tavern-parchment-dark); }
-.player-status-label.active { background: var(--tavern-gold); color: var(--tavern-wood-dark); }
-.player-status-label.rolled { background: var(--tavern-info); color: white; }
-.player-status-label.holding { background: var(--tavern-success); color: white; }
-.player-status-label.busted { background: var(--tavern-danger); color: white; }
-.player-status-label.revealed { background: var(--tavern-gold-dim); color: white; }
+.player-status-label.waiting {
+  background: var(--tavern-wood-light);
+  color: var(--tavern-parchment-dark);
+}
+
+.player-status-label.active {
+  background: var(--tavern-gold);
+  color: var(--tavern-wood-dark);
+}
+
+.player-status-label.rolled {
+  background: var(--tavern-info);
+  color: white;
+}
+
+.player-status-label.holding {
+  background: var(--tavern-success);
+  color: white;
+}
+
+.player-status-label.busted {
+  background: var(--tavern-danger);
+  color: white;
+}
+
+.player-status-label.revealed {
+  background: var(--tavern-gold-dim);
+  color: white;
+}
 
 /* Dice display */
 .player-dice {
@@ -354,7 +389,7 @@
   justify-content: center;
   border-radius: var(--tavern-radius-sm);
   font-weight: 700;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   transition: transform 0.2s ease;
 }
 
@@ -368,15 +403,34 @@
   color: var(--tavern-parchment-dark);
 }
 
-.die-face.d4 { background: linear-gradient(135deg, #4a7c4e, #3a5c3e); color: white; }
-.die-face.d6 { background: linear-gradient(135deg, #4a8b6e, #3a6b5e); color: white; }
-.die-face.d8 { background: linear-gradient(135deg, #8b8b3a, #6b6b2a); color: white; }
-.die-face.d10 { background: linear-gradient(135deg, #b5854a, #8b652a); color: white; }
-.die-face.d20 { background: linear-gradient(135deg, #8b3a3a, #6b2a2a); color: white; }
+.die-face.d4 {
+  background: linear-gradient(135deg, #4a7c4e, #3a5c3e);
+  color: white;
+}
+
+.die-face.d6 {
+  background: linear-gradient(135deg, #4a8b6e, #3a6b5e);
+  color: white;
+}
+
+.die-face.d8 {
+  background: linear-gradient(135deg, #8b8b3a, #6b6b2a);
+  color: white;
+}
+
+.die-face.d10 {
+  background: linear-gradient(135deg, #b5854a, #8b652a);
+  color: white;
+}
+
+.die-face.d20 {
+  background: linear-gradient(135deg, #8b3a3a, #6b2a2a);
+  color: white;
+}
 
 /* V2.0: Public vs Hole Die styling */
 .die-face.public-die {
-  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .die-face.hole-die {
@@ -420,7 +474,7 @@
 
 /* Player total */
 .player-total {
-  background: rgba(0,0,0,0.3);
+  background: rgba(0, 0, 0, 0.3);
   padding: 6px 16px;
   border-radius: var(--tavern-radius-sm);
   text-align: center;
@@ -449,8 +503,13 @@
 }
 
 @keyframes reveal-glow {
-  0% { box-shadow: 0 0 30px var(--tavern-gold); }
-  100% { box-shadow: none; }
+  0% {
+    box-shadow: 0 0 30px var(--tavern-gold);
+  }
+
+  100% {
+    box-shadow: none;
+  }
 }
 
 /* Empty table */
@@ -539,8 +598,15 @@
 }
 
 @keyframes your-turn-glow {
-  0%, 100% { box-shadow: 0 0 10px rgba(212, 160, 74, 0.2); }
-  50% { box-shadow: 0 0 20px rgba(212, 160, 74, 0.4); }
+
+  0%,
+  100% {
+    box-shadow: 0 0 10px rgba(212, 160, 74, 0.2);
+  }
+
+  50% {
+    box-shadow: 0 0 20px rgba(212, 160, 74, 0.4);
+  }
 }
 
 .turn-hint {
@@ -598,7 +664,7 @@
   align-items: center;
   justify-content: center;
   padding: 14px 8px 10px;
-  background: 
+  background:
     radial-gradient(ellipse at 50% 30%, rgba(212, 160, 74, 0.15) 0%, transparent 70%),
     linear-gradient(180deg, var(--tavern-wood-medium) 0%, var(--tavern-wood-dark) 100%);
   border: 2px solid var(--tavern-wood-highlight);
@@ -616,16 +682,15 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, transparent 50%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
   pointer-events: none;
 }
 
 .btn-die-premium .die-icon {
   width: 42px;
   height: 42px;
-  filter: 
-    drop-shadow(0 2px 4px rgba(0,0,0,0.4))
-    drop-shadow(0 0 8px rgba(212, 160, 74, 0.3));
+  filter:
+    drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4)) drop-shadow(0 0 8px rgba(212, 160, 74, 0.3));
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -653,7 +718,7 @@
   color: var(--tavern-gold-bright);
   text-transform: uppercase;
   white-space: nowrap;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
 }
 
 .btn-die-premium .die-cost.free {
@@ -674,17 +739,15 @@
 .btn-die-premium:hover {
   transform: translateY(-4px) scale(1.05);
   border-color: var(--tavern-gold);
-  box-shadow: 
-    0 8px 20px rgba(0,0,0,0.4),
+  box-shadow:
+    0 8px 20px rgba(0, 0, 0, 0.4),
     0 0 20px rgba(212, 160, 74, 0.3),
     inset 0 0 20px rgba(212, 160, 74, 0.1);
 }
 
 .btn-die-premium:hover .die-icon {
-  filter: 
-    drop-shadow(0 4px 8px rgba(0,0,0,0.5))
-    drop-shadow(0 0 15px rgba(212, 160, 74, 0.6))
-    brightness(1.2);
+  filter:
+    drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 15px rgba(212, 160, 74, 0.6)) brightness(1.2);
   transform: scale(1.1);
 }
 
@@ -694,16 +757,24 @@
 
 .btn-die-premium:active {
   transform: translateY(-2px) scale(1.02);
-  box-shadow: 
-    0 4px 10px rgba(0,0,0,0.3),
+  box-shadow:
+    0 4px 10px rgba(0, 0, 0, 0.3),
     0 0 15px rgba(212, 160, 74, 0.4);
 }
 
 /* Dice button click animation */
 @keyframes diceClick {
-  0% { transform: scale(1); }
-  50% { transform: scale(0.95); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(0.95);
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
 
 .btn-die-premium:active .die-icon {
@@ -731,13 +802,13 @@
 
 .btn-die:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   border-color: var(--tavern-gold);
 }
 
 .btn-die:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   border-color: var(--tavern-gold);
 }
 
@@ -980,16 +1051,30 @@
   display: flex;
   gap: 8px;
   padding: 8px;
-  background: rgba(0,0,0,0.2);
+  background: rgba(0, 0, 0, 0.2);
   border-radius: var(--tavern-radius-sm);
   border-left: 3px solid var(--tavern-wood-highlight);
 }
 
-.history-entry.round_start { border-left-color: var(--tavern-success); }
-.history-entry.roll { border-left-color: var(--tavern-info); }
-.history-entry.hold { border-left-color: var(--tavern-warning); }
-.history-entry.bust { border-left-color: var(--tavern-danger); }
-.history-entry.round_end { border-left-color: var(--tavern-gold); }
+.history-entry.round_start {
+  border-left-color: var(--tavern-success);
+}
+
+.history-entry.roll {
+  border-left-color: var(--tavern-info);
+}
+
+.history-entry.hold {
+  border-left-color: var(--tavern-warning);
+}
+
+.history-entry.bust {
+  border-left-color: var(--tavern-danger);
+}
+
+.history-entry.round_end {
+  border-left-color: var(--tavern-gold);
+}
 
 .entry-icon {
   width: 24px;
@@ -1053,7 +1138,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 8px var(--tavern-gap-lg);
-  background: rgba(0,0,0,0.3);
+  background: rgba(0, 0, 0, 0.3);
   border-top: 1px solid var(--tavern-wood-highlight);
   font-size: 11px;
 }
@@ -1068,8 +1153,13 @@
   font-size: 8px;
 }
 
-.gm-status.online { color: var(--tavern-success); }
-.gm-status.offline { color: var(--tavern-danger); }
+.gm-status.online {
+  color: var(--tavern-success);
+}
+
+.gm-status.offline {
+  color: var(--tavern-danger);
+}
 
 .game-status {
   color: var(--tavern-parchment-dark);
@@ -1142,7 +1232,7 @@
 
 .tavern-results {
   font-family: monospace;
-  background: rgba(0,0,0,0.2);
+  background: rgba(0, 0, 0, 0.2);
   padding: 8px;
   border-radius: var(--tavern-radius-sm);
   margin-bottom: 8px;
@@ -1185,8 +1275,15 @@
    ============================================ */
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .player-seat {
@@ -1205,11 +1302,11 @@
   .tavern-main {
     grid-template-columns: 1fr;
   }
-  
+
   .tavern-sidebar {
     flex-direction: row;
   }
-  
+
   .tavern-controls-panel,
   .tavern-history-panel {
     flex: 1;
@@ -1315,8 +1412,15 @@
 }
 
 @keyframes caught-pulse {
-  0%, 100% { box-shadow: 0 0 5px rgba(170, 106, 170, 0.5); }
-  50% { box-shadow: 0 0 15px rgba(170, 106, 170, 0.8); }
+
+  0%,
+  100% {
+    box-shadow: 0 0 5px rgba(170, 106, 170, 0.5);
+  }
+
+  50% {
+    box-shadow: 0 0 15px rgba(170, 106, 170, 0.8);
+  }
 }
 
 .player-seat.caught {
@@ -1331,9 +1435,17 @@
 }
 
 /* History entry types for cheating */
-.history-entry.inspection { border-left-color: var(--tavern-info); }
-.history-entry.cheat_caught { border-left-color: #9a4a9a; }
-.history-entry.inspection_failed { border-left-color: var(--tavern-danger); }
+.history-entry.inspection {
+  border-left-color: var(--tavern-info);
+}
+
+.history-entry.cheat_caught {
+  border-left-color: #9a4a9a;
+}
+
+.history-entry.inspection_failed {
+  border-left-color: var(--tavern-danger);
+}
 
 /* ============================================
    GM Alert Styling (Whispered Messages)
@@ -1634,6 +1746,7 @@
     opacity: 0;
     transform: translateX(-10px);
   }
+
   100% {
     opacity: 1;
     transform: translateX(0);
@@ -1658,8 +1771,15 @@
 }
 
 @keyframes gut-feeling-pulse {
-  0%, 100% { opacity: 0.7; }
-  50% { opacity: 1; }
+
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+
+  50% {
+    opacity: 1;
+  }
 }
 
 .gut-feeling-content {
@@ -1737,104 +1857,153 @@
   text-align: center;
 }
 
-/* Goad chat card */
+/* Goad chat card - Premium Design */
 .tavern-goad-card {
-  background: linear-gradient(135deg, #203a20, #152a15);
+  background: linear-gradient(180deg, #1a2a1a 0%, #0f1a0f 100%);
   border: 2px solid #3a6a3a;
-  border-radius: var(--tavern-radius-md);
+  border-radius: var(--tavern-radius-lg);
   color: var(--tavern-parchment);
   overflow: hidden;
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(100, 180, 100, 0.2);
 }
 
-.goad-header {
-  background: linear-gradient(180deg, #2a4a2a, #1a3a1a);
-  padding: 12px 16px;
-  border-bottom: 1px solid #3a6a3a;
+.goad-banner {
+  background: linear-gradient(180deg, #2a4a2a 0%, #1a3a1a 100%);
+  padding: 10px 16px;
+  border-bottom: 1px solid #4a8a4a;
   display: flex;
   align-items: center;
-  gap: 12px;
-}
-
-.goad-header i {
-  font-size: 24px;
-  color: #aaffaa;
-}
-
-.goad-title {
-  font-size: 14px;
-  color: #aaffaa;
-  font-weight: 600;
-}
-
-.goad-rolls {
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  gap: 16px;
-  margin: 12px;
-  padding: 10px;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: var(--tavern-radius-sm);
-}
-
-.goad-roll {
-  text-align: center;
-  flex: 1;
-}
-
-.goad-roll .roll-label {
-  display: block;
-  font-size: 11px;
-  color: #99cc99;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 4px;
-}
-
-.goad-roll .roll-result {
-  font-size: 14px;
-  color: var(--tavern-parchment);
-}
-
-.goad-roll .roll-result strong {
-  font-size: 18px;
-  color: var(--tavern-gold-bright);
-}
-
-.goad-vs {
-  font-size: 12px;
-  font-weight: 700;
-  color: #666;
-  padding: 0 8px;
-}
-
-.goad-result {
-  text-align: center;
-  padding: 10px 12px;
-  margin: 0 12px 12px;
-  border-radius: var(--tavern-radius-sm);
-  font-weight: 600;
+  gap: 10px;
   font-size: 13px;
+  font-weight: 600;
+  color: #88dd88;
 }
 
-.goad-result i {
-  margin-right: 6px;
-}
-
-.goad-result.success {
-  background: rgba(74, 124, 78, 0.3);
-  border: 1px solid var(--tavern-success);
+.goad-banner i {
+  font-size: 16px;
   color: #aaffaa;
 }
 
-.goad-result.failure {
-  background: rgba(139, 58, 58, 0.3);
-  border: 1px solid var(--tavern-danger);
+.goad-duel {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: 16px;
+  gap: 0;
+  background: radial-gradient(ellipse at center, rgba(60, 100, 60, 0.15) 0%, transparent 70%);
+}
+
+.goad-combatant {
+  flex: 1;
+  text-align: center;
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: var(--tavern-radius-md);
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.goad-combatant.winner {
+  border-color: var(--tavern-gold);
+  background: rgba(212, 160, 74, 0.1);
+  box-shadow: 0 0 15px rgba(212, 160, 74, 0.2);
+}
+
+.goad-combatant.loser {
+  opacity: 0.7;
+}
+
+.combatant-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tavern-parchment);
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.combatant-skill {
+  font-size: 10px;
+  color: #88aa88;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+.combatant-roll {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.combatant-roll .roll-total {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--tavern-gold-bright);
+  text-shadow: 0 2px 8px rgba(212, 160, 74, 0.4);
+  line-height: 1;
+}
+
+.goad-combatant.loser .roll-total {
+  color: #999;
+  text-shadow: none;
+}
+
+.combatant-roll .roll-breakdown {
+  font-size: 11px;
+  color: #888;
+}
+
+.goad-versus {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+}
+
+.goad-versus span {
+  font-size: 14px;
+  font-weight: 900;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.goad-outcome {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.goad-outcome i {
+  font-size: 18px;
+}
+
+.goad-outcome.success {
+  background: linear-gradient(180deg, rgba(74, 124, 78, 0.4) 0%, rgba(74, 124, 78, 0.2) 100%);
+  border-top: 1px solid #5a9a5e;
+  color: #aaffaa;
+}
+
+.goad-outcome.failure {
+  background: linear-gradient(180deg, rgba(139, 58, 58, 0.4) 0%, rgba(139, 58, 58, 0.2) 100%);
+  border-top: 1px solid #aa6a6a;
   color: #ffaaaa;
 }
 
 /* History entry for goad */
-.history-entry.goad { border-left-color: #4a8a4a; }
+.history-entry.goad {
+  border-left-color: #4a8a4a;
+}
 
 /* ============================================
    Blackjack (Natural 21) Bonus Styles
@@ -1855,11 +2024,14 @@
 }
 
 @keyframes blackjack-sparkle {
-  0%, 100% { 
+
+  0%,
+  100% {
     transform: scale(1);
     opacity: 1;
   }
-  50% { 
+
+  50% {
     transform: scale(1.2);
     opacity: 0.8;
   }
@@ -1877,10 +2049,13 @@
 }
 
 @keyframes blackjack-glow {
-  0%, 100% { 
+
+  0%,
+  100% {
     box-shadow: 0 0 10px rgba(212, 160, 74, 0.3);
   }
-  50% { 
+
+  50% {
     box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
   }
 }
@@ -1894,7 +2069,7 @@
 /* Player seat blackjack indicator */
 .player-seat.blackjack {
   border-color: var(--tavern-gold-bright);
-  box-shadow: 
+  box-shadow:
     0 0 20px var(--tavern-glow),
     0 0 40px rgba(255, 215, 0, 0.3),
     inset 0 0 30px rgba(212, 160, 74, 0.1);
@@ -1907,11 +2082,14 @@
 }
 
 @keyframes blackjack-pulse {
-  0%, 100% { 
+
+  0%,
+  100% {
     box-shadow: 0 0 5px var(--tavern-glow);
     transform: scale(1);
   }
-  50% { 
+
+  50% {
     box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
     transform: scale(1.05);
   }
@@ -1986,10 +2164,13 @@
 }
 
 @keyframes retaliation-pulse {
-  0%, 100% { 
+
+  0%,
+  100% {
     box-shadow: 0 0 5px rgba(122, 106, 58, 0.3);
   }
-  50% { 
+
+  50% {
     box-shadow: 0 0 15px rgba(157, 138, 74, 0.5);
   }
 }
@@ -2072,20 +2253,25 @@
 }
 
 /* History entry for bump */
-.history-entry.bump { border-left-color: #7a6a3a; }
-.history-entry.bump_retaliation { border-left-color: #9a8a4a; }
+.history-entry.bump {
+  border-left-color: #7a6a3a;
+}
+
+.history-entry.bump_retaliation {
+  border-left-color: #9a8a4a;
+}
 
 /* v1.8.1 - Hide dice values in bump/retaliation selection */
 .bump-die-btn .bump-die-icon {
   width: 28px;
   height: 28px;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
 }
 
 .btn-retaliation-die .retaliation-die-icon {
   width: 36px;
   height: 36px;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
 }
 
 /* ============================================
@@ -2103,8 +2289,15 @@
 }
 
 @keyframes duel-pulse {
-  0%, 100% { box-shadow: 0 0 10px rgba(171, 74, 74, 0.3); }
-  50% { box-shadow: 0 0 25px rgba(171, 74, 74, 0.6); }
+
+  0%,
+  100% {
+    box-shadow: 0 0 10px rgba(171, 74, 74, 0.3);
+  }
+
+  50% {
+    box-shadow: 0 0 25px rgba(171, 74, 74, 0.6);
+  }
 }
 
 .control-section.duel h3 {
@@ -2192,8 +2385,15 @@
 }
 
 @keyframes duel-waiting-dots {
-  0%, 100% { opacity: 0.3; }
-  50% { opacity: 1; }
+
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+
+  50% {
+    opacity: 1;
+  }
 }
 
 .duel-waiting {
@@ -2204,6 +2404,14 @@
 }
 
 /* History entry for duel */
-.history-entry.duel_start { border-left-color: #ab4a4a; }
-.history-entry.duel_tie { border-left-color: #8b6a4a; }
-.history-entry.duel_end { border-left-color: var(--tavern-gold); }
+.history-entry.duel_start {
+  border-left-color: #ab4a4a;
+}
+
+.history-entry.duel_tie {
+  border-left-color: #8b6a4a;
+}
+
+.history-entry.duel_end {
+  border-left-color: var(--tavern-gold);
+}
