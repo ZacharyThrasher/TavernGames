@@ -148,8 +148,8 @@
         <div class="retaliation-dice">
           {{#each retaliationAttackerDice}}
             <button type="button" class="btn-retaliation-die" data-action="bumpRetaliation" data-die-index="{{this.index}}">
+              <img src="icons/svg/d{{this.die}}-grey.svg" alt="d{{this.die}}" class="retaliation-die-icon" />
               <span class="die-type">d{{this.die}}</span>
-              <span class="die-value">{{this.result}}</span>
             </button>
           {{/each}}
         </div>

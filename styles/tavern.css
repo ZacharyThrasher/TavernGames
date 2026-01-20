@@ -1940,3 +1940,16 @@
 /* History entry for bump */
 .history-entry.bump { border-left-color: #7a6a3a; }
 .history-entry.bump_retaliation { border-left-color: #9a8a4a; }
+
+/* v1.8.1 - Hide dice values in bump/retaliation selection */
+.bump-die-btn .bump-die-icon {
+  width: 28px;
+  height: 28px;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+}
+
+.btn-retaliation-die .retaliation-die-icon {
+  width: 36px;
+  height: 36px;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+}

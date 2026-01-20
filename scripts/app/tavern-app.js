@@ -685,7 +685,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
           if (targetData && targetData.dice.length > 0) {
             diceContainer.empty();
             targetData.dice.forEach((d, idx) => {
-              const btn = $(`<button type="button" class="bump-die-btn" data-die-index="${idx}">d${d.die}: ${d.result}</button>`);
+              const btn = $(`<button type="button" class="bump-die-btn" data-die-index="${idx}"><img src="icons/svg/d${d.die}-grey.svg" class="bump-die-icon" /><span>d${d.die}</span></button>`);
               btn.on('click', function(e) {
                 e.preventDefault();
                 diceContainer.find('.bump-die-btn').removeClass('selected');
