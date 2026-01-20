@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.1.2]2026-01-19
+### Fixed
+- **Accusation Error**: Fixed "Yes is not a function" error when making an accusation (updated Dialog logic).
+- **GM Roll Cost**: GM clients no longer get "Insufficient Gold" prompts when rolling (House plays for free).
+- **Cheat Privacy**: Fixed issue where cheat rolls would notify other players of a "Private Roll".
+
 ## [2.1.1]2026-01-19
 ### Fixed
 - **GM Payments**: GM clients no longer see the "Put it on the Tab" payment toggle (House plays for free).

@@ -1273,6 +1273,7 @@ export async function cheat(payload, userId) {
     </div></div>`,
     flavor: flavorText,
     whisper: whisperIds,
+    type: CONST.CHAT_MESSAGE_TYPES.OTHER,
     speaker: { alias: skillName },
     rolls: [roll],
   });

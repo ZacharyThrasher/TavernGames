@@ -465,8 +465,9 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const ante = game.settings.get(MODULE_ID, "fixedAnte");
     const isBettingPhase = state.tableData?.phase === "betting";
 
-    // Cost only applies during betting phase
-    const cost = isBettingPhase ? getDieCost(parseInt(die), ante) : 0;
+    // Cost only applies during betting phase (and non-GM)
+    const isGM = game.user.isGM;
+    const cost = (isBettingPhase && !isGM) ? getDieCost(parseInt(die), ante) : 0;
 
     let payWithDrink = false;
 
@@ -653,12 +654,25 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       </form>
     `;
 
-    const result = await Dialog.confirm({
-      title: "Make Accusation",
-      content,
-      yes: { label: "Accuse!", icon: '<i class="fa-solid fa-hand-point-right"></i>' },
-      no: { label: "Cancel", icon: '<i class="fa-solid fa-times"></i>' },
-      defaultYes: false,
+    const result = await new Promise(resolve => {
+      new Dialog({
+        title: "Make Accusation",
+        content,
+        buttons: {
+          accuse: {
+            label: "Accuse!",
+            icon: '<i class="fa-solid fa-hand-point-right"></i>',
+            callback: () => resolve(true)
+          },
+          cancel: {
+            label: "Cancel",
+            icon: '<i class="fa-solid fa-times"></i>',
+            callback: () => resolve(false)
+          }
+        },
+        default: "accuse",
+        close: () => resolve(false)
+      }).render(true);
     });
 
     if (result) {
