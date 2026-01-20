@@ -1,5 +1,9 @@
 # Changelog
 
+## [3.0.3] - 2026-01-20
+### Fixed
+- **App Crash**: Fixed a critical `ReferenceError: isInGame` that prevented the app from rendering.
+
 ## [3.0.2] - 2026-01-20
 ### Improved
 - **Accuse Anytime**: Accusations can now be made at any time during the round (not just Inspection).
