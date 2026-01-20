@@ -66,6 +66,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
   async _prepareContext() {
     const state = getState();
     const userId = game.user.id;
+    const isInGame = Boolean(state.players?.[userId]);
     const isGM = game.user.isGM;
     const players = Object.values(state.players ?? {});
     const tableData = state.tableData ?? {};
@@ -258,7 +259,6 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
     // V3: Goad context - can goad during betting phase if it's your turn, not busted, and haven't used it this round
     const hasGoadedThisRound = tableData.goadedThisRound?.[userId] ?? false;
-    const isInGame = Boolean(state.players?.[userId]);
     const canGoad = isBettingPhase && myTurn && isInGame && !isBusted && !isFolded && !isGM && !hasGoadedThisRound;
 
     // V3: Valid goad targets: other players not busted, not GM, not Sloppy, not Folded
