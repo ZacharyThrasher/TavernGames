@@ -26,6 +26,8 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       cheat: TavernApp.onCheat,
       accuse: TavernApp.onAccuse,
       intimidate: TavernApp.onIntimidate,
+      bumpTable: TavernApp.onBumpTable,
+      bumpRetaliation: TavernApp.onBumpRetaliation,
       skipInspection: TavernApp.onSkipInspection,
       reveal: TavernApp.onReveal,
       newRound: TavernApp.onNewRound,
@@ -198,6 +200,33 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         return { id: p.id, name: p.name, img };
       }) : [];
 
+    // Bump table context - can bump during betting phase if not busted/held, and haven't used it this round
+    const hasBumpedThisRound = tableData.bumpedThisRound?.[userId] ?? false;
+    const canBump = isBettingPhase && isInGame && !isBusted && !isHolding && !isGM && !hasBumpedThisRound;
+    
+    // Valid bump targets: other players with dice, not self, not busted, not GM (holders ARE valid targets!)
+    const bumpTargets = canBump ? players
+      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !game.users.get(p.id)?.isGM)
+      .filter(p => (tableData.rolls?.[p.id]?.length ?? 0) > 0)
+      .map(p => {
+        const user = game.users.get(p.id);
+        const actor = user?.character;
+        const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
+        const dice = (tableData.rolls?.[p.id] ?? []).map((r, idx) => ({ index: idx, die: r.die, result: r.result }));
+        return { id: p.id, name: p.name, img, dice };
+      }) : [];
+
+    // Pending bump retaliation context
+    const pendingRetaliation = tableData.pendingBumpRetaliation;
+    const isRetaliationTarget = pendingRetaliation?.targetId === userId;
+    const canRetaliate = isRetaliationTarget || (isGM && pendingRetaliation);
+    const retaliationAttackerName = pendingRetaliation 
+      ? (state.players?.[pendingRetaliation.attackerId]?.name ?? "Unknown") 
+      : null;
+    const retaliationAttackerDice = pendingRetaliation 
+      ? (tableData.rolls?.[pendingRetaliation.attackerId] ?? []).map((r, idx) => ({ index: idx, die: r.die, result: r.result }))
+      : [];
+
     // Build history entries with formatting
     const history = (state.history ?? []).slice().reverse().map(entry => ({
       ...entry,
@@ -234,6 +263,12 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       accuseTargets,
       canIntimidate,
       intimidateTargets,
+      canBump,
+      bumpTargets,
+      canRetaliate,
+      isRetaliationTarget,
+      retaliationAttackerName,
+      retaliationAttackerDice,
       isOpeningPhase,
       isBettingPhase,
       openingRollsRemaining,
@@ -564,6 +599,130 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     if (result) {
       await tavernSocket.executeAsGM("playerAction", "intimidate", result, game.user.id);
     }
+  }
+
+  static async onBumpTable(event, target) {
+    const state = getState();
+    const tableData = state.tableData ?? {};
+    const userId = game.user.id;
+    const players = Object.values(state.players ?? {});
+    
+    // Build list of valid targets (not self, not busted, not GM, has dice)
+    const validTargets = players
+      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !game.users.get(p.id)?.isGM)
+      .filter(p => (tableData.rolls?.[p.id]?.length ?? 0) > 0)
+      .map(p => {
+        const user = game.users.get(p.id);
+        const actor = user?.character;
+        const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
+        const dice = (tableData.rolls?.[p.id] ?? []).map((r, idx) => ({ index: idx, die: r.die, result: r.result }));
+        const isHolding = tableData.holds?.[p.id] ?? false;
+        return { id: p.id, name: p.name, img, dice, isHolding };
+      });
+    
+    if (validTargets.length === 0) {
+      return ui.notifications.warn("No valid targets to bump.");
+    }
+    
+    // Get Athletics modifier
+    const actor = game.user.character;
+    const athMod = actor?.system?.skills?.ath?.total ?? 0;
+    const hasActor = !!actor;
+    
+    // Build target selection with portraits
+    const targetOptions = validTargets.map(t => 
+      `<div class="bump-portrait" data-target-id="${t.id}" data-target-name="${t.name}" tabindex="0" style="display: inline-block; text-align: center; padding: 8px; margin: 4px; border: 2px solid transparent; border-radius: 8px; cursor: pointer;">
+        <img src="${t.img}" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;" />
+        <div style="font-size: 0.85em; margin-top: 4px;">${t.name}${t.isHolding ? ' <span style="color: #4a7c4e;">(Holding)</span>' : ''}</div>
+      </div>`
+    ).join("");
+    
+    const content = `
+      <form>
+        <p style="font-weight: bold; margin-bottom: 8px;">Select a target to bump:</p>
+        <div class="bump-targets" style="display: flex; flex-wrap: wrap; justify-content: center; margin-bottom: 12px;">
+          ${targetOptions}
+        </div>
+        <div class="form-group">
+          <label>Your Skill: Athletics (STR) ${hasActor ? `(+${athMod})` : ""}</label>
+        </div>
+        <div class="form-group" id="bump-die-selection" style="display: none;">
+          <label>Select which die to bump:</label>
+          <div id="bump-dice-container" style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 8px;"></div>
+        </div>
+        <hr>
+        <p style="color: #c44; font-weight: bold;">WARNING: If you fail, they choose one of YOUR dice to re-roll!</p>
+      </form>
+      <style>
+        .bump-portrait:hover { border-color: #666; background: rgba(255,255,255,0.1); }
+        .bump-portrait.selected { border-color: #7a6a3a; background: rgba(122, 106, 58, 0.2); }
+        .bump-die-btn { padding: 8px 12px; border: 2px solid #555; border-radius: 4px; background: #333; color: #fff; cursor: pointer; }
+        .bump-die-btn:hover { border-color: #7a6a3a; background: #444; }
+        .bump-die-btn.selected { border-color: #ddc888; background: #5a4a2a; }
+      </style>
+    `;
+    
+    let selectedTargetId = null;
+    let selectedDieIndex = null;
+    
+    const result = await Dialog.prompt({
+      title: "Bump the Table",
+      content,
+      label: "Bump!",
+      render: (html) => {
+        const portraits = html.find('.bump-portrait');
+        const dieSelection = html.find('#bump-die-selection');
+        const diceContainer = html.find('#bump-dice-container');
+        
+        portraits.on('click', function() {
+          portraits.removeClass('selected');
+          $(this).addClass('selected');
+          selectedTargetId = $(this).data('target-id');
+          selectedDieIndex = null;
+          
+          // Find target's dice and show selection
+          const targetData = validTargets.find(t => t.id === selectedTargetId);
+          if (targetData && targetData.dice.length > 0) {
+            diceContainer.empty();
+            targetData.dice.forEach((d, idx) => {
+              const btn = $(`<button type="button" class="bump-die-btn" data-die-index="${idx}">d${d.die}: ${d.result}</button>`);
+              btn.on('click', function(e) {
+                e.preventDefault();
+                diceContainer.find('.bump-die-btn').removeClass('selected');
+                $(this).addClass('selected');
+                selectedDieIndex = idx;
+              });
+              diceContainer.append(btn);
+            });
+            dieSelection.show();
+          }
+        });
+        
+        portraits.on('keydown', function(e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            $(this).click();
+          }
+        });
+      },
+      callback: (html) => {
+        if (!selectedTargetId || selectedDieIndex === null) return null;
+        return { targetId: selectedTargetId, dieIndex: selectedDieIndex };
+      },
+      rejectClose: false,
+    });
+    
+    if (result) {
+      await tavernSocket.executeAsGM("playerAction", "bumpTable", result, game.user.id);
+    }
+  }
+
+  static async onBumpRetaliation(event, target) {
+    const dieIndex = parseInt(target?.dataset?.dieIndex);
+    if (isNaN(dieIndex)) {
+      return ui.notifications.warn("Invalid die selection.");
+    }
+    await tavernSocket.executeAsGM("playerAction", "bumpRetaliation", { dieIndex }, game.user.id);
   }
 
   static async onInspect() {

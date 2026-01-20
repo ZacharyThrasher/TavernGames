@@ -35,8 +35,11 @@ function emptyTableData() {
     // Track who made a false accusation (forfeits winnings)
     failedInspector: null,
     // Intimidation tracking
-    intimidatedThisRound: {},  // { [oderId]: true } - who has used their intimidation this round
-    intimidationBackfire: {},  // { [oderId]: true } - disadvantage on next cheat/accuse from failed intimidation
+    intimidatedThisRound: {},  // { [userId]: true } - who has used their intimidation this round
+    intimidationBackfire: {},  // { [userId]: true } - disadvantage on next cheat/accuse from failed intimidation
+    // Bump table tracking
+    bumpedThisRound: {},       // { [userId]: true } - who has used their bump this round
+    pendingBumpRetaliation: null,  // { attackerId, targetId } or null - awaiting target's choice
   };
 }
 
@@ -1262,4 +1265,394 @@ export async function skipInspection() {
     return state;
   }
   return finishRound();
+}
+
+/**
+ * Bump the Table: Try to force another player to re-roll one of their dice.
+ * - Only during betting phase
+ * - Once per round per player
+ * - Attacker rolls Athletics (STR)
+ * - Defender rolls Dexterity Save
+ * - If attacker wins: target's chosen die is re-rolled
+ * - If attacker loses: target chooses one of attacker's dice to re-roll (pending state)
+ */
+export async function bumpTable(payload, userId) {
+  const state = getState();
+  if (state.status !== "PLAYING") {
+    ui.notifications.warn("Cannot bump the table outside of an active round.");
+    return state;
+  }
+
+  const tableData = state.tableData ?? emptyTableData();
+
+  // Must be in betting phase
+  if (tableData.phase !== "betting") {
+    ui.notifications.warn("You can only bump the table during the betting phase.");
+    return state;
+  }
+
+  // GM cannot bump - they're the house
+  const user = game.users.get(userId);
+  if (user?.isGM) {
+    ui.notifications.warn("The house does not bump the table.");
+    return state;
+  }
+
+  // Player must not have busted or held
+  if (tableData.busts?.[userId]) {
+    ui.notifications.warn("You busted - you can't bump the table!");
+    return state;
+  }
+  if (tableData.holds?.[userId]) {
+    ui.notifications.warn("You've already held - you can't bump the table!");
+    return state;
+  }
+
+  // Player can only bump once per round
+  if (tableData.bumpedThisRound?.[userId]) {
+    ui.notifications.warn("You've already bumped the table this round.");
+    return state;
+  }
+
+  const { targetId, dieIndex } = payload;
+
+  // Validate target
+  if (!targetId || targetId === userId) {
+    ui.notifications.warn("You can't bump your own dice!");
+    return state;
+  }
+
+  const targetUser = game.users.get(targetId);
+  if (targetUser?.isGM) {
+    ui.notifications.warn("You can't bump the house's dice!");
+    return state;
+  }
+
+  if (tableData.busts?.[targetId]) {
+    ui.notifications.warn("That player has already busted.");
+    return state;
+  }
+
+  // Validate target has dice and dieIndex is valid
+  const targetRolls = tableData.rolls?.[targetId] ?? [];
+  if (targetRolls.length === 0) {
+    ui.notifications.warn("That player has no dice to bump.");
+    return state;
+  }
+
+  if (dieIndex < 0 || dieIndex >= targetRolls.length) {
+    ui.notifications.warn("Invalid die selection.");
+    return state;
+  }
+
+  // Get actor info
+  const attackerActor = game.user.character ? game.users.get(userId)?.character : null;
+  const actualAttackerActor = game.users.get(userId)?.character;
+  const attackerName = actualAttackerActor?.name ?? game.users.get(userId)?.name ?? "Unknown";
+  const targetActor = game.users.get(targetId)?.character;
+  const targetName = targetActor?.name ?? game.users.get(targetId)?.name ?? "Unknown";
+
+  // Roll attacker's Athletics
+  let athleticsRoll = 10;
+  let athleticsMod = 0;
+  let athleticsD20 = 10;
+
+  const attackerRoll = await new Roll("1d20").evaluate();
+  athleticsD20 = attackerRoll.total;
+
+  if (actualAttackerActor) {
+    athleticsMod = actualAttackerActor.system?.skills?.ath?.total ?? 0;
+    athleticsRoll = athleticsD20 + athleticsMod;
+
+    await ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: actualAttackerActor }),
+      flavor: `<em>${attackerName} bumps the table...</em><br>Athletics`,
+      content: `<div class="dice-roll"><div class="dice-result"><div class="dice-formula">1d20 + ${athleticsMod}</div><div class="dice-tooltip"><section class="tooltip-part"><div class="dice"><ol class="dice-rolls"><li class="roll die d20">${athleticsD20}</li></ol></div></section></div><h4 class="dice-total">${athleticsRoll}</h4></div></div>`,
+      rolls: [attackerRoll],
+    });
+  } else {
+    athleticsRoll = athleticsD20;
+    await ChatMessage.create({
+      speaker: { alias: game.users.get(userId)?.name ?? "Unknown" },
+      flavor: `<em>Bumping the table...</em><br>Athletics`,
+      content: `<div class="dice-roll"><div class="dice-result"><div class="dice-formula">1d20</div><div class="dice-tooltip"><section class="tooltip-part"><div class="dice"><ol class="dice-rolls"><li class="roll die d20">${athleticsD20}</li></ol></div></section></div><h4 class="dice-total">${athleticsRoll}</h4></div></div>`,
+      rolls: [attackerRoll],
+    });
+  }
+
+  // Roll defender's Dex Save
+  let dexSaveRoll = 10;
+  let dexSaveMod = 0;
+  let dexSaveD20 = 10;
+
+  const defenderRoll = await new Roll("1d20").evaluate();
+  dexSaveD20 = defenderRoll.total;
+
+  if (targetActor) {
+    dexSaveMod = targetActor.system?.abilities?.dex?.save ?? 0;
+    dexSaveRoll = dexSaveD20 + dexSaveMod;
+
+    await ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: targetActor }),
+      flavor: `<em>${targetName} tries to catch their dice...</em><br>Dexterity Save`,
+      content: `<div class="dice-roll"><div class="dice-result"><div class="dice-formula">1d20 + ${dexSaveMod}</div><div class="dice-tooltip"><section class="tooltip-part"><div class="dice"><ol class="dice-rolls"><li class="roll die d20">${dexSaveD20}</li></ol></div></section></div><h4 class="dice-total">${dexSaveRoll}</h4></div></div>`,
+      rolls: [defenderRoll],
+    });
+  } else {
+    dexSaveRoll = dexSaveD20;
+    await ChatMessage.create({
+      speaker: { alias: game.users.get(targetId)?.name ?? "Unknown" },
+      flavor: `<em>Trying to catch the dice...</em><br>Dexterity Save`,
+      content: `<div class="dice-roll"><div class="dice-result"><div class="dice-formula">1d20</div><div class="dice-tooltip"><section class="tooltip-part"><div class="dice"><ol class="dice-rolls"><li class="roll die d20">${dexSaveD20}</li></ol></div></section></div><h4 class="dice-total">${dexSaveRoll}</h4></div></div>`,
+      rolls: [defenderRoll],
+    });
+  }
+
+  // Determine winner: attacker must beat defender
+  const success = athleticsRoll > dexSaveRoll;
+
+  // Mark that attacker has bumped this round
+  const updatedBumpedThisRound = { ...tableData.bumpedThisRound, [userId]: true };
+
+  if (success) {
+    // SUCCESS: Re-roll target's specified die
+    const targetDie = targetRolls[dieIndex];
+    const oldValue = targetDie.result;
+    const dieSides = targetDie.die;
+
+    // Roll new value
+    const reroll = await new Roll(`1d${dieSides}`).evaluate();
+    const newValue = reroll.total;
+
+    // Update target's rolls
+    const newTargetRolls = [...targetRolls];
+    newTargetRolls[dieIndex] = { ...targetDie, result: newValue };
+
+    // Calculate new total
+    const newTotal = newTargetRolls.reduce((sum, r) => sum + r.result, 0);
+    const oldTotal = tableData.totals?.[targetId] ?? 0;
+    const targetBusted = newTotal > 21;
+
+    // Update state
+    const updatedRolls = { ...tableData.rolls, [targetId]: newTargetRolls };
+    const updatedTotals = { ...tableData.totals, [targetId]: newTotal };
+    const updatedBusts = { ...tableData.busts };
+    if (targetBusted) {
+      updatedBusts[targetId] = true;
+    }
+
+    const updatedTableData = {
+      ...tableData,
+      rolls: updatedRolls,
+      totals: updatedTotals,
+      busts: updatedBusts,
+      bumpedThisRound: updatedBumpedThisRound,
+    };
+
+    await addHistoryEntry({
+      type: "bump",
+      attacker: attackerName,
+      target: targetName,
+      success: true,
+      oldValue,
+      newValue,
+      die: dieSides,
+      message: `${attackerName} bumped ${targetName}'s d${dieSides}: ${oldValue} → ${newValue}`,
+    });
+
+    // Create success chat card
+    let resultMessage = `<strong>${targetName}'s</strong> d${dieSides} (was ${oldValue}) → <strong>${newValue}</strong><br>`;
+    resultMessage += `Total: ${oldTotal} → <strong>${newTotal}</strong>`;
+    if (targetBusted) {
+      resultMessage += `<br><span style="color: #ff6666; font-weight: bold;">BUST!</span>`;
+    }
+
+    await createChatCard({
+      title: "Table Bump!",
+      subtitle: `${attackerName} vs ${targetName}`,
+      message: `
+        <div style="display: flex; justify-content: space-around; margin: 8px 0; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 4px;">
+          <div style="text-align: center;">
+            <div style="font-size: 11px; color: #999; text-transform: uppercase;">Athletics</div>
+            <div style="font-size: 20px; font-weight: bold; color: #ddc888;">${athleticsRoll}</div>
+          </div>
+          <div style="text-align: center;">
+            <div style="font-size: 11px; color: #999; text-transform: uppercase;">Dex Save</div>
+            <div style="font-size: 20px; font-weight: bold; color: #88ccdd;">${dexSaveRoll}</div>
+          </div>
+        </div>
+        <div style="text-align: center; padding: 8px; background: rgba(74, 124, 78, 0.3); border: 1px solid #4a7c4e; border-radius: 4px; margin-top: 8px;">
+          <div style="color: #aaffaa; font-weight: bold;">SUCCESS!</div>
+          <div style="margin-top: 4px;">${resultMessage}</div>
+        </div>
+      `,
+      icon: "fa-solid fa-hand-fist",
+    });
+
+    await playSound("dice");
+
+    return updateState({ tableData: updatedTableData });
+
+  } else {
+    // FAILURE: Set pending retaliation state - target chooses attacker's die
+    const updatedTableData = {
+      ...tableData,
+      bumpedThisRound: updatedBumpedThisRound,
+      pendingBumpRetaliation: {
+        attackerId: userId,
+        targetId: targetId,
+      },
+    };
+
+    await addHistoryEntry({
+      type: "bump",
+      attacker: attackerName,
+      target: targetName,
+      success: false,
+      message: `${attackerName} tried to bump ${targetName}'s dice but was caught!`,
+    });
+
+    // Create failure chat card (awaiting retaliation)
+    await createChatCard({
+      title: "Table Bump!",
+      subtitle: `${attackerName} vs ${targetName}`,
+      message: `
+        <div style="display: flex; justify-content: space-around; margin: 8px 0; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 4px;">
+          <div style="text-align: center;">
+            <div style="font-size: 11px; color: #999; text-transform: uppercase;">Athletics</div>
+            <div style="font-size: 20px; font-weight: bold; color: #ddc888;">${athleticsRoll}</div>
+          </div>
+          <div style="text-align: center;">
+            <div style="font-size: 11px; color: #999; text-transform: uppercase;">Dex Save</div>
+            <div style="font-size: 20px; font-weight: bold; color: #88ccdd;">${dexSaveRoll}</div>
+          </div>
+        </div>
+        <div style="text-align: center; padding: 8px; background: rgba(139, 58, 58, 0.3); border: 1px solid #8b3a3a; border-radius: 4px; margin-top: 8px;">
+          <div style="color: #ffaaaa; font-weight: bold;">CAUGHT!</div>
+          <div style="margin-top: 4px;"><strong>${targetName}</strong> catches their dice!</div>
+          <div style="margin-top: 4px; font-style: italic; color: #ffcc88;">Awaiting retaliation...</div>
+        </div>
+      `,
+      icon: "fa-solid fa-hand-fist",
+    });
+
+    return updateState({ tableData: updatedTableData });
+  }
+}
+
+/**
+ * Bump Retaliation: Target (or GM override) chooses which of attacker's dice to re-roll.
+ */
+export async function bumpRetaliation(payload, userId) {
+  const state = getState();
+  if (state.status !== "PLAYING") {
+    ui.notifications.warn("Cannot complete retaliation outside of an active round.");
+    return state;
+  }
+
+  const tableData = state.tableData ?? emptyTableData();
+  const pending = tableData.pendingBumpRetaliation;
+
+  if (!pending) {
+    ui.notifications.warn("No pending bump retaliation.");
+    return state;
+  }
+
+  // Only the target or GM can complete retaliation
+  const user = game.users.get(userId);
+  const isTarget = userId === pending.targetId;
+  const isGM = user?.isGM;
+
+  if (!isTarget && !isGM) {
+    ui.notifications.warn("Only the target or GM can choose the retaliation die.");
+    return state;
+  }
+
+  const { dieIndex } = payload;
+  const attackerId = pending.attackerId;
+  const targetId = pending.targetId;
+
+  // Validate attacker has dice and dieIndex is valid
+  const attackerRolls = tableData.rolls?.[attackerId] ?? [];
+  if (attackerRolls.length === 0) {
+    ui.notifications.warn("Attacker has no dice to re-roll.");
+    return state;
+  }
+
+  if (dieIndex < 0 || dieIndex >= attackerRolls.length) {
+    ui.notifications.warn("Invalid die selection.");
+    return state;
+  }
+
+  // Get names
+  const attackerActor = game.users.get(attackerId)?.character;
+  const attackerName = attackerActor?.name ?? game.users.get(attackerId)?.name ?? "Unknown";
+  const targetActor = game.users.get(targetId)?.character;
+  const targetName = targetActor?.name ?? game.users.get(targetId)?.name ?? "Unknown";
+
+  // Re-roll attacker's die
+  const attackerDie = attackerRolls[dieIndex];
+  const oldValue = attackerDie.result;
+  const dieSides = attackerDie.die;
+
+  const reroll = await new Roll(`1d${dieSides}`).evaluate();
+  const newValue = reroll.total;
+
+  // Update attacker's rolls
+  const newAttackerRolls = [...attackerRolls];
+  newAttackerRolls[dieIndex] = { ...attackerDie, result: newValue };
+
+  // Calculate new total
+  const newTotal = newAttackerRolls.reduce((sum, r) => sum + r.result, 0);
+  const oldTotal = tableData.totals?.[attackerId] ?? 0;
+  const attackerBusted = newTotal > 21;
+
+  // Update state
+  const updatedRolls = { ...tableData.rolls, [attackerId]: newAttackerRolls };
+  const updatedTotals = { ...tableData.totals, [attackerId]: newTotal };
+  const updatedBusts = { ...tableData.busts };
+  if (attackerBusted) {
+    updatedBusts[attackerId] = true;
+  }
+
+  const updatedTableData = {
+    ...tableData,
+    rolls: updatedRolls,
+    totals: updatedTotals,
+    busts: updatedBusts,
+    pendingBumpRetaliation: null,  // Clear the pending state
+  };
+
+  await addHistoryEntry({
+    type: "bump_retaliation",
+    attacker: attackerName,
+    target: targetName,
+    oldValue,
+    newValue,
+    die: dieSides,
+    message: `${targetName} chose ${attackerName}'s d${dieSides}: ${oldValue} → ${newValue}`,
+  });
+
+  // Create retaliation result chat card
+  let resultMessage = `<strong>${attackerName}'s</strong> d${dieSides} (was ${oldValue}) → <strong>${newValue}</strong><br>`;
+  resultMessage += `Total: ${oldTotal} → <strong>${newTotal}</strong>`;
+  if (attackerBusted) {
+    resultMessage += `<br><span style="color: #ff6666; font-weight: bold;">BUST!</span>`;
+  }
+
+  await createChatCard({
+    title: "Retaliation!",
+    subtitle: `${targetName} strikes back`,
+    message: `
+      <div style="text-align: center; padding: 8px; background: rgba(139, 107, 58, 0.3); border: 1px solid #8b6b3a; border-radius: 4px;">
+        <div style="color: #ffcc88; font-weight: bold;">${targetName} chose ${attackerName}'s d${dieSides}</div>
+        <div style="margin-top: 8px;">${resultMessage}</div>
+      </div>
+    `,
+    icon: "fa-solid fa-hand-back-fist",
+  });
+
+  await playSound("dice");
+
+  return updateState({ tableData: updatedTableData });
 }

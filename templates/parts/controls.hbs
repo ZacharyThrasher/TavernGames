@@ -122,6 +122,40 @@
       {{/if}}
     {{/if}}
 
+    {{!-- Bump Table button - available during betting phase --}}
+    {{#if canBump}}
+      {{#if bumpTargets.length}}
+        <div class="control-section bump-section">
+          <button type="button" class="btn btn-bump" data-action="bumpTable">
+            <i class="fa-solid fa-hand-fist"></i> Bump Table
+          </button>
+          <p class="hint bump-hint">Force a re-roll. Once per round.</p>
+        </div>
+      {{/if}}
+    {{/if}}
+
+    {{!-- Pending Bump Retaliation --}}
+    {{#if canRetaliate}}
+      <div class="control-section bump-retaliation">
+        <h3><i class="fa-solid fa-hand"></i> Caught!</h3>
+        {{#if isRetaliationTarget}}
+          <p>You caught <strong>{{retaliationAttackerName}}</strong> bumping the table!</p>
+          <p>Choose one of their dice to re-roll:</p>
+        {{else}}
+          <p class="gm-override-note"><strong>{{retaliationAttackerName}}</strong> is waiting for retaliation.</p>
+          <p>Override and choose a die:</p>
+        {{/if}}
+        <div class="retaliation-dice">
+          {{#each retaliationAttackerDice}}
+            <button type="button" class="btn-retaliation-die" data-action="bumpRetaliation" data-die-index="{{this.index}}">
+              <span class="die-type">d{{this.die}}</span>
+              <span class="die-value">{{this.result}}</span>
+            </button>
+          {{/each}}
+        </div>
+      </div>
+    {{/if}}
+
     {{#if isGM}}
       <div class="control-section gm-controls">
         <button type="button" class="btn btn-secondary btn-small" data-action="reveal">

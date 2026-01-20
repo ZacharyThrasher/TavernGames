@@ -1,5 +1,5 @@
 import { MODULE_ID, getState, updateState } from "./state.js";
-import { startRound, submitRoll, hold, revealDice, finishRound, returnToLobby, cheat, accuse, skipInspection, intimidate } from "./twenty-one.js";
+import { startRound, submitRoll, hold, revealDice, finishRound, returnToLobby, cheat, accuse, skipInspection, intimidate, bumpTable, bumpRetaliation } from "./twenty-one.js";
 import { playSound } from "./sounds.js";
 
 function ensureGM() {
@@ -76,6 +76,10 @@ export async function handlePlayerAction(action, payload, userId) {
       return accuse(payload, userId);
     case "intimidate":
       return intimidate(payload, userId);
+    case "bumpTable":
+      return bumpTable(payload, userId);
+    case "bumpRetaliation":
+      return bumpRetaliation(payload, userId);
     case "skipInspection":
       return skipInspection();
     case "reveal": {

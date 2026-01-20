@@ -1782,3 +1782,161 @@
     transform: scale(1.05);
   }
 }
+
+/* ============================================
+   Bump Table (Athletics) System Styles
+   ============================================ */
+
+/* Bump section in controls */
+.bump-section {
+  border-top: 1px dashed var(--tavern-wood-highlight);
+  padding-top: var(--tavern-gap-md);
+  margin-top: var(--tavern-gap-md);
+}
+
+/* Bump button - earthy strength style */
+.btn-bump {
+  width: 100%;
+  padding: 10px;
+  background: linear-gradient(135deg, #5a4a2a 0%, #3a2a1a 100%);
+  border: 2px solid #7a6a3a;
+  color: #ddc888;
+  font-weight: 600;
+  border-radius: var(--tavern-radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-bump:hover {
+  background: linear-gradient(135deg, #6a5a3a 0%, #4a3a2a 100%);
+  border-color: #9a8a4a;
+  box-shadow: 0 0 15px rgba(157, 138, 74, 0.4);
+}
+
+.btn-bump i {
+  margin-right: 6px;
+}
+
+.bump-hint {
+  font-size: 11px;
+  color: #aa9966;
+  text-align: center;
+}
+
+/* Bump Retaliation Section */
+.bump-retaliation {
+  background: rgba(90, 74, 42, 0.2);
+  border: 2px solid #7a6a3a;
+  border-radius: var(--tavern-radius-md);
+  padding: var(--tavern-gap-md);
+  animation: retaliation-pulse 2s ease-in-out infinite;
+}
+
+.bump-retaliation h3 {
+  color: #ddc888;
+  margin-bottom: var(--tavern-gap-sm);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bump-retaliation p {
+  font-size: 13px;
+  color: var(--tavern-parchment);
+  margin-bottom: var(--tavern-gap-sm);
+}
+
+.bump-retaliation .gm-override-note {
+  font-style: italic;
+  color: var(--tavern-parchment-dark);
+}
+
+@keyframes retaliation-pulse {
+  0%, 100% { 
+    box-shadow: 0 0 5px rgba(122, 106, 58, 0.3);
+  }
+  50% { 
+    box-shadow: 0 0 15px rgba(157, 138, 74, 0.5);
+  }
+}
+
+/* Retaliation Dice Selection */
+.retaliation-dice {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: var(--tavern-gap-md);
+}
+
+.btn-retaliation-die {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, var(--tavern-wood-medium) 0%, var(--tavern-wood-dark) 100%);
+  border: 2px solid var(--tavern-wood-highlight);
+  border-radius: var(--tavern-radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 60px;
+}
+
+.btn-retaliation-die:hover {
+  border-color: #ddc888;
+  background: linear-gradient(135deg, #5a4a2a 0%, var(--tavern-wood-medium) 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 10px rgba(157, 138, 74, 0.3);
+}
+
+.btn-retaliation-die .die-type {
+  font-size: 11px;
+  color: var(--tavern-parchment-dark);
+  text-transform: uppercase;
+}
+
+.btn-retaliation-die .die-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--tavern-gold-bright);
+}
+
+/* Bump chat card styling */
+.tavern-bump-card {
+  background: linear-gradient(135deg, #3a3020, #2a2015);
+  border: 2px solid #7a6a3a;
+  border-radius: var(--tavern-radius-md);
+  color: var(--tavern-parchment);
+  overflow: hidden;
+}
+
+.bump-header {
+  background: linear-gradient(180deg, #4a3a2a, #3a2a1a);
+  padding: 12px 16px;
+  border-bottom: 1px solid #7a6a3a;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.bump-header i {
+  font-size: 24px;
+  color: #ddc888;
+}
+
+.bump-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #ddc888;
+}
+
+.bump-header .subtitle {
+  font-size: 12px;
+  color: #aa9966;
+  font-style: italic;
+}
+
+/* History entry for bump */
+.history-entry.bump { border-left-color: #7a6a3a; }
+.history-entry.bump_retaliation { border-left-color: #9a8a4a; }
