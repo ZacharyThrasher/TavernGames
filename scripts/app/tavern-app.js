@@ -549,6 +549,93 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }
 
     await tavernSocket.executeAsGM("playerAction", "roll", { die, payWithDrink }, game.user.id);
+
+    // V3: Auto-pop cheat UI after roll (DEX/Sleight of Hand only)
+    // Give a moment for the state to update
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    const updatedState = getState();
+    const myRolls = updatedState.tableData?.rolls?.[game.user.id] ?? [];
+    const lastDieIndex = myRolls.length - 1;
+
+    if (lastDieIndex >= 0 && !updatedState.tableData?.busts?.[game.user.id]) {
+      const lastDie = myRolls[lastDieIndex];
+      const actor = game.user.character;
+      const sltMod = actor?.system?.skills?.slt?.total ?? 0;
+      const heatDC = updatedState.tableData?.heatDC ?? 10;
+
+      // Quick cheat dialog for the new die
+      const result = await Dialog.wait({
+        title: "Quick Cheat?",
+        content: `
+          <div style="text-align: center; padding: 12px;">
+            <p>Your d${lastDie.die} landed on <strong>${lastDie.result}</strong></p>
+            <p style="font-size: 0.9em; color: #888;">Sleight of Hand: +${sltMod} | Heat DC: ${heatDC}</p>
+            <div style="display: flex; justify-content: center; gap: 8px; margin: 16px 0;">
+              <label style="padding: 8px 16px; border: 2px solid #666; border-radius: 4px; cursor: pointer;">
+                <input type="radio" name="adj" value="-3" style="display: none;" />
+                <span style="font-weight: bold; color: #ff8888;">-3</span>
+              </label>
+              <label style="padding: 8px 16px; border: 2px solid #666; border-radius: 4px; cursor: pointer;">
+                <input type="radio" name="adj" value="-2" style="display: none;" />
+                <span style="font-weight: bold; color: #ff8888;">-2</span>
+              </label>
+              <label style="padding: 8px 16px; border: 2px solid #666; border-radius: 4px; cursor: pointer;">
+                <input type="radio" name="adj" value="-1" style="display: none;" />
+                <span style="font-weight: bold; color: #ff8888;">-1</span>
+              </label>
+              <label style="padding: 8px 16px; border: 2px solid #666; border-radius: 4px; cursor: pointer;">
+                <input type="radio" name="adj" value="1" style="display: none;" />
+                <span style="font-weight: bold; color: #88ff88;">+1</span>
+              </label>
+              <label style="padding: 8px 16px; border: 2px solid #666; border-radius: 4px; cursor: pointer;">
+                <input type="radio" name="adj" value="2" style="display: none;" />
+                <span style="font-weight: bold; color: #88ff88;">+2</span>
+              </label>
+              <label style="padding: 8px 16px; border: 2px solid #666; border-radius: 4px; cursor: pointer;">
+                <input type="radio" name="adj" value="3" style="display: none;" />
+                <span style="font-weight: bold; color: #88ff88;">+3</span>
+              </label>
+            </div>
+          </div>
+          <script>
+            document.querySelectorAll('[name="adj"]').forEach(radio => {
+              radio.closest('label').addEventListener('click', () => {
+                document.querySelectorAll('[name="adj"]').forEach(r => r.closest('label').style.borderColor = '#666');
+                radio.checked = true;
+                radio.closest('label').style.borderColor = '#ddc888';
+              });
+            });
+          </script>
+        `,
+        buttons: {
+          cheat: {
+            label: "Cheat",
+            icon: '<i class="fa-solid fa-hand-sparkles"></i>',
+            callback: (html) => {
+              const adj = parseInt(html.find('[name="adj"]:checked').val());
+              return isNaN(adj) ? null : adj;
+            }
+          },
+          skip: {
+            label: "Play Honest",
+            icon: '<i class="fa-solid fa-thumbs-up"></i>',
+            callback: () => null
+          }
+        },
+        default: "skip"
+      });
+
+      if (result) {
+        // Submit the cheat with DEX/Sleight of Hand
+        await tavernSocket.executeAsGM("playerAction", "cheat", {
+          dieIndex: lastDieIndex,
+          adjustment: result,
+          cheatType: "physical",
+          skill: "slt"
+        }, game.user.id);
+      }
+    }
   }
 
   static async onToggleLiquidMode(event, target) {

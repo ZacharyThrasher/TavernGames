@@ -539,6 +539,14 @@ export async function submitRoll(payload, userId) {
     delete goadBackfire[userId];
   }
 
+  // V3: Clear hunch lock after player rolls (they fulfilled the required Hit)
+  const hunchLocked = { ...tableData.hunchLocked };
+  const hunchLockedDie = { ...tableData.hunchLockedDie };
+  if (hunchLocked[userId]) {
+    delete hunchLocked[userId];
+    delete hunchLockedDie[userId];
+  }
+
   const updatedTable = {
     ...tableData,
     rolls,
@@ -547,6 +555,8 @@ export async function submitRoll(payload, userId) {
     cleaningFees,
     visibleTotals,
     goadBackfire,
+    hunchLocked,
+    hunchLockedDie,
   };
 
   // Determine next player based on phase
