@@ -1,5 +1,5 @@
 import { MODULE_ID, getState, updateState } from "./state.js";
-import { startRound, submitRoll, hold, revealDice, finishRound, returnToLobby, cheat, accuse, skipInspection, goad, bumpTable, bumpRetaliation, scan, submitDuelRoll } from "./twenty-one.js";
+import { startRound, submitRoll, hold, revealDice, finishRound, returnToLobby, cheat, accuse, skipInspection, goad, resistGoad, bumpTable, bumpRetaliation, hunch, profile, useCut, fold, submitDuelRoll } from "./twenty-one.js";
 import { playSound } from "./sounds.js";
 
 function ensureGM() {
@@ -70,6 +70,18 @@ export async function handlePlayerAction(action, payload, userId) {
       return submitRoll(payload, userId);
     case "hold":
       return hold(userId);
+    // V3: New actions
+    case "fold":
+      return fold(userId);
+    case "useCut":
+      return useCut(userId, payload?.reroll);
+    case "resistGoad":
+      return resistGoad(userId);
+    case "hunch":
+      return hunch(userId);
+    case "profile":
+      return profile(payload, userId);
+    // Skills
     case "cheat":
       return cheat(payload, userId);
     case "accuse":
@@ -80,8 +92,7 @@ export async function handlePlayerAction(action, payload, userId) {
       return bumpTable(payload, userId);
     case "bumpRetaliation":
       return bumpRetaliation(payload, userId);
-    case "scan":
-      return scan(payload, userId);
+    // Duel & phases
     case "duelRoll":
       return submitDuelRoll(userId);
     case "skipInspection":
@@ -111,8 +122,8 @@ export async function handleResetTable() {
     players: {},
     tableData: {
       totals: {},
-      visibleTotals: {},       // V2.0
-      bettingOrder: null,      // V2.0
+      visibleTotals: {},
+      bettingOrder: null,
       holds: {},
       busts: {},
       rolls: {},
@@ -121,14 +132,35 @@ export async function handleResetTable() {
       cheaters: {},
       caught: {},
       accusation: null,
-      failedInspector: null,
-      goadedThisRound: {},     // V2.0
-      goadBackfire: {},        // V2.0
+      disqualified: {},           // V3: Wrong accusation = disqualified
+      goadedThisRound: {},
+      goadBackfire: {},
       bumpedThisRound: {},
       pendingBumpRetaliation: null,
-      cleaningFees: {},        // V2.0
-      scannedBy: {},           // V2.0
-      duel: null,              // V2.0
+      cleaningFees: {},
+      profiledBy: {},             // V3: Replaces scannedBy
+      duel: null,
+      drinkCount: {},
+      sloppy: {},
+      // V3: Heat mechanic
+      heatDC: 10,
+      cheatsThisRound: 0,
+      // V3: Fold tracking
+      folded: {},
+      foldedEarly: {},
+      hasActed: {},
+      // V3: Hunch tracking
+      hunchPrediction: {},
+      hunchLocked: {},
+      hunchLockedDie: {},
+      hunchExact: {},
+      // V3: Side bets
+      sideBets: {},
+      // V3: Hit tracking for Duel
+      hitCount: {},
+      // V3: The Cut
+      theCutPlayer: null,
+      theCutUsed: false,
     },
     history: [],
   });

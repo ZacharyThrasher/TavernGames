@@ -24,12 +24,19 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       start: TavernApp.onStart,
       roll: TavernApp.onRoll,
       hold: TavernApp.onHold,
+      // V3: New actions
+      fold: TavernApp.onFold,
+      useCut: TavernApp.onUseCut,
+      resistGoad: TavernApp.onResistGoad,
+      hunch: TavernApp.onHunch,
+      profile: TavernApp.onProfile,
+      // Skills
       cheat: TavernApp.onCheat,
       accuse: TavernApp.onAccuse,
-      scan: TavernApp.onScan,
       goad: TavernApp.onGoad,
       bumpTable: TavernApp.onBumpTable,
       bumpRetaliation: TavernApp.onBumpRetaliation,
+      // Phases
       duelRoll: TavernApp.onDuelRoll,
       skipInspection: TavernApp.onSkipInspection,
       reveal: TavernApp.onReveal,
@@ -173,11 +180,33 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const phase = tableData.phase ?? "opening";
     const isOpeningPhase = phase === "opening";
     const isBettingPhase = phase === "betting";
+    const isCutPhase = phase === "cut"; // V3
+
+    // V3: The Cut tracking
+    const theCutPlayer = tableData.theCutPlayer;
+    const isTheCutPlayer = theCutPlayer === userId;
+    const theCutPlayerName = theCutPlayer
+      ? (game.users.get(theCutPlayer)?.character?.name ?? game.users.get(theCutPlayer)?.name ?? "Unknown")
+      : null;
 
     // Check if player can hold (only in betting phase)
     const myRolls = tableData.rolls?.[userId] ?? [];
-    const canHold = myTurn && isBettingPhase;
+    const isFolded = tableData.folded?.[userId] ?? false; // V3
+    const hasActed = tableData.hasActed?.[userId] ?? false; // V3
+    const canHold = myTurn && isBettingPhase && !tableData.hunchLocked?.[userId];
     const openingRollsRemaining = Math.max(0, 2 - myRolls.length);
+
+    // V3: Hunch lock tracking
+    const hunchLocked = tableData.hunchLocked?.[userId] ?? false;
+    const hunchLockedDie = tableData.hunchLockedDie?.[userId] ?? null;
+
+    // V3: Goad resist tracking
+    const goadBackfireState = tableData.goadBackfire?.[userId];
+    const canResistGoad = goadBackfireState?.canPayToResist ?? false;
+    const goadResistCost = goadBackfireState?.resistCost ?? ante;
+    const goadedByName = goadBackfireState?.goadedBy
+      ? (game.users.get(goadBackfireState.goadedBy)?.character?.name ?? game.users.get(goadBackfireState.goadedBy)?.name ?? "Someone")
+      : null;
 
     // Cheating context - player can cheat their own dice during play (GM cannot cheat)
     const canCheat = state.status === "PLAYING" && state.players?.[userId] && myRolls.length > 0 && !tableData.busts?.[userId] && !isGM;
@@ -226,16 +255,15 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         return { id: p.id, name: p.name, img };
       }) : [];
 
-    // V2.0: Goad context - can goad during betting phase if not busted, and haven't used it this round
-    // NOTE: You CAN goad even if you're holding! (Unlike old intimidate)
+    // V3: Goad context - can goad during betting phase if it's your turn, not busted, and haven't used it this round
     const hasGoadedThisRound = tableData.goadedThisRound?.[userId] ?? false;
     const isInGame = Boolean(state.players?.[userId]);
-    const canGoad = isBettingPhase && isInGame && !isBusted && !isGM && !hasGoadedThisRound;
+    const canGoad = isBettingPhase && myTurn && isInGame && !isBusted && !isFolded && !isGM && !hasGoadedThisRound;
 
-    // V2.0: Valid goad targets: other players not busted, not GM
-    // HOLDERS ARE VALID TARGETS - that's the whole point of goad!
+    // V3: Valid goad targets: other players not busted, not GM, not Sloppy, not Folded
     const goadTargets = canGoad ? players
       .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !game.users.get(p.id)?.isGM)
+      .filter(p => !tableData.sloppy?.[p.id] && !tableData.folded?.[p.id]) // V3: Can't goad Sloppy or Folded
       .map(p => {
         const user = game.users.get(p.id);
         const actor = user?.character;
@@ -243,6 +271,20 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         const isTargetHolding = tableData.holds?.[p.id] ?? false;
         return { id: p.id, name: p.name, img, isHolding: isTargetHolding };
       }) : [];
+
+    // V3: Hunch context - can use during betting phase if it's your turn and not locked
+    const canHunch = isBettingPhase && myTurn && isInGame && !isBusted && !isFolded && !isHolding && !isGM && !hunchLocked;
+
+    // V3: Profile context - can use during betting phase if it's your turn
+    const profileTargets = (isBettingPhase && myTurn && !isBusted && !isFolded && !isGM) ? players
+      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !game.users.get(p.id)?.isGM && !tableData.folded?.[p.id])
+      .map(p => {
+        const user = game.users.get(p.id);
+        const actor = user?.character;
+        const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
+        return { id: p.id, name: p.name, img };
+      }) : [];
+    const canProfile = profileTargets.length > 0;
 
     // Bump table context - can bump during betting phase if not busted/held, and haven't used it this round
     const hasBumpedThisRound = tableData.bumpedThisRound?.[userId] ?? false;
@@ -322,7 +364,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       openingRollsRemaining,
       history,
       // V2.0: Dice with variable costs (d12 removed)
-      dice: this._buildDiceArray(ante, isBettingPhase),
+      dice: this._buildDiceArray(ante, isBettingPhase || isCutPhase),
       // V2.0: Duel state
       isDuel: state.status === "DUEL",
       duel: tableData.duel ?? null,
@@ -333,6 +375,24 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         hasRolled: !!tableData.duel?.rolls?.[id],
         roll: tableData.duel?.rolls?.[id]?.total ?? null,
       })),
+      // V3: Cut phase
+      isCutPhase,
+      isTheCutPlayer,
+      theCutPlayerName,
+      // V3: Fold
+      isFolded,
+      hasActed,
+      // V3: Hunch
+      canHunch,
+      hunchLocked,
+      hunchLockedDie,
+      // V3: Profile
+      canProfile,
+      profileTargets,
+      // V3: Goad resist
+      canResistGoad,
+      goadResistCost,
+      goadedByName,
     };
   }
 
@@ -501,6 +561,117 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     await tavernSocket.executeAsGM("playerAction", "hold", {}, game.user.id);
   }
 
+  // V3: Fold action
+  static async onFold() {
+    await tavernSocket.executeAsGM("playerAction", "fold", {}, game.user.id);
+  }
+
+  // V3: Use The Cut action
+  static async onUseCut(event, target) {
+    const reroll = target?.dataset?.reroll === "true";
+    await tavernSocket.executeAsGM("playerAction", "useCut", { reroll }, game.user.id);
+  }
+
+  // V3: Resist a goad by paying
+  static async onResistGoad() {
+    await tavernSocket.executeAsGM("playerAction", "resistGoad", {}, game.user.id);
+  }
+
+  // V3: Hunch skill - get intuition about next roll
+  static async onHunch() {
+    await tavernSocket.executeAsGM("playerAction", "hunch", {}, game.user.id);
+  }
+
+  // V3: Profile skill - read an opponent
+  static async onProfile(event, target) {
+    const state = getState();
+    const tableData = state.tableData ?? {};
+    const userId = game.user.id;
+    const players = Object.values(state.players ?? {});
+
+    // Build list of valid targets
+    const validTargets = players
+      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !game.users.get(p.id)?.isGM && !tableData.folded?.[p.id])
+      .map(p => {
+        const user = game.users.get(p.id);
+        const actor = user?.character;
+        const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
+        return { id: p.id, name: p.name, img };
+      });
+
+    if (validTargets.length === 0) {
+      return ui.notifications.warn("No valid targets to profile.");
+    }
+
+    // If only one target, profile them directly
+    if (validTargets.length === 1) {
+      await tavernSocket.executeAsGM("playerAction", "profile", { targetId: validTargets[0].id }, game.user.id);
+      return;
+    }
+
+    // Get skill modifiers
+    const actor = game.user.character;
+    const invMod = actor?.system?.skills?.inv?.total ?? 0;
+    const hasActor = !!actor;
+
+    // Build target selection with portraits
+    const targetOptions = validTargets.map(t =>
+      `<div class="profile-portrait" data-target-id="${t.id}" data-target-name="${t.name}" tabindex="0" style="display: inline-block; text-align: center; padding: 8px; margin: 4px; border: 2px solid transparent; border-radius: 8px; cursor: pointer;">
+        <img src="${t.img}" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;" />
+        <div style="font-size: 0.85em; margin-top: 4px;">${t.name}</div>
+      </div>`
+    ).join("");
+
+    const content = `
+      <form>
+        <p style="font-weight: bold; margin-bottom: 8px;">Who do you want to read?</p>
+        <div class="profile-targets" style="display: flex; flex-wrap: wrap; justify-content: center; margin-bottom: 12px;">
+          ${targetOptions}
+        </div>
+        <hr>
+        <p style="color: #aaf; font-size: 0.9em;">
+          <i class="fa-solid fa-eye"></i> <strong>Investigation</strong> ${hasActor ? `(+${invMod})` : ""} vs Passive Deception
+        </p>
+        <p style="font-size: 0.85em; color: #888;">Success: Learn their hole die. Failure: They learn yours!</p>
+      </form>
+      <style>
+        .profile-portrait:hover { border-color: #666; background: rgba(255,255,255,0.1); }
+        .profile-portrait.selected { border-color: #4a6b8b; background: rgba(74,107,139,0.2); }
+      </style>
+    `;
+
+    let selectedTargetId = null;
+
+    const result = await Dialog.prompt({
+      title: "Profile",
+      content,
+      label: "Profile",
+      render: (html) => {
+        const portraits = html.find('.profile-portrait');
+        portraits.on('click', function () {
+          portraits.removeClass('selected');
+          $(this).addClass('selected');
+          selectedTargetId = $(this).data('target-id');
+        });
+        portraits.on('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            $(this).click();
+          }
+        });
+      },
+      callback: (html) => {
+        if (!selectedTargetId) return null;
+        return { targetId: selectedTargetId };
+      },
+      rejectClose: false,
+    });
+
+    if (result) {
+      await tavernSocket.executeAsGM("playerAction", "profile", result, game.user.id);
+    }
+  }
+
   static async onCheat(event, target) {
     const state = getState();
     const userId = game.user.id;
@@ -523,14 +694,15 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const wisMod = actor?.system?.abilities?.wis?.mod ?? 0;
     const chaMod = actor?.system?.abilities?.cha?.mod ?? 0;
 
-    // Build a dialog for selecting which die to cheat and the new value
+    // Build a dialog for selecting which die to cheat and the adjustment
     const diceOptions = myRolls.map((r, idx) => {
       const visibility = r.public ? "Visible" : "Hole";
-      return `<option value="${idx}" data-max="${r.die}">Die ${idx + 1}: d${r.die} (${visibility}, current: ${r.result})</option>`;
+      return `<option value="${idx}" data-max="${r.die}" data-current="${r.result}">Die ${idx + 1}: d${r.die} (${visibility}, current: ${r.result})</option>`;
     }).join("");
 
-    // Get initial max value from first die
+    // Get initial values from first die
     const initialMax = myRolls[0]?.die ?? 20;
+    const initialCurrent = myRolls[0]?.result ?? 1;
 
     const content = `
       <form>
@@ -541,8 +713,36 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
           </select>
         </div>
         <div class="form-group">
-          <label>New Value: <span id="cheat-max-label">(1-${initialMax})</span></label>
-          <input type="number" name="newValue" id="cheat-new-value" min="1" max="${initialMax}" value="1" style="width: 100%;" />
+          <label>Adjustment (±1 to ±3):</label>
+          <div style="display: flex; justify-content: center; gap: 8px; margin: 12px 0;">
+            <label class="cheat-adj-btn" style="padding: 8px 16px; border: 2px solid #666; border-radius: 4px; cursor: pointer; text-align: center;">
+              <input type="radio" name="adjustment" value="-3" style="display: none;" />
+              <span style="font-size: 1.2em; font-weight: bold; color: #ff8888;">-3</span>
+            </label>
+            <label class="cheat-adj-btn" style="padding: 8px 16px; border: 2px solid #666; border-radius: 4px; cursor: pointer; text-align: center;">
+              <input type="radio" name="adjustment" value="-2" style="display: none;" />
+              <span style="font-size: 1.2em; font-weight: bold; color: #ff8888;">-2</span>
+            </label>
+            <label class="cheat-adj-btn" style="padding: 8px 16px; border: 2px solid #666; border-radius: 4px; cursor: pointer; text-align: center;">
+              <input type="radio" name="adjustment" value="-1" style="display: none;" />
+              <span style="font-size: 1.2em; font-weight: bold; color: #ff8888;">-1</span>
+            </label>
+            <label class="cheat-adj-btn" style="padding: 8px 16px; border: 2px solid #666; border-radius: 4px; cursor: pointer; text-align: center;">
+              <input type="radio" name="adjustment" value="1" checked style="display: none;" />
+              <span style="font-size: 1.2em; font-weight: bold; color: #88ff88;">+1</span>
+            </label>
+            <label class="cheat-adj-btn" style="padding: 8px 16px; border: 2px solid #666; border-radius: 4px; cursor: pointer; text-align: center;">
+              <input type="radio" name="adjustment" value="2" style="display: none;" />
+              <span style="font-size: 1.2em; font-weight: bold; color: #88ff88;">+2</span>
+            </label>
+            <label class="cheat-adj-btn" style="padding: 8px 16px; border: 2px solid #666; border-radius: 4px; cursor: pointer; text-align: center;">
+              <input type="radio" name="adjustment" value="3" style="display: none;" />
+              <span style="font-size: 1.2em; font-weight: bold; color: #88ff88;">+3</span>
+            </label>
+          </div>
+          <div style="text-align: center; font-size: 1.1em; margin-top: 8px;">
+            <span id="cheat-current-display">${initialCurrent}</span> → <span id="cheat-preview-value" style="font-weight: bold;">${Math.min(initialMax, initialCurrent + 1)}</span>
+          </div>
         </div>
         <hr>
         <div class="form-group">
@@ -576,49 +776,64 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
           </select>
         </div>
         <hr>
-        <div id="cheat-warning-physical">
-          <p class="hint" style="font-size: 0.9em; color: #c44; margin-top: 10px;">
-            <i class="fa-solid fa-warning"></i> <strong>FUMBLE:</strong> Roll < 10 = auto-caught immediately!
+        <div id="cheat-warning-info">
+          <p class="hint" style="font-size: 0.9em; color: #aaa; margin-top: 10px;">
+            <i class="fa-solid fa-info-circle"></i> <strong>Heat DC:</strong> Starts at 10, +2 per cheat this round
           </p>
-          <p class="hint" style="font-size: 0.85em; color: #888;">Sets Tell DC (detected by Insight during Scan)</p>
-        </div>
-        <div id="cheat-warning-magical" style="display: none;">
-          <p class="hint" style="font-size: 0.9em; color: #88f; margin-top: 10px;">
-            <i class="fa-solid fa-wand-magic-sparkles"></i> Magical cheats cannot fumble.
+          <p class="hint" style="font-size: 0.9em; color: #ddc888; margin-top: 4px;">
+            <i class="fa-solid fa-star"></i> <strong>Nat 20:</strong> Invisible cheat (DC 0)
           </p>
-          <p class="hint" style="font-size: 0.85em; color: #888;">Sets Residue DC (detected by Arcana during Scan)</p>
+          <p class="hint" style="font-size: 0.9em; color: #ff6666; margin-top: 4px;">
+            <i class="fa-solid fa-warning"></i> <strong>Nat 1:</strong> Auto-caught + pay 1× ante
+          </p>
         </div>
       </form>
       <script>
         document.getElementById('cheat-die-select')?.addEventListener('change', (e) => {
-          const max = e.target.selectedOptions[0]?.dataset?.max ?? 20;
-          document.getElementById('cheat-new-value').max = max;
-          document.getElementById('cheat-max-label').textContent = '(1-' + max + ')';
+          const idx = parseInt(e.target.value);
+          const current = parseInt(e.target.selectedOptions[0]?.dataset?.current ?? 1);
+          const max = parseInt(e.target.selectedOptions[0]?.dataset?.max ?? 20);
+          document.getElementById('cheat-current-display').textContent = current;
+          // Update preview based on current adjustment
+          updatePreview();
         });
         document.querySelectorAll('[name="cheatType"]').forEach(radio => {
           radio.addEventListener('change', (e) => {
             const isPhysical = e.target.value === 'physical';
             document.getElementById('physical-skill-group').style.display = isPhysical ? 'block' : 'none';
             document.getElementById('magical-skill-group').style.display = isPhysical ? 'none' : 'block';
-            document.getElementById('cheat-warning-physical').style.display = isPhysical ? 'block' : 'none';
-            document.getElementById('cheat-warning-magical').style.display = isPhysical ? 'none' : 'block';
           });
         });
+        document.querySelectorAll('[name="adjustment"]').forEach(radio => {
+          radio.addEventListener('change', updatePreview);
+        });
+        function updatePreview() {
+          const select = document.getElementById('cheat-die-select');
+          const current = parseInt(select.selectedOptions[0]?.dataset?.current ?? 1);
+          const max = parseInt(select.selectedOptions[0]?.dataset?.max ?? 20);
+          const adj = parseInt(document.querySelector('[name="adjustment"]:checked')?.value ?? 0);
+          let newVal = current + adj;
+          if (newVal < 1) newVal = 1;
+          if (newVal > max) newVal = max;
+          document.getElementById('cheat-preview-value').textContent = newVal;
+          document.getElementById('cheat-preview-value').style.color = adj > 0 ? '#88ff88' : (adj < 0 ? '#ff8888' : '#ffffff');
+        }
+        updatePreview();
       </script>
     `;
 
     const result = await Dialog.prompt({
-      title: "Cheat - V2.0",
+      title: "Cheat - V3.0",
       content,
       label: "Attempt Cheat",
       callback: (html) => {
         const dieIndex = parseInt(html.find('[name="dieIndex"]').val());
-        const newValue = parseInt(html.find('[name="newValue"]').val());
+        const adjustment = parseInt(html.find('[name="adjustment"]:checked').val());
         const cheatType = html.find('[name="cheatType"]:checked').val();
         const skill = cheatType === "physical"
           ? html.find('[name="physicalSkill"]').val()
           : html.find('[name="magicalSkill"]').val();
-        return { dieIndex, newValue, cheatType, skill };
+        return { dieIndex, adjustment, cheatType, skill };
       },
       rejectClose: false,
     });

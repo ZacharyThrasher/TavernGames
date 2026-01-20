@@ -8,8 +8,21 @@ import { tavernSocket } from "./socket.js";
 // V2.0: d12 removed, variable costs
 const VALID_DICE = [20, 10, 8, 6, 4];
 const OPENING_ROLLS_REQUIRED = 2;
+const OPENING_DIE = 10; // V3: Auto-roll 2d10 for opening
 
-// Iron Liver Patch: Themed duel challenges
+// V3: High/Low thresholds for Hunch
+const HUNCH_THRESHOLDS = {
+  4: 2,   // d4: 1-2 low, 3-4 high
+  6: 3,   // d6: 1-3 low, 4-6 high
+  8: 4,   // d8: 1-4 low, 5-8 high
+  10: 5,  // d10: 1-5 low, 6-10 high
+  20: 10, // d20: 1-10 low, 11-20 high
+};
+
+// V3: Default DC for Hunch skill checks
+const HUNCH_DC = 12;
+
+// Iron Liver Patch: Themed duel challenges (V3: No longer used for random ability, kept for flavor)
 const DUEL_CHALLENGES = {
   str: { name: "Arm Wrestling", desc: "Lock hands and slam 'em down!", icon: "fa-solid fa-hand-fist" },
   dex: { name: "Quick-Draw Dice Catch", desc: "Fastest hand on the table wins!", icon: "fa-solid fa-hand" },
@@ -20,16 +33,16 @@ const DUEL_CHALLENGES = {
 };
 
 /**
- * V2.0 Economy: Get the cost for rolling a specific die
- * d20 = FREE, d10 = ½ ante, d6/d8 = 1x ante, d4 = 2x ante
+ * V3.0 Economy: Get the cost for rolling a specific die
+ * d20 = ½ ante, d10 = ½ ante, d6/d8 = 1x ante, d4 = 2x ante
  */
 export function getDieCost(die, ante) {
   switch (die) {
-    case 20: return 0;                        // FREE - Hail Mary
+    case 20: return Math.floor(ante / 2);     // V3: ½ Ante (not free)
     case 10: return Math.floor(ante / 2);     // ½ Ante - The Builder
-    case 8: return ante;                     // 1x Ante - Standard
-    case 6: return ante;                     // 1x Ante - Standard
-    case 4: return ante * 2;                 // 2x Ante - Precision
+    case 8: return ante;                      // 1x Ante - Standard
+    case 6: return ante;                      // 1x Ante - Standard
+    case 4: return ante * 2;                  // 2x Ante - Precision
     default: return ante;
   }
 }
@@ -63,31 +76,56 @@ function emptyTableData() {
     busts: {},
     rolls: {},                 // V2.0: [{ die, result, public: bool }]
     currentPlayer: null,
-    phase: "opening", // "opening" = everyone rolls 2 dice, "betting" = roll costs ante or hold
+    phase: "opening", // "opening" = auto 2d10, "cut" = The Cut, "betting" = roll/hold/fold
     // V2.0 Cheating system: track each cheat with type (physical/magical) and DC
     // cheaters: { [userId]: { cheats: [{ dieIndex, oldValue, newValue, type, dc, fumbled }] } }
     cheaters: {},
     // Track who was caught cheating (forfeits the round)
     caught: {},
-    // Targeted accusation tracking: { accuserId, targetId, success }
+    // Targeted accusation tracking: { accuserId, targetId, dieIndex, success }
     accusation: null,
-    // Track who made a false accusation (forfeits winnings)
-    failedInspector: null,
+    // V3: Track who is disqualified (wrong accusation)
+    disqualified: {},
     // V2.0: Goad tracking (replaces intimidation)
     goadedThisRound: {},       // { [userId]: true } - who has used their goad this round
-    goadBackfire: {},          // { [userId]: true } - who must roll due to failed goad
+    goadBackfire: {},          // { [userId]: { mustRoll, canPayToResist, resistCost } }
     // Bump table tracking
     bumpedThisRound: {},       // { [userId]: true } - who has used their bump this round
     pendingBumpRetaliation: null,  // { attackerId, targetId } or null - awaiting target's choice
     // V2.0: Cleaning fees for Natural 1s (Spilled Drink)
     cleaningFees: {},          // { [userId]: number } - gp owed for spilled drinks
-    // V2.0: Scan tracking
-    scannedBy: {},             // { [targetId]: [scannerId, ...] } - who has been scanned by whom
+    // V3: Profile tracking (replaces Scan)
+    profiledBy: {},            // { [targetId]: [scannerId, ...] } - who has been profiled by whom
     // V2.0: Duel state for ties
-    duel: null,                // { participants: [], contestType, stat, rolls: {} } or null
+    duel: null,                // { participants: [], rolls: {}, hitCounts: {} } or null
     // Iron Liver: Liquid Currency - drink tracking
     drinkCount: {},            // { [userId]: number } - drinks taken this round
     sloppy: {},                // { [userId]: true } - has Sloppy condition (disadvantage)
+
+    // V3: Heat mechanic for cheating
+    heatDC: 10,                // Current cheat DC (starts at 10)
+    cheatsThisRound: 0,        // Number of cheats this round (for Heat tracking)
+
+    // V3: Fold tracking
+    folded: {},                // { [userId]: true } - who has folded
+    foldedEarly: {},           // { [userId]: true } - folded before any action (gets 50% back)
+    hasActed: {},              // { [userId]: true } - who has taken a Hit or Skill
+
+    // V3: Hunch tracking
+    hunchPrediction: {},       // { [userId]: { predictions } } - pending Hunch predictions
+    hunchLocked: {},           // { [userId]: true } - locked into Hit (failed Hunch)
+    hunchLockedDie: {},        // { [userId]: 20 } - locked into specific die (Nat 1 Hunch)
+    hunchExact: {},            // { [userId]: { die: value } } - Nat 20 exact predictions
+
+    // V3: Side bets
+    sideBets: {},              // { [userId]: { onPlayerId, amount } }
+
+    // V3: Track hits for Duel
+    hitCount: {},              // { [userId]: number } - hits taken this round
+
+    // V3: The Cut
+    theCutPlayer: null,        // userId of player who can use The Cut
+    theCutUsed: false,         // Whether The Cut has been used/skipped
   };
 }
 
@@ -184,11 +222,11 @@ function getNextActivePlayer(state, tableData) {
     ? order.indexOf(tableData.currentPlayer)
     : -1;
 
-  // Find next player who hasn't held or busted
+  // V3: Find next player who hasn't held, busted, or folded
   for (let i = 1; i <= order.length; i++) {
     const nextIndex = (currentIndex + i) % order.length;
     const nextId = order[nextIndex];
-    if (!tableData.holds[nextId] && !tableData.busts[nextId]) {
+    if (!tableData.holds[nextId] && !tableData.busts[nextId] && !tableData.folded?.[nextId]) {
       return nextId;
     }
   }
@@ -196,9 +234,9 @@ function getNextActivePlayer(state, tableData) {
 }
 
 function allPlayersFinished(state, tableData) {
-  // V2.0: Use betting order if available
+  // V3: Use betting order if available, include folded players
   const order = tableData.bettingOrder ?? state.turnOrder;
-  return order.every((id) => tableData.holds[id] || tableData.busts[id]);
+  return order.every((id) => tableData.holds[id] || tableData.busts[id] || tableData.folded?.[id]);
 }
 
 /**
@@ -269,13 +307,54 @@ export async function startRound() {
   const houseMatch = playerAntes; // House matches player antes only
   const pot = playerAntes + houseMatch;
 
-  state.turnOrder.forEach((id) => {
-    tableData.totals[id] = 0;
-    tableData.rolls[id] = [];
-  });
+  // V3: Auto-roll 2d10 for everyone (1 visible, 1 hole)
+  let lowestVisible = Infinity;
+  let cutPlayerId = null;
 
-  tableData.currentPlayer = state.turnOrder[0];
-  tableData.phase = "opening";
+  for (const userId of state.turnOrder) {
+    const roll1 = await new Roll("1d10").evaluate();
+    const roll2 = await new Roll("1d10").evaluate();
+
+    tableData.rolls[userId] = [
+      { die: 10, result: roll1.total, public: true },   // Visible
+      { die: 10, result: roll2.total, public: false },  // Hole
+    ];
+    tableData.totals[userId] = roll1.total + roll2.total;
+    tableData.visibleTotals[userId] = roll1.total;
+
+    // Track lowest visible for The Cut
+    if (roll1.total < lowestVisible) {
+      lowestVisible = roll1.total;
+      cutPlayerId = userId;
+    }
+
+    // Show dice to player (visible die public, hole die private)
+    try {
+      await tavernSocket.executeAsUser("showRoll", userId, {
+        formula: "1d10",
+        die: 10,
+        result: roll1.total
+      });
+    } catch (e) {
+      console.warn("Tavern Twenty-One | Could not show dice to player:", e);
+    }
+  }
+
+  // V3: Calculate betting order (sorted by visible total, lowest first)
+  tableData.bettingOrder = calculateBettingOrder(state, tableData);
+
+  // V3: Set up The Cut - lowest visible die can re-roll hole
+  tableData.theCutPlayer = cutPlayerId;
+  tableData.theCutUsed = false;
+
+  // V3: Transition to cut phase if someone gets The Cut, otherwise straight to betting
+  if (cutPlayerId && state.turnOrder.length > 1) {
+    tableData.phase = "cut";
+    tableData.currentPlayer = cutPlayerId;
+  } else {
+    tableData.phase = "betting";
+    tableData.currentPlayer = tableData.bettingOrder.find(id => !tableData.busts[id]) ?? null;
+  }
 
   const next = await updateState({
     status: "PLAYING",
@@ -291,10 +370,19 @@ export async function startRound() {
     players: playerNames,
   });
 
+  // V3: Updated message for auto-roll opening
+  const cutPlayerName = cutPlayerId ? (getActorForUser(cutPlayerId)?.name ?? game.users.get(cutPlayerId)?.name ?? "Unknown") : null;
+  let chatMessage = `Each player antes ${ante}gp. The house matches. Pot: <strong>${pot}gp</strong><br>` +
+    `<em>All hands dealt (2d10 each: 1 visible, 1 hole)</em>`;
+
+  if (cutPlayerId && state.turnOrder.length > 1) {
+    chatMessage += `<br><strong>${cutPlayerName}</strong> has The Cut (lowest visible: ${lowestVisible})`;
+  }
+
   await createChatCard({
     title: "Twenty-One",
     subtitle: "A new round begins!",
-    message: `Each player antes ${ante}gp. The house matches. Pot: <strong>${pot}gp</strong><br><em>Opening round: everyone rolls 2 dice!</em>`,
+    message: chatMessage,
     icon: "fa-solid fa-coins",
   });
 
@@ -534,22 +622,26 @@ export async function hold(userId) {
     return state;
   }
 
-  if (tableData.holds[userId] || tableData.busts[userId]) {
+  if (tableData.holds[userId] || tableData.busts[userId] || tableData.folded?.[userId]) {
     ui.notifications.warn("You've already finished this round.");
     return state;
   }
 
-  // Can't hold during opening phase
-  if (tableData.phase === "opening") {
-    const rollCount = (tableData.rolls[userId] ?? []).length;
-    const remaining = OPENING_ROLLS_REQUIRED - rollCount;
-    ui.notifications.warn(`Opening round: you must roll ${remaining} more ${remaining === 1 ? "die" : "dice"}.`);
+  // V3: Can't hold during opening or cut phase
+  if (tableData.phase === "opening" || tableData.phase === "cut") {
+    await notifyUser(userId, "Cannot hold during opening phase.");
     return state;
   }
 
   // Can't hold if goaded (must roll instead)
   if (tableData.goadBackfire?.[userId]?.mustRoll) {
     await notifyUser(userId, "You were goaded! You must roll instead.");
+    return state;
+  }
+
+  // V3: Can't hold if locked from Hunch failure
+  if (tableData.hunchLocked?.[userId]) {
+    await notifyUser(userId, "Your Hunch locked you into rolling!");
     return state;
   }
 
@@ -568,6 +660,172 @@ export async function hold(userId) {
   const next = await updateState({ tableData: updatedTable });
 
   if (allPlayersFinished(state, updatedTable)) {
+    return revealDice();
+  }
+
+  return next;
+}
+
+/**
+ * V3: Use The Cut - lowest visible die player can re-roll their hole die
+ */
+export async function useCut(userId, reroll = false) {
+  const state = getState();
+  if (state.status !== "PLAYING") {
+    ui.notifications.warn("No active round.");
+    return state;
+  }
+
+  const tableData = state.tableData ?? emptyTableData();
+
+  // Must be in cut phase and be the cut player
+  if (tableData.phase !== "cut" || tableData.theCutPlayer !== userId) {
+    await notifyUser(userId, "You cannot use The Cut right now.");
+    return state;
+  }
+
+  const actor = getActorForUser(userId);
+  const userName = actor?.name ?? game.users.get(userId)?.name ?? "Unknown";
+
+  if (reroll) {
+    // Re-roll the hole die
+    const roll = await new Roll("1d10").evaluate();
+    const oldValue = tableData.rolls[userId][1].result;
+    tableData.rolls[userId][1].result = roll.total;
+    tableData.totals[userId] = tableData.totals[userId] - oldValue + roll.total;
+
+    // Show dice to player
+    try {
+      await tavernSocket.executeAsUser("showRoll", userId, {
+        formula: "1d10",
+        die: 10,
+        result: roll.total
+      });
+    } catch (e) {
+      console.warn("Tavern Twenty-One | Could not show dice to player:", e);
+    }
+
+    await createChatCard({
+      title: "The Cut",
+      subtitle: `${userName} takes the cut!`,
+      message: `Re-rolled hole die: ${oldValue} → <strong>${roll.total}</strong>`,
+      icon: "fa-solid fa-scissors",
+    });
+
+    await addHistoryEntry({
+      type: "cut",
+      player: userName,
+      oldValue,
+      newValue: roll.total,
+      message: `${userName} used The Cut: ${oldValue} → ${roll.total}`,
+    });
+  } else {
+    await createChatCard({
+      title: "The Cut",
+      subtitle: `${userName} passes`,
+      message: `Kept their original hole die`,
+      icon: "fa-solid fa-hand",
+    });
+  }
+
+  // Transition to betting phase
+  tableData.phase = "betting";
+  tableData.theCutUsed = true;
+  tableData.currentPlayer = tableData.bettingOrder.find(id => !tableData.busts[id]) ?? null;
+
+  // Build turn order message
+  const ante = game.settings.get(MODULE_ID, "fixedAnte");
+  const orderNames = tableData.bettingOrder
+    .filter(id => !tableData.busts[id])
+    .map(id => {
+      const name = getActorForUser(id)?.name ?? game.users.get(id)?.name ?? "Unknown";
+      const vt = tableData.visibleTotals[id] ?? 0;
+      return `${name} (${vt})`;
+    })
+    .join(" → ");
+
+  await createChatCard({
+    title: "Betting Round",
+    subtitle: "The game begins!",
+    message: `<strong>Turn order (by visible total):</strong> ${orderNames}<br><em>d20/d10: ${Math.floor(ante / 2)}gp | d6/d8: ${ante}gp | d4: ${ante * 2}gp</em>`,
+    icon: "fa-solid fa-hand-holding-dollar",
+  });
+
+  return updateState({ tableData });
+}
+
+/**
+ * V3: Fold - exit the round
+ * - Early fold (no hits/skills): 50% ante refund
+ * - Late fold: no refund but become untargetable
+ */
+export async function fold(userId) {
+  const state = getState();
+  if (state.status !== "PLAYING") {
+    ui.notifications.warn("No active round.");
+    return state;
+  }
+
+  const tableData = state.tableData ?? emptyTableData();
+  const ante = game.settings.get(MODULE_ID, "fixedAnte");
+
+  if (tableData.currentPlayer !== userId) {
+    await notifyUser(userId, "It's not your turn.");
+    return state;
+  }
+
+  // V3: Can't fold during opening or cut phase
+  if (tableData.phase === "opening" || tableData.phase === "cut") {
+    await notifyUser(userId, "Cannot fold during opening phase.");
+    return state;
+  }
+
+  if (tableData.folded?.[userId] || tableData.busts?.[userId]) {
+    ui.notifications.warn("You've already finished this round.");
+    return state;
+  }
+
+  // Can't fold if locked from Hunch failure
+  if (tableData.hunchLocked?.[userId]) {
+    await notifyUser(userId, "Your Hunch locked you into rolling!");
+    return state;
+  }
+
+  const hasActed = tableData.hasActed?.[userId] ?? false;
+  const refund = hasActed ? 0 : Math.floor(ante / 2);
+
+  const actor = getActorForUser(userId);
+  const userName = actor?.name ?? game.users.get(userId)?.name ?? "Unknown";
+
+  if (refund > 0) {
+    await payOutWinners({ [userId]: refund });
+    tableData.foldedEarly = { ...tableData.foldedEarly, [userId]: true };
+  }
+
+  tableData.folded = { ...tableData.folded, [userId]: true };
+  tableData.currentPlayer = getNextActivePlayer(state, tableData);
+
+  await createChatCard({
+    title: "Fold",
+    subtitle: `${userName} folds`,
+    message: refund > 0
+      ? `Received <strong>${refund}gp</strong> refund (50% ante). Now untargetable.`
+      : `No refund (already acted). Now untargetable.`,
+    icon: "fa-solid fa-door-open",
+  });
+
+  await addHistoryEntry({
+    type: "fold",
+    player: userName,
+    refund,
+    message: refund > 0
+      ? `${userName} folded early and received ${refund}gp back.`
+      : `${userName} folded (no refund).`,
+  });
+
+  const next = await updateState({ tableData });
+
+  if (allPlayersFinished(state, tableData)) {
     return revealDice();
   }
 
@@ -924,28 +1182,36 @@ export async function submitDuelRoll(userId) {
     return state;
   }
 
-  // Get actor and ability modifier
+  // Get actor info
   const actor = getActorForUser(userId);
   const userName = actor?.name ?? game.users.get(userId)?.name ?? "Unknown";
-  const abilityMod = actor?.system?.abilities?.[duel.contestType]?.mod ?? 0;
 
-  // Roll 1d20 + ability modifier
-  const roll = await new Roll("1d20").evaluate();
-  const d20Result = roll.total;
-  const total = d20Result + abilityMod;
+  // V3: Calculate Hits taken (dice rolled after opening 2)
+  const playerRolls = tableData.rolls[userId] ?? [];
+  const hitsTaken = Math.max(0, playerRolls.length - OPENING_ROLLS_REQUIRED);
+
+  // V3: Roll 1d20 + Xd4 where X = hits taken
+  const d4Count = hitsTaken;
+  const formula = d4Count > 0 ? `1d20 + ${d4Count}d4` : "1d20";
+  const roll = await new Roll(formula).evaluate();
+
+  // Extract d20 and d4 totals
+  const d20Result = roll.dice[0]?.total ?? roll.total;
+  const d4Total = d4Count > 0 ? (roll.dice[1]?.total ?? 0) : 0;
+  const total = roll.total;
 
   // Post the roll publicly
   await ChatMessage.create({
     speaker: { alias: userName },
-    flavor: `<em>${userName} rolls for the duel...</em><br>${duel.stat}`,
-    content: `<div class="dice-roll"><div class="dice-result"><div class="dice-formula">1d20 + ${abilityMod}</div><div class="dice-tooltip"><section class="tooltip-part"><div class="dice"><ol class="dice-rolls"><li class="roll die d20">${d20Result}</li></ol></div></section></div><h4 class="dice-total">${total}</h4></div></div>`,
+    flavor: `<em>${userName} rolls for the duel...</em><br>Duel Roll${hitsTaken > 0 ? ` (+${hitsTaken}d4 for Hits taken)` : ""}`,
+    content: `<div class="dice-roll"><div class="dice-result"><div class="dice-formula">${formula}</div><div class="dice-tooltip"><section class="tooltip-part"><div class="dice"><ol class="dice-rolls"><li class="roll die d20">${d20Result}</li></ol></div></section>${d4Count > 0 ? `<section class="tooltip-part"><div class="dice"><ol class="dice-rolls">${d4Total}</ol></div></section>` : ""}</div><h4 class="dice-total">${total}</h4></div></div>`,
     rolls: [roll],
   });
 
   // Update duel state
   const updatedDuel = {
     ...duel,
-    rolls: { ...duel.rolls, [userId]: { total, d20: d20Result, mod: abilityMod } },
+    rolls: { ...duel.rolls, [userId]: { total, d20: d20Result, d4Bonus: d4Total, hits: hitsTaken } },
     pendingRolls: duel.pendingRolls.filter(id => id !== userId),
   };
 
@@ -1183,10 +1449,20 @@ export async function cheat(payload, userId) {
     return state;
   }
 
-  const tableData = state.tableData ?? emptyTableData();
-  const { dieIndex, newValue, cheatType = "physical", skill = "slt" } = payload;
+  let tableData = state.tableData ?? emptyTableData();
+  const ante = game.settings.get(MODULE_ID, "fixedAnte");
 
-  // V2.0: Determine cheat type and skill
+  // V3: dieIndex + adjustment (1-3, positive or negative)
+  const { dieIndex, adjustment = 1, cheatType = "physical", skill = "slt" } = payload;
+
+  // V3: Validate adjustment is ±1 to ±3
+  const absAdj = Math.abs(adjustment);
+  if (absAdj < 1 || absAdj > 3) {
+    ui.notifications.warn("Cheat adjustment must be ±1, ±2, or ±3.");
+    return state;
+  }
+
+  // V3: Determine cheat type and skill
   const isPhysical = cheatType === "physical";
   const skillNames = {
     // Physical skills
@@ -1210,55 +1486,70 @@ export async function cheat(payload, userId) {
   const maxValue = targetDie.die;
   const isHoleDie = !(targetDie.public ?? true);
 
-  // Validate new value
-  if (newValue < 1 || newValue > maxValue) {
-    ui.notifications.warn(`Value must be between 1 and ${maxValue}.`);
+  // V3: Calculate new value from adjustment
+  const oldValue = targetDie.result;
+  let newValue = oldValue + adjustment;
+
+  // Clamp to valid range
+  if (newValue < 1) newValue = 1;
+  if (newValue > maxValue) newValue = maxValue;
+
+  // Don't allow "cheating" to the same value
+  if (newValue === oldValue) {
+    ui.notifications.warn("That wouldn't change the value!");
     return state;
   }
 
-  // Don't allow "cheating" to the same value
-  if (newValue === targetDie.result) {
-    ui.notifications.warn("That's already the value!");
-    return state;
-  }
+  // V3: Mark as acted (affects Fold refund)
+  tableData.hasActed = { ...tableData.hasActed, [userId]: true };
+
+  // V3: Get current Heat DC and roll against it
+  const heatDC = tableData.heatDC ?? 10;
 
   // Roll the check (Iron Liver: Sloppy = disadvantage)
   const actor = getActorForUser(userId);
   const isSloppy = tableData.sloppy?.[userId] ?? false;
-  let rollTotal = 10;
-  let modifier = 0;
-  let d20Result = 10;
 
-  // Roll with disadvantage if Sloppy
   const roll = await new Roll(isSloppy ? "2d20kl1" : "1d20").evaluate();
-  d20Result = roll.total;
+  const d20Raw = roll.dice[0]?.results?.[0]?.result ?? roll.total;
+  const d20Result = roll.total;
 
+  // V3: Check for Nat 20/Nat 1
+  const isNat20 = d20Raw === 20;
+  const isNat1 = d20Raw === 1;
+
+  let modifier = 0;
   if (actor) {
     if (isPhysical) {
-      // Physical: use skill modifier (slt or dec)
       modifier = actor.system?.skills?.[skill]?.total ?? 0;
     } else {
-      // Magical: use ability modifier (int, wis, or cha)
       modifier = actor.system?.abilities?.[skill]?.mod ?? 0;
     }
-    rollTotal = d20Result + modifier;
-  } else {
-    rollTotal = d20Result;
   }
+  const rollTotal = d20Result + modifier;
 
-  // V2.0: Fumble rule for Physical cheats - roll < 10 = auto-caught!
-  const fumbled = isPhysical && rollTotal < 10;
+  // V3: Determine success (Nat 1 always fails, otherwise beat Heat DC)
+  const success = !isNat1 && rollTotal >= heatDC;
+
+  // V3: Determine if caught
+  // Nat 1 = auto-caught
+  // Failure = not caught yet, but adds to Heat
+  const fumbled = isNat1;
   const dcType = isPhysical ? "Tell DC" : "Residue DC";
 
   // Whisper the skill roll to the player
   const cheatTypeLabel = isPhysical ? "Physical" : "Magical";
   let flavorText = `<em>${actor?.name ?? "You"} attempt${actor ? "s" : ""} to cheat (${cheatTypeLabel})...</em><br>`;
-  flavorText += `${skillName}: ${d20Result} + ${modifier} = <strong>${rollTotal}</strong>`;
+  flavorText += `${skillName}: ${d20Result} + ${modifier} = <strong>${rollTotal}</strong> vs Heat DC ${heatDC}`;
 
-  if (fumbled) {
-    flavorText += ` <span style='color: red; font-weight: bold;'>FUMBLED! (< 10 = Auto-caught!)</span>`;
+  if (isNat20) {
+    flavorText += ` <span style='color: gold; font-weight: bold;'>NAT 20! Invisible cheat!</span>`;
+  } else if (isNat1) {
+    flavorText += ` <span style='color: red; font-weight: bold;'>NAT 1! Caught + pay 1× ante!</span>`;
+  } else if (!success) {
+    flavorText += ` <span style='color: orange;'>Failed (${dcType}: ${rollTotal})</span>`;
   } else {
-    flavorText += ` <span style='color: #888;'>(${dcType}: ${rollTotal})</span>`;
+    flavorText += ` <span style='color: #888;'>Success (${dcType}: ${rollTotal})</span>`;
   }
 
   // Whisper to player AND GM - use rolls array to trigger 3D dice (Dice So Nice)
@@ -1278,10 +1569,9 @@ export async function cheat(payload, userId) {
     rolls: [roll],
   });
 
-  // Update the die value
+  // Update the die value (oldValue already defined above)
   const updatedRolls = { ...tableData.rolls };
   updatedRolls[userId] = [...rolls];
-  const oldValue = updatedRolls[userId][dieIndex].result;
   updatedRolls[userId][dieIndex] = { ...targetDie, result: newValue };
 
   // Update total
@@ -1294,14 +1584,25 @@ export async function cheat(payload, userId) {
     updatedVisibleTotals[userId] = (updatedVisibleTotals[userId] ?? 0) - oldValue + newValue;
   }
 
+  // V3: Update Heat DC (increases by 2 per cheat, unless Nat 20)
+  let newHeatDC = heatDC;
+  if (!isNat20) {
+    newHeatDC = heatDC + 2;
+  }
+  const newCheatsThisRound = (tableData.cheatsThisRound ?? 0) + 1;
+
   // Check for bust after cheating
   const updatedBusts = { ...tableData.busts };
   const updatedCaught = { ...tableData.caught };
+  let newPot = state.pot;
 
   if (fumbled) {
-    // V2.0: Fumble = auto-caught immediately!
+    // V3: Nat 1 = auto-caught + pay 1× ante
     updatedCaught[userId] = true;
     updatedBusts[userId] = true;
+    const ante = game.settings.get(MODULE_ID, "fixedAnte");
+    await deductFromActor(userId, ante);
+    newPot = state.pot + ante;
     await playSound("lose");
   }
 
@@ -1312,7 +1613,7 @@ export async function cheat(payload, userId) {
     updatedBusts[userId] = false;
   }
 
-  // V2.0: Track cheat with new structure
+  // V3: Track cheat with new structure (Nat 20 = no DC recorded, invisible)
   const cheaters = { ...tableData.cheaters };
   if (!cheaters[userId]) {
     cheaters[userId] = { cheats: [] };
@@ -1326,11 +1627,14 @@ export async function cheat(payload, userId) {
     dieIndex,
     oldValue,
     newValue,
+    adjustment,
     type: cheatType, // "physical" or "magical"
     skill,
-    dc: rollTotal,   // Tell DC or Residue DC
+    dc: isNat20 ? 0 : rollTotal,   // Nat 20 = invisible (DC 0)
     fumbled,
     isHoleDie,
+    isNat20,
+    isNat1,
   };
 
   cheaters[userId].cheats.push(cheatRecord);
@@ -1339,9 +1643,9 @@ export async function cheat(payload, userId) {
     dieIndex,
     oldValue,
     newValue,
-    deception: rollTotal,
-    isNat1: false,
-    isNat20: false,
+    deception: isNat20 ? 0 : rollTotal,
+    isNat1,
+    isNat20,
   });
 
   const updatedTable = {
@@ -1352,14 +1656,17 @@ export async function cheat(payload, userId) {
     busts: updatedBusts,
     caught: updatedCaught,
     cheaters,
+    heatDC: newHeatDC,
+    cheatsThisRound: newCheatsThisRound,
   };
 
   const userName = game.users.get(userId)?.name ?? "Unknown";
   const characterName = actor?.name ?? userName;
 
-  // Notify the GM with cheat details
+  // V3: Notify the GM with cheat details
   if (gmIds.length > 0) {
-    const fumbleStatus = fumbled ? " <span style='color: red;'>(FUMBLED - AUTO-CAUGHT!)</span>" : "";
+    const fumbleStatus = fumbled ? " <span style='color: red;'>(NAT 1 - AUTO-CAUGHT!)</span>" : "";
+    const invisibleStatus = isNat20 ? " <span style='color: gold;'>(NAT 20 - INVISIBLE!)</span>" : "";
     const dieLocation = isHoleDie ? " (Hole Die)" : " (Visible)";
     await ChatMessage.create({
       content: `<div class="tavern-gm-alert tavern-gm-cheat">
@@ -1688,13 +1995,15 @@ export async function accuse(payload, userId) {
 }
 
 /**
- * Goad (V2.0): Try to force another player to ROLL.
- * - Only during betting phase
+ * V3 Goad (CHA): Try to force another player to ROLL.
+ * - Only during betting phase, on your turn (bonus action)
  * - Once per round per player
- * - Attacker chooses: Intimidation OR Persuasion
- * - Defender rolls: Insight
- * - If attacker wins: target MUST roll a die of their choice (even if holding!)
- * - If attacker loses (backfire): attacker MUST roll a die of their choice
+ * - Attacker: Intimidation OR Persuasion vs Defender: Insight
+ * - Success: Target must roll or pay 1x ante to resist
+ * - Backfire: Attacker pays 1x ante to pot
+ * - Nat 20: Target cannot pay to resist
+ * - Nat 1: Backfire + attacker forced to roll
+ * - Sloppy/Folded players cannot be goaded
  */
 export async function goad(payload, userId) {
   const state = getState();
@@ -1703,7 +2012,14 @@ export async function goad(payload, userId) {
     return state;
   }
 
-  const tableData = state.tableData ?? emptyTableData();
+  let tableData = state.tableData ?? emptyTableData();
+  const ante = game.settings.get(MODULE_ID, "fixedAnte");
+
+  // V3: Must be your turn (skill is bonus action)
+  if (tableData.currentPlayer !== userId) {
+    await notifyUser(userId, "You can only Goad on your turn.");
+    return state;
+  }
 
   // Must be in betting phase
   if (tableData.phase !== "betting") {
@@ -1718,14 +2034,13 @@ export async function goad(payload, userId) {
     return state;
   }
 
-  // Player must not have busted
-  if (tableData.busts?.[userId]) {
-    ui.notifications.warn("You busted - you can't goad anyone!");
+  // Player must not have busted or folded
+  if (tableData.busts?.[userId] || tableData.folded?.[userId]) {
+    ui.notifications.warn("You can't goad anyone!");
     return state;
   }
 
-  // Player can goad even if holding (unlike old intimidate)
-  // But they can only goad once per round
+  // Player can only goad once per round
   if (tableData.goadedThisRound?.[userId]) {
     ui.notifications.warn("You've already used your goad this round.");
     return state;
@@ -1758,11 +2073,24 @@ export async function goad(payload, userId) {
     return state;
   }
 
-  // Target must not have busted (but CAN be holding - that's the point!)
+  // V3: Can't goad Sloppy or Folded players
+  if (tableData.sloppy?.[targetId]) {
+    await notifyUser(userId, "That player is Sloppy - too drunk to be goaded!");
+    return state;
+  }
+  if (tableData.folded?.[targetId]) {
+    await notifyUser(userId, "That player has folded - they're untargetable!");
+    return state;
+  }
+
+  // Target must not have busted
   if (tableData.busts?.[targetId]) {
     ui.notifications.warn("That player has already busted.");
     return state;
   }
+
+  // V3: Mark as acted (affects Fold refund)
+  tableData.hasActed = { ...tableData.hasActed, [userId]: true };
 
   // Get actors
   const attackerActor = getActorForUser(userId);
@@ -1780,9 +2108,14 @@ export async function goad(payload, userId) {
   // Roll attacker's chosen skill (Iron Liver: Sloppy = disadvantage)
   const isAttackerSloppy = tableData.sloppy?.[userId] ?? false;
   const attackRoll = await new Roll(isAttackerSloppy ? "2d20kl1" : "1d20").evaluate();
+  const attackD20Raw = attackRoll.dice[0]?.results?.[0]?.result ?? attackRoll.total;
   const attackD20 = attackRoll.total;
   const attackMod = attackerActor?.system?.skills?.[attackerSkill]?.total ?? 0;
   const attackTotal = attackD20 + attackMod;
+
+  // V3: Check for Nat 20/Nat 1
+  const isNat20 = attackD20Raw === 20;
+  const isNat1 = attackD20Raw === 1;
 
   // Roll defender's Insight (Iron Liver: Sloppy = disadvantage)
   const isDefenderSloppy = tableData.sloppy?.[targetId] ?? false;
@@ -1792,7 +2125,18 @@ export async function goad(payload, userId) {
   const defendTotal = defendD20 + defendMod;
 
   // Determine winner: attacker must beat (not tie) defender
-  const attackerWins = attackTotal > defendTotal;
+  // V3: Nat 1 always fails regardless of total
+  const attackerWins = !isNat1 && attackTotal > defendTotal;
+
+  // Build outcome message for Nat effects
+  let nat20Effect = "";
+  let nat1Effect = "";
+  if (isNat20 && attackerWins) {
+    nat20Effect = "<br><strong style='color: gold;'>NAT 20! Cannot resist!</strong>";
+  }
+  if (isNat1) {
+    nat1Effect = "<br><strong style='color: #ff4444;'>NAT 1! Backfire + forced roll!</strong>";
+  }
 
   // Post the premium goad card
   await ChatMessage.create({
@@ -1825,9 +2169,11 @@ export async function goad(payload, userId) {
       <div class="goad-outcome ${attackerWins ? 'success' : 'failure'}">
         <i class="fa-solid ${attackerWins ? 'fa-dice' : 'fa-face-smile-wink'}"></i>
         <span>${attackerWins
-        ? `${defenderName} takes the bait! They must roll!`
-        : `${defenderName} sees through it! ${attackerName} must roll!`
-      }</span>
+        ? (isNat20
+          ? `${defenderName} MUST roll! No escape!`
+          : `${defenderName} must roll or pay ${ante}gp to resist!`)
+        : `${defenderName} sees through it! ${attackerName} pays ${ante}gp!`
+      }</span>${nat20Effect}${nat1Effect}
       </div>
     </div>`,
     speaker: { alias: "Tavern Twenty-One" },
@@ -1838,16 +2184,20 @@ export async function goad(payload, userId) {
   const updatedGoadedThisRound = { ...tableData.goadedThisRound, [userId]: true };
   const updatedGoadBackfire = { ...tableData.goadBackfire };
 
-  // If attacker wins: target is marked as needing to roll (goadBackfire on TARGET means they must roll)
-  // If attacker loses: attacker must roll (goadBackfire on ATTACKER)
-  // We'll store who must roll in goadBackfire - they'll pick their die on their action
   if (attackerWins) {
     // Target must roll - remove their hold status if they were holding
     const updatedHolds = { ...tableData.holds };
     if (updatedHolds[targetId]) {
       delete updatedHolds[targetId];
     }
-    updatedGoadBackfire[targetId] = { mustRoll: true, goadedBy: userId };
+
+    // V3: Target can pay to resist, unless Nat 20
+    updatedGoadBackfire[targetId] = {
+      mustRoll: true,
+      goadedBy: userId,
+      canPayToResist: !isNat20,
+      resistCost: ante,
+    };
     await playSound("reveal");
 
     const updatedTableData = {
@@ -1865,13 +2215,22 @@ export async function goad(payload, userId) {
       attackRoll: attackTotal,
       defendRoll: defendTotal,
       success: true,
-      message: `${attackerName} goaded ${defenderName} into rolling again!`,
+      nat20: isNat20,
+      message: isNat20
+        ? `${attackerName} CRITICALLY goaded ${defenderName}! No escape!`
+        : `${attackerName} goaded ${defenderName} (can resist for ${ante}gp)`,
     });
 
     return updateState({ tableData: updatedTableData });
   } else {
-    // Attacker must roll (backfire)
-    updatedGoadBackfire[userId] = { mustRoll: true, goadedBy: targetId };
+    // V3: Backfire = attacker pays 1x ante to pot
+    const newPot = state.pot + ante;
+    await deductFromActor(userId, ante);
+
+    // V3: Nat 1 = also forced to roll
+    if (isNat1) {
+      updatedGoadBackfire[userId] = { mustRoll: true, goadedBy: targetId };
+    }
     await playSound("lose");
 
     const updatedTableData = {
@@ -1888,11 +2247,490 @@ export async function goad(payload, userId) {
       attackRoll: attackTotal,
       defendRoll: defendTotal,
       success: false,
-      message: `${attackerName}'s goad backfired! They must roll instead!`,
+      nat1: isNat1,
+      message: isNat1
+        ? `${attackerName}'s goad CRITICALLY backfired! Pays ${ante}gp AND must roll!`
+        : `${attackerName}'s goad backfired! Pays ${ante}gp to the pot.`,
     });
 
-    return updateState({ tableData: updatedTableData });
+    return updateState({ tableData: updatedTableData, pot: newPot });
   }
+}
+
+/**
+ * V3: Resist a goad by paying 1x ante to the pot
+ */
+export async function resistGoad(userId) {
+  const state = getState();
+  if (state.status !== "PLAYING") return state;
+
+  const tableData = state.tableData ?? emptyTableData();
+  const ante = game.settings.get(MODULE_ID, "fixedAnte");
+
+  const goadState = tableData.goadBackfire?.[userId];
+  if (!goadState?.canPayToResist) {
+    await notifyUser(userId, "You cannot pay to resist this goad.");
+    return state;
+  }
+
+  const cost = goadState.resistCost ?? ante;
+  const canAfford = await deductFromActor(userId, cost);
+  if (!canAfford) {
+    await notifyUser(userId, `You need ${cost}gp to resist the goad.`);
+    return state;
+  }
+
+  // Add to pot
+  const newPot = state.pot + cost;
+
+  // Remove goad state
+  const updatedGoadBackfire = { ...tableData.goadBackfire };
+  delete updatedGoadBackfire[userId];
+
+  const actor = getActorForUser(userId);
+  const userName = actor?.name ?? game.users.get(userId)?.name ?? "Unknown";
+
+  await createChatCard({
+    title: "Goad Resisted",
+    subtitle: `${userName} pays ${cost}gp`,
+    message: `Ignoring the goad and staying composed.`,
+    icon: "fa-solid fa-hand-holding-dollar",
+  });
+
+  await addHistoryEntry({
+    type: "goad_resisted",
+    player: userName,
+    cost,
+    message: `${userName} paid ${cost}gp to resist a goad.`,
+  });
+
+  return updateState({
+    pot: newPot,
+    tableData: { ...tableData, goadBackfire: updatedGoadBackfire },
+  });
+}
+
+/**
+ * V3 Hunch (WIS): Trust your gut about your next roll.
+ * - Success: Learn if your next Hit will be high or low (before choosing die)
+ * - Failure: Locked into taking a Hit this turn
+ * - Nat 20: Learn exact value of next Hit
+ * - Nat 1: Locked into Hit with d20 specifically
+ */
+export async function hunch(userId) {
+  const state = getState();
+  if (state.status !== "PLAYING") {
+    ui.notifications.warn("Cannot use Hunch outside of an active round.");
+    return state;
+  }
+
+  let tableData = state.tableData ?? emptyTableData();
+
+  // V3: Must be your turn (skill is bonus action)
+  if (tableData.currentPlayer !== userId) {
+    await notifyUser(userId, "You can only use Hunch on your turn.");
+    return state;
+  }
+
+  // Must be in betting phase
+  if (tableData.phase !== "betting") {
+    await notifyUser(userId, "Hunch can only be used during the betting phase.");
+    return state;
+  }
+
+  // Can't use if busted, folded, or holding
+  if (tableData.busts?.[userId] || tableData.folded?.[userId] || tableData.holds?.[userId]) {
+    await notifyUser(userId, "You can't use Hunch right now.");
+    return state;
+  }
+
+  // GM cannot use skills
+  const user = game.users.get(userId);
+  if (user?.isGM) {
+    ui.notifications.warn("The house does not guess.");
+    return state;
+  }
+
+  // V3: Mark as acted (affects Fold refund)
+  tableData.hasActed = { ...tableData.hasActed, [userId]: true };
+
+  const actor = getActorForUser(userId);
+  const userName = actor?.name ?? game.users.get(userId)?.name ?? "Unknown";
+  const wisMod = actor?.system?.abilities?.wis?.mod ?? 0;
+
+  // Roll Wisdom check (Sloppy = disadvantage)
+  const isSloppy = tableData.sloppy?.[userId] ?? false;
+  const roll = await new Roll(isSloppy ? "2d20kl1" : "1d20").evaluate();
+  const d20Raw = roll.dice[0]?.results?.[0]?.result ?? roll.total;
+  const d20 = roll.total;
+  const isNat20 = d20Raw === 20;
+  const isNat1 = d20Raw === 1;
+
+  const rollTotal = d20 + wisMod;
+  const success = !isNat1 && rollTotal >= HUNCH_DC;
+
+  // Get GM IDs for whispered messages
+  const gmIds = getGMUserIds();
+
+  if (isNat20) {
+    // V3: Nat 20 = Learn exact value for each die type
+    const predictions = {};
+    for (const die of VALID_DICE) {
+      const preRoll = await new Roll(`1d${die}`).evaluate();
+      predictions[die] = preRoll.total;
+    }
+    tableData.hunchExact = { ...tableData.hunchExact, [userId]: predictions };
+
+    await ChatMessage.create({
+      content: `<div class="tavern-skill-result success">
+        <strong>Perfect Intuition!</strong><br>
+        Your senses sharpen completely. You know exactly what each die will show:<br>
+        <em>d4: ${predictions[4]}, d6: ${predictions[6]}, d8: ${predictions[8]}, 
+        d10: ${predictions[10]}, d20: ${predictions[20]}</em>
+      </div>`,
+      flavor: `${userName} rolled ${d20} + ${wisMod} = ${rollTotal} (DC ${HUNCH_DC}) — <strong style="color: gold;">NAT 20!</strong>`,
+      whisper: [userId, ...gmIds],
+      rolls: [roll],
+    });
+
+    await createChatCard({
+      title: "The Hunch",
+      subtitle: `${userName}'s eyes close...`,
+      message: `A perfect read! They know exactly what's coming.`,
+      icon: "fa-solid fa-eye",
+    });
+  } else if (isNat1) {
+    // V3: Nat 1 = Locked into Hit with d20
+    tableData.hunchLocked = { ...tableData.hunchLocked, [userId]: true };
+    tableData.hunchLockedDie = { ...tableData.hunchLockedDie, [userId]: 20 };
+
+    await ChatMessage.create({
+      content: `<div class="tavern-skill-result failure">
+        <strong>Tunnel Vision!</strong><br>
+        Your instincts betray you. You're compelled to take a risky gamble!
+        <br><em>You MUST roll a d20 before your turn ends.</em>
+      </div>`,
+      flavor: `${userName} rolled ${d20} + ${wisMod} = ${rollTotal} — <strong style="color: #ff4444;">NAT 1!</strong>`,
+      whisper: [userId, ...gmIds],
+      rolls: [roll],
+    });
+
+    await createChatCard({
+      title: "The Hunch",
+      subtitle: `${userName} spirals into doubt`,
+      message: `Terrible intuition! Locked into rolling a <strong>d20</strong>!`,
+      icon: "fa-solid fa-dice-d20",
+    });
+    await playSound("lose");
+  } else if (success) {
+    // V3: Success = Learn high/low for each die type before choosing
+    const predictions = {};
+    for (const die of VALID_DICE) {
+      const preRoll = await new Roll(`1d${die}`).evaluate();
+      const threshold = HUNCH_THRESHOLDS[die];
+      predictions[die] = preRoll.total > threshold ? "HIGH" : "LOW";
+    }
+    tableData.hunchPrediction = { ...tableData.hunchPrediction, [userId]: predictions };
+
+    await ChatMessage.create({
+      content: `<div class="tavern-skill-result success">
+        <strong>The Hunch</strong><br>
+        A feeling washes over you...<br>
+        <em>d4: ${predictions[4]}, d6: ${predictions[6]}, d8: ${predictions[8]}, 
+        d10: ${predictions[10]}, d20: ${predictions[20]}</em>
+      </div>`,
+      flavor: `${userName} rolled ${d20} + ${wisMod} = ${rollTotal} vs DC ${HUNCH_DC} — Success!`,
+      whisper: [userId, ...gmIds],
+      rolls: [roll],
+    });
+
+    await createChatCard({
+      title: "The Hunch",
+      subtitle: `${userName} gets a feeling...`,
+      message: `Something tells them what's coming. Choose wisely!`,
+      icon: "fa-solid fa-eye",
+    });
+  } else {
+    // V3: Failure = Locked into a Hit (any die)
+    tableData.hunchLocked = { ...tableData.hunchLocked, [userId]: true };
+
+    await ChatMessage.create({
+      content: `<div class="tavern-skill-result failure">
+        <strong>Bad Read</strong><br>
+        You reach for intuition but grasp only doubt.
+        <br><em>You MUST take a Hit before your turn ends.</em>
+      </div>`,
+      flavor: `${userName} rolled ${d20} + ${wisMod} = ${rollTotal} vs DC ${HUNCH_DC} — Failed!`,
+      whisper: [userId, ...gmIds],
+      rolls: [roll],
+    });
+
+    await createChatCard({
+      title: "The Hunch",
+      subtitle: `${userName}'s intuition fails`,
+      message: `Committed to the gamble! Must Hit this turn.`,
+      icon: "fa-solid fa-lock",
+    });
+    await playSound("lose");
+  }
+
+  await addHistoryEntry({
+    type: "hunch",
+    player: userName,
+    roll: rollTotal,
+    dc: HUNCH_DC,
+    success: success || isNat20,
+    nat20: isNat20,
+    nat1: isNat1,
+    message: isNat20 ? `${userName} got a perfect hunch! (Nat 20)`
+      : isNat1 ? `${userName}'s hunch locked them into a d20! (Nat 1)`
+        : success ? `${userName} successfully used Hunch.`
+          : `${userName}'s hunch failed - locked into a Hit.`,
+  });
+
+  return updateState({ tableData });
+}
+
+/**
+ * V3 Profile (INT): Read your opponent to learn their secrets.
+ * - Roll: Investigation vs target's passive Deception
+ * - Success: Learn their hole die value
+ * - Failure: They learn YOUR hole die value
+ * - Nat 20: Learn hole die + whether they've cheated (and which die)
+ * - Nat 1: They learn your hole die + whether YOU've cheated
+ */
+export async function profile(payload, userId) {
+  const state = getState();
+  if (state.status !== "PLAYING") {
+    ui.notifications.warn("Cannot Profile outside of an active round.");
+    return state;
+  }
+
+  let tableData = state.tableData ?? emptyTableData();
+  const { targetId } = payload;
+
+  // V3: Must be your turn (skill is bonus action)
+  if (tableData.currentPlayer !== userId) {
+    await notifyUser(userId, "You can only Profile on your turn.");
+    return state;
+  }
+
+  // Must be in betting phase
+  if (tableData.phase !== "betting") {
+    await notifyUser(userId, "Profile can only be used during the betting phase.");
+    return state;
+  }
+
+  // GM cannot use skills
+  const user = game.users.get(userId);
+  if (user?.isGM) {
+    ui.notifications.warn("The house knows all.");
+    return state;
+  }
+
+  // Can't profile yourself
+  if (targetId === userId) {
+    await notifyUser(userId, "You can't Profile yourself!");
+    return state;
+  }
+
+  // Validate target exists and is not GM
+  if (!targetId || !state.turnOrder.includes(targetId)) {
+    await notifyUser(userId, "Invalid Profile target.");
+    return state;
+  }
+  const targetUser = game.users.get(targetId);
+  if (targetUser?.isGM) {
+    await notifyUser(userId, "You can't read the house!");
+    return state;
+  }
+
+  // Can't profile busted or folded players
+  if (tableData.busts?.[targetId]) {
+    await notifyUser(userId, "That player has busted.");
+    return state;
+  }
+  if (tableData.folded?.[targetId]) {
+    await notifyUser(userId, "That player has folded - they're untargetable!");
+    return state;
+  }
+
+  // Can't use if busted or folded yourself
+  if (tableData.busts?.[userId] || tableData.folded?.[userId]) {
+    await notifyUser(userId, "You can't Profile right now.");
+    return state;
+  }
+
+  // V3: Mark as acted (affects Fold refund)
+  tableData.hasActed = { ...tableData.hasActed, [userId]: true };
+
+  const actor = getActorForUser(userId);
+  const targetActor = getActorForUser(targetId);
+  const userName = actor?.name ?? game.users.get(userId)?.name ?? "Unknown";
+  const targetName = targetActor?.name ?? game.users.get(targetId)?.name ?? "Unknown";
+
+  // Roll Investigation (Sloppy = disadvantage)
+  const isSloppy = tableData.sloppy?.[userId] ?? false;
+  const roll = await new Roll(isSloppy ? "2d20kl1" : "1d20").evaluate();
+  const d20Raw = roll.dice[0]?.results?.[0]?.result ?? roll.total;
+  const d20 = roll.total;
+  const isNat20 = d20Raw === 20;
+  const isNat1 = d20Raw === 1;
+
+  const invMod = actor?.system?.skills?.inv?.total ?? 0;
+  const attackTotal = d20 + invMod;
+
+  // Target's passive Deception (10 + mod)
+  const decMod = targetActor?.system?.skills?.dec?.total ?? 0;
+  const defenseTotal = 10 + decMod;
+
+  // V3: Nat 1 always fails, otherwise compare totals
+  const success = !isNat1 && attackTotal >= defenseTotal;
+
+  // Get hole dice info
+  const targetRolls = tableData.rolls[targetId] ?? [];
+  const targetHoleDie = targetRolls.find(r => !r.public);
+  const targetHoleValue = targetHoleDie?.result ?? "?";
+
+  const myRolls = tableData.rolls[userId] ?? [];
+  const myHoleDie = myRolls.find(r => !r.public);
+  const myHoleValue = myHoleDie?.result ?? "?";
+
+  // Cheat info
+  const targetCheated = !!tableData.cheaters?.[targetId];
+  const targetCheatDice = tableData.cheaters?.[targetId]?.cheats?.map(c => c.dieIndex + 1) ?? [];
+  const myCheated = !!tableData.cheaters?.[userId];
+
+  const gmIds = getGMUserIds();
+
+  if (isNat20) {
+    // V3: Nat 20 = Learn hole die + cheat detection
+    let message = `${targetName}'s hole die: <strong>${targetHoleValue}</strong>`;
+    if (targetCheated) {
+      message += `<br><span style="color: #ff6666;">They've CHEATED! (Die ${targetCheatDice.join(", ")})</span>`;
+    } else {
+      message += `<br><span style="color: #88ff88;">They appear clean.</span>`;
+    }
+
+    await ChatMessage.create({
+      content: `<div class="tavern-skill-result success">
+        <strong>Perfect Read!</strong><br>${message}
+      </div>`,
+      flavor: `${userName} rolled ${d20} + ${invMod} = ${attackTotal} vs passive ${defenseTotal} — <strong style="color: gold;">NAT 20!</strong>`,
+      whisper: [userId, ...gmIds],
+      rolls: [roll],
+    });
+
+    await createChatCard({
+      title: "Profile",
+      subtitle: `${userName} stares down ${targetName}`,
+      message: `An intense read! ${userName} sees everything.`,
+      icon: "fa-solid fa-user-secret",
+    });
+  } else if (isNat1) {
+    // V3: Nat 1 = They learn your hole die + if you cheated
+    let message = `${userName}'s hole die: <strong>${myHoleValue}</strong>`;
+    if (myCheated) {
+      message += `<br><span style="color: #ff6666;">They've CHEATED!</span>`;
+    }
+
+    await ChatMessage.create({
+      content: `<div class="tavern-skill-result success">
+        <strong>Counter-Read!</strong><br>${message}
+      </div>`,
+      flavor: `Investigation vs Deception — ${userName} got exposed!`,
+      whisper: [targetId, ...gmIds],
+      rolls: [roll],
+    });
+
+    await ChatMessage.create({
+      content: `<div class="tavern-skill-result failure">
+        <strong>Exposed!</strong><br>
+        Your poker face cracked. ${targetName} read YOU instead!
+      </div>`,
+      flavor: `${userName} rolled ${d20} + ${invMod} = ${attackTotal} — <strong style="color: #ff4444;">NAT 1!</strong>`,
+      whisper: [userId, ...gmIds],
+      rolls: [roll],
+    });
+
+    await createChatCard({
+      title: "Profile",
+      subtitle: `${userName} overreaches`,
+      message: `The tables turned! ${targetName} read ${userName} instead!`,
+      icon: "fa-solid fa-face-flushed",
+    });
+    await playSound("lose");
+  } else if (success) {
+    // V3: Success = Learn hole die only
+    await ChatMessage.create({
+      content: `<div class="tavern-skill-result success">
+        <strong>Profile Success</strong><br>
+        ${targetName}'s hole die: <strong>${targetHoleValue}</strong>
+      </div>`,
+      flavor: `${userName} rolled ${d20} + ${invMod} = ${attackTotal} vs passive ${defenseTotal} — Success!`,
+      whisper: [userId, ...gmIds],
+      rolls: [roll],
+    });
+
+    await createChatCard({
+      title: "Profile",
+      subtitle: `${userName} studies ${targetName}`,
+      message: `A solid read. Information gathered.`,
+      icon: "fa-solid fa-user-secret",
+    });
+  } else {
+    // V3: Failure = They learn your hole die
+    await ChatMessage.create({
+      content: `<div class="tavern-skill-result success">
+        <strong>Counter-Read!</strong><br>
+        ${userName}'s hole die: <strong>${myHoleValue}</strong>
+      </div>`,
+      flavor: `Investigation vs Deception — ${userName} got read!`,
+      whisper: [targetId, ...gmIds],
+      rolls: [roll],
+    });
+
+    await ChatMessage.create({
+      content: `<div class="tavern-skill-result failure">
+        <strong>Failed Read</strong><br>
+        Your attempt to read them revealed yourself instead!
+      </div>`,
+      flavor: `${userName} rolled ${d20} + ${invMod} = ${attackTotal} vs passive ${defenseTotal} — Failed!`,
+      whisper: [userId, ...gmIds],
+      rolls: [roll],
+    });
+
+    await createChatCard({
+      title: "Profile",
+      subtitle: `${userName} overreaches`,
+      message: `${targetName} saw right through the attempt!`,
+      icon: "fa-solid fa-eye",
+    });
+  }
+
+  // Track profile
+  const profiledBy = { ...tableData.profiledBy };
+  if (!profiledBy[targetId]) profiledBy[targetId] = [];
+  profiledBy[targetId].push(userId);
+
+  tableData.profiledBy = profiledBy;
+
+  await addHistoryEntry({
+    type: "profile",
+    profiler: userName,
+    target: targetName,
+    roll: attackTotal,
+    defense: defenseTotal,
+    success: success || isNat20,
+    nat20: isNat20,
+    nat1: isNat1,
+    message: isNat20 ? `${userName} perfectly profiled ${targetName}! (Nat 20)`
+      : isNat1 ? `${userName}'s profile backfired! ${targetName} read them! (Nat 1)`
+        : success ? `${userName} successfully profiled ${targetName}.`
+          : `${userName} failed to profile ${targetName} - got counter-read!`,
+  });
+
+  return updateState({ tableData });
 }
 
 /**
@@ -1985,84 +2823,104 @@ export async function bumpTable(payload, userId) {
     return state;
   }
 
+  // V3: Must be your turn (skill is bonus action)
+  if (tableData.currentPlayer !== userId) {
+    await notifyUser(userId, "You can only Bump on your turn.");
+    return state;
+  }
+
+  // V3: Can't bump Folded players
+  if (tableData.folded?.[targetId]) {
+    await notifyUser(userId, "That player has folded - they're untargetable!");
+    return state;
+  }
+
+  // V3: Mark as acted (affects Fold refund)
+  tableData.hasActed = { ...tableData.hasActed, [userId]: true };
+
+  const ante = game.settings.get(MODULE_ID, "fixedAnte");
+
   // Get actor info
-  const attackerActor = game.user.character ? game.users.get(userId)?.character : null;
-  const actualAttackerActor = game.users.get(userId)?.character;
+  const actualAttackerActor = getActorForUser(userId);
   const attackerName = actualAttackerActor?.name ?? game.users.get(userId)?.name ?? "Unknown";
-  const targetActor = game.users.get(targetId)?.character;
+  const targetActor = getActorForUser(targetId);
   const targetName = targetActor?.name ?? game.users.get(targetId)?.name ?? "Unknown";
 
-  // Roll attacker's Athletics
-  let athleticsRoll = 10;
-  let athleticsMod = 0;
-  let athleticsD20 = 10;
+  // V3: Roll STR vs STR (not Athletics vs DEX save)
+  const isAttackerSloppy = tableData.sloppy?.[userId] ?? false;
+  const isDefenderSloppy = tableData.sloppy?.[targetId] ?? false;
 
-  const attackerRoll = await new Roll("1d20").evaluate();
-  athleticsD20 = attackerRoll.total;
+  const attackerRoll = await new Roll(isAttackerSloppy ? "2d20kl1" : "1d20").evaluate();
+  const attackerD20Raw = attackerRoll.dice[0]?.results?.[0]?.result ?? attackerRoll.total;
+  const attackerD20 = attackerRoll.total;
+  const attackerStrMod = actualAttackerActor?.system?.abilities?.str?.mod ?? 0;
+  const attackerTotal = attackerD20 + attackerStrMod;
 
-  if (actualAttackerActor) {
-    athleticsMod = actualAttackerActor.system?.skills?.ath?.total ?? 0;
-    athleticsRoll = athleticsD20 + athleticsMod;
+  const defenderRoll = await new Roll(isDefenderSloppy ? "2d20kl1" : "1d20").evaluate();
+  const defenderD20 = defenderRoll.total;
+  const defenderStrMod = targetActor?.system?.abilities?.str?.mod ?? 0;
+  const defenderTotal = defenderD20 + defenderStrMod;
 
-    await ChatMessage.create({
-      speaker: ChatMessage.getSpeaker({ actor: actualAttackerActor }),
-      flavor: `<em>${attackerName} bumps the table...</em><br>Athletics`,
-      content: `<div class="dice-roll"><div class="dice-result"><div class="dice-formula">1d20 + ${athleticsMod}</div><div class="dice-tooltip"><section class="tooltip-part"><div class="dice"><ol class="dice-rolls"><li class="roll die d20">${athleticsD20}</li></ol></div></section></div><h4 class="dice-total">${athleticsRoll}</h4></div></div>`,
-      rolls: [attackerRoll],
-    });
-  } else {
-    athleticsRoll = athleticsD20;
-    await ChatMessage.create({
-      speaker: { alias: game.users.get(userId)?.name ?? "Unknown" },
-      flavor: `<em>Bumping the table...</em><br>Athletics`,
-      content: `<div class="dice-roll"><div class="dice-result"><div class="dice-formula">1d20</div><div class="dice-tooltip"><section class="tooltip-part"><div class="dice"><ol class="dice-rolls"><li class="roll die d20">${athleticsD20}</li></ol></div></section></div><h4 class="dice-total">${athleticsRoll}</h4></div></div>`,
-      rolls: [attackerRoll],
-    });
+  // V3: Check for Nat 20/Nat 1
+  const isNat20 = attackerD20Raw === 20;
+  const isNat1 = attackerD20Raw === 1;
+
+  // Determine winner (Nat 1 always fails)
+  const success = !isNat1 && attackerTotal > defenderTotal;
+
+  // Build nat effect messages
+  let nat20Effect = "";
+  let nat1Effect = "";
+  if (isNat20 && success) {
+    nat20Effect = "<br><strong style='color: gold;'>NAT 20! Bonus reroll!</strong>";
+  }
+  if (isNat1) {
+    nat1Effect = "<br><strong style='color: #ff4444;'>NAT 1! Backfire + pay 1× ante!</strong>";
   }
 
-  // Iron Liver: Immovable Object - auto-select best save for defender
-  // The defender's higher modifier between DEX and CON is used
-  const dexMod = targetActor?.system?.abilities?.dex?.mod ?? 0;
-  const conMod = targetActor?.system?.abilities?.con?.mod ?? 0;
-  const defenderSaveType = conMod > dexMod ? "con" : "dex";
-  const saveName = defenderSaveType === "con" ? "Constitution Save" : "Dexterity Save";
-  const saveFlavorDex = `${targetName} tries to catch their dice...`;
-  const saveFlavorCon = `${targetName} braces against the table...`;
-  const saveFlavor = defenderSaveType === "con" ? saveFlavorCon : saveFlavorDex;
-
-  // Roll defender's save (DEX or CON)
-  let defenderSaveRoll = 10;
-  let defenderSaveMod = 0;
-  let defenderSaveD20 = 10;
-
-  const defenderRoll = await new Roll("1d20").evaluate();
-  defenderSaveD20 = defenderRoll.total;
-
-  if (targetActor) {
-    defenderSaveMod = targetActor.system?.abilities?.[defenderSaveType]?.mod ?? 0;
-    defenderSaveRoll = defenderSaveD20 + defenderSaveMod;
-
-    await ChatMessage.create({
-      speaker: ChatMessage.getSpeaker({ actor: targetActor }),
-      flavor: `<em>${saveFlavor}</em><br>${saveName}`,
-      content: `<div class="dice-roll"><div class="dice-result"><div class="dice-formula">1d20 + ${defenderSaveMod}</div><div class="dice-tooltip"><section class="tooltip-part"><div class="dice"><ol class="dice-rolls"><li class="roll die d20">${defenderSaveD20}</li></ol></div></section></div><h4 class="dice-total">${defenderSaveRoll}</h4></div></div>`,
-      rolls: [defenderRoll],
-    });
-  } else {
-    defenderSaveRoll = defenderSaveD20;
-    await ChatMessage.create({
-      speaker: { alias: game.users.get(targetId)?.name ?? "Unknown" },
-      flavor: `<em>${saveFlavor}</em><br>${saveName}`,
-      content: `<div class="dice-roll"><div class="dice-result"><div class="dice-formula">1d20</div><div class="dice-tooltip"><section class="tooltip-part"><div class="dice"><ol class="dice-rolls"><li class="roll die d20">${defenderSaveD20}</li></ol></div></section></div><h4 class="dice-total">${defenderSaveRoll}</h4></div></div>`,
-      rolls: [defenderRoll],
-    });
-  }
-
-  // Determine winner: attacker must beat defender
-  const success = athleticsRoll > defenderSaveRoll;
+  // Post the bump card
+  await ChatMessage.create({
+    content: `<div class="tavern-bump-card">
+      <div class="bump-banner">
+        <i class="fa-solid fa-hand-fist"></i>
+        <span>${attackerName} bumps the table!</span>
+      </div>
+      <div class="bump-duel">
+        <div class="bump-combatant ${success ? 'winner' : 'loser'}">
+          <div class="combatant-name">${attackerName}</div>
+          <div class="combatant-skill">Strength</div>
+          <div class="combatant-roll">
+            <span class="roll-total">${attackerTotal}</span>
+            <span class="roll-breakdown">${attackerD20} + ${attackerStrMod}</span>
+          </div>
+        </div>
+        <div class="bump-versus">
+          <span>VS</span>
+        </div>
+        <div class="bump-combatant ${!success ? 'winner' : 'loser'}">
+          <div class="combatant-name">${targetName}</div>
+          <div class="combatant-skill">Strength</div>
+          <div class="combatant-roll">
+            <span class="roll-total">${defenderTotal}</span>
+            <span class="roll-breakdown">${defenderD20} + ${defenderStrMod}</span>
+          </div>
+        </div>
+      </div>
+      <div class="bump-outcome ${success ? 'success' : 'failure'}">
+        <i class="fa-solid ${success ? 'fa-dice' : 'fa-shield'}"></i>
+        <span>${success
+        ? `${targetName}'s die goes flying!`
+        : `${targetName} catches their dice!`
+      }</span>${nat20Effect}${nat1Effect}
+      </div>
+    </div>`,
+    speaker: { alias: "Tavern Twenty-One" },
+    rolls: [attackerRoll, defenderRoll],
+  });
 
   // Mark that attacker has bumped this round
   const updatedBumpedThisRound = { ...tableData.bumpedThisRound, [userId]: true };
+  let newPot = state.pot;
 
   if (success) {
     // SUCCESS: Re-roll target's specified die

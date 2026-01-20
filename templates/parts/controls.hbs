@@ -55,6 +55,44 @@
 
   {{!-- Playing state --}}
   {{#if isPlaying}}
+
+  {{!-- V3: The Cut phase --}}
+  {{#if isCutPhase}}
+  {{#if isTheCutPlayer}}
+  <div class="control-section cut-phase">
+    <h3><i class="fa-solid fa-scissors"></i> The Cut</h3>
+    <p class="cut-text">You rolled the lowest visible die. Re-roll your hole die?</p>
+    <div class="cut-buttons">
+      <button type="button" class="btn btn-success" data-action="useCut" data-reroll="true">
+        <i class="fa-solid fa-dice"></i> Re-roll Hole Die
+      </button>
+      <button type="button" class="btn btn-secondary" data-action="useCut" data-reroll="false">
+        <i class="fa-solid fa-check"></i> Keep It
+      </button>
+    </div>
+  </div>
+  {{else}}
+  <div class="control-section waiting">
+    <h3><i class="fa-solid fa-scissors"></i> The Cut</h3>
+    <p class="waiting-text"><strong>{{theCutPlayerName}}</strong> is deciding...</p>
+  </div>
+  {{/if}}
+  {{/if}}
+
+  {{!-- V3: Goad Resist Option --}}
+  {{#if canResistGoad}}
+  <div class="control-section goad-resist">
+    <h3><i class="fa-solid fa-comments"></i> You've Been Goaded!</h3>
+    <p>{{goadedByName}} is pressuring you to roll.</p>
+    <div class="goad-resist-buttons">
+      <button type="button" class="btn btn-warning" data-action="resistGoad">
+        <i class="fa-solid fa-coins"></i> Pay {{goadResistCost}}gp to Resist
+      </button>
+      <p class="hint">Or just roll a die to comply.</p>
+    </div>
+  </div>
+  {{/if}}
+
   {{#if myTurn}}
   <div class="control-section your-turn">
     <h3><i class="fa-solid fa-dice"></i> Your Turn!</h3>
@@ -64,9 +102,11 @@
       <strong>Opening Round:</strong> Roll {{openingRollsRemaining}} more {{#if (eq openingRollsRemaining
       1)}}die{{else}}dice{{/if}}.
     </p>
+    {{else if isCutPhase}}
+    {{!-- Handled above --}}
     {{else}}
     <p class="turn-hint phase-betting">
-      <strong>Betting Round:</strong> Choose your die wisely!
+      <strong>Betting Round:</strong> Choose your action!
     </p>
     {{/if}}
 
@@ -78,6 +118,14 @@
       </button>
     </div>
     {{/unless}}
+
+    {{!-- V3: Hit locked indicator --}}
+    {{#if hunchLocked}}
+    <p class="hunch-locked-warning">
+      <i class="fa-solid fa-lock"></i> Your Hunch locked you in! You MUST roll {{#if hunchLockedDie}}a
+      d{{hunchLockedDie}}{{else}}before your turn ends{{/if}}.
+    </p>
+    {{/if}}
 
     <div class="dice-buttons premium">
       {{#each dice}}
@@ -94,21 +142,52 @@
     </div>
 
     {{#if isBettingPhase}}
-    <button type="button" class="btn btn-hold" data-action="hold">
-      <i class="fa-solid fa-hand"></i> Hold
-    </button>
+    <div class="main-actions">
+      <button type="button" class="btn btn-hold" data-action="hold">
+        <i class="fa-solid fa-hand"></i> Hold
+      </button>
+      <button type="button" class="btn btn-fold" data-action="fold">
+        <i class="fa-solid fa-door-open"></i> Fold {{#unless hasActed}}(50% back){{/unless}}
+      </button>
+    </div>
     {{/if}}
   </div>
+
+  {{!-- V3: Bonus Action Skills Section --}}
+  {{#if isBettingPhase}}
+  {{#unless isGM}}
+  <div class="control-section skill-section">
+    <h4><i class="fa-solid fa-star"></i> Bonus Action (Skills)</h4>
+    <div class="skill-buttons">
+      {{#if canHunch}}
+      <button type="button" class="btn btn-skill btn-hunch" data-action="hunch"
+        title="WIS - Predict high/low before rolling">
+        <i class="fa-solid fa-eye"></i> Hunch
+      </button>
+      {{/if}}
+      {{#if canProfile}}
+      <button type="button" class="btn btn-skill btn-profile" data-action="profile"
+        title="INT - Learn target's hole die">
+        <i class="fa-solid fa-user-secret"></i> Profile
+      </button>
+      {{/if}}
+    </div>
+  </div>
+  {{/unless}}
+  {{/if}}
+
   {{else}}
   <div class="control-section waiting">
     <h3><i class="fa-solid fa-hourglass-half"></i> Waiting</h3>
     {{#if currentPlayer}}
     <p class="waiting-text">
-      <strong>{{currentPlayer.name}}</strong> is rolling...
+      <strong>{{currentPlayer.name}}</strong> is {{#if isCutPhase}}deciding on The Cut{{else}}rolling{{/if}}...
     </p>
     {{/if}}
     {{#if isOpeningPhase}}
     <p class="phase-label">Opening Round</p>
+    {{else if isCutPhase}}
+    <p class="phase-label">The Cut</p>
     {{else}}
     <p class="phase-label">Betting Round</p>
     {{/if}}
