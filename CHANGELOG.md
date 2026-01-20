@@ -1,5 +1,15 @@
 # Changelog
 
+## [3.0.2] - 2026-01-20
+### Improved
+- **Accuse Anytime**: Accusations can now be made at any time during the round (not just Inspection).
+- **Accuse Resolution**: Accusations resolve immediately with instant refunds/bounties.
+- **Faster Gameplay**: Opening dice rolls (2d10) now happen simultaneously for all players to speed up round start.
+
+### Fixed
+- **Bump Turn Restriction**: "Bump the Table" button is now correctly disabled when it's not your turn.
+- **Accusation Limit**: Fixed global lockout; accusations are now limited to once per player per round.
+
 ## [2.1.3]2026-01-19
 ### Fixed
 - **Cheat Fumble**: Fumbling a cheat roll (rolling < 10 on physical cheat) now correctly results in an immediate Bust, as intended.
