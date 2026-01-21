@@ -1,8 +1,18 @@
-import { MODULE_ID } from "./state.js";
+import { MODULE_ID, getState } from "./state.js";
 
+// V3.5: Updated to return NPC actor for GM-as-NPC
 function getActorForUser(userId) {
   const user = game.users.get(userId);
   if (!user) return null;
+
+  // V3.5: Check if this is a GM playing as NPC
+  const state = getState();
+  const playerData = state?.players?.[userId];
+  if (playerData?.playingAsNpc && playerData?.npcActorId) {
+    return game.actors.get(playerData.npcActorId) ?? null;
+  }
+
+  // Regular behavior - use assigned character
   const actorId = user.character?.id;
   if (!actorId) return null;
   return game.actors.get(actorId) ?? null;
