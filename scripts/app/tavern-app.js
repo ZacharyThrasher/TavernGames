@@ -321,8 +321,14 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     // Valid bump targets: other players with dice, not self, not busted, not house (holders ARE valid targets!)
     // V3.5: GM-as-NPC IS a valid target
     const bumpTargets = canBump ? players
-      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !isPlayerHouse(p.id))
-      .filter(p => (tableData.rolls?.[p.id]?.length ?? 0) > 0)
+      .filter(p => {
+        const isNotSelf = p.id !== userId;
+        const isNotBusted = !tableData.busts?.[p.id];
+        const isNotHouse = !isPlayerHouse(p.id);
+        const hasRolls = (tableData.rolls?.[p.id]?.length ?? 0) > 0;
+        console.log(`Tavern | Bump filter for ${p.name}(${p.id}): notSelf=${isNotSelf}, notBusted=${isNotBusted}, notHouse=${isNotHouse}, hasRolls=${hasRolls}`);
+        return isNotSelf && isNotBusted && isNotHouse && hasRolls;
+      })
       .map(p => {
         const user = game.users.get(p.id);
         const actor = user?.character;
