@@ -79,11 +79,14 @@ export async function hunch(userId) {
     if (isNat20) {
         // Nat 20 = Learn exact value for each die type
         const predictions = {};
+        const exactRolls = {};
         for (const die of VALID_DICE) {
             const preRoll = await new Roll(`1d${die}`).evaluate();
             predictions[die] = preRoll.total;
+            exactRolls[die] = preRoll.total;
         }
         tableData.hunchExact = { ...tableData.hunchExact, [userId]: predictions };
+        tableData.hunchRolls = { ...tableData.hunchRolls, [userId]: exactRolls };
 
         await ChatMessage.create({
             content: `<div class="tavern-skill-result success">
@@ -127,14 +130,17 @@ export async function hunch(userId) {
         });
         await playSound("lose");
     } else if (success) {
-        // Success = Learn high/low for each die type
+        // Success = Learn high/low for each die type (and store exact values for enforcement)
         const predictions = {};
+        const exactRolls = {};
         for (const die of VALID_DICE) {
             const preRoll = await new Roll(`1d${die}`).evaluate();
             const threshold = HUNCH_THRESHOLDS[die];
             predictions[die] = preRoll.total > threshold ? "HIGH" : "LOW";
+            exactRolls[die] = preRoll.total;
         }
         tableData.hunchPrediction = { ...tableData.hunchPrediction, [userId]: predictions };
+        tableData.hunchRolls = { ...tableData.hunchRolls, [userId]: exactRolls };
 
         await ChatMessage.create({
             content: `<div class="tavern-skill-result success">

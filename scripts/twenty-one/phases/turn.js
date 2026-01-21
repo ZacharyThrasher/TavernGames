@@ -64,7 +64,25 @@ export async function submitRoll(payload, userId) {
     }
   }
 
-  const roll = await new Roll(`1d${die}`).evaluate();
+  // V3: Hunch Accuracy - Use pre-rolled value if available
+  let forcedResult = null;
+  if (tableData.hunchRolls?.[userId]?.[die]) {
+    forcedResult = tableData.hunchRolls[userId][die];
+  }
+
+  let roll;
+  if (forcedResult !== null) {
+    // Construct a roll with the forced result
+    roll = new Roll(`1d${die}`);
+    roll.terms = [
+      new Die({ number: 1, faces: die, results: [{ result: forcedResult, active: true }] })
+    ];
+    roll._total = forcedResult;
+    roll._evaluated = true;
+  } else {
+    roll = await new Roll(`1d${die}`).evaluate();
+  }
+
   let result = roll.total ?? 0;
   const naturalRoll = result;
 
@@ -150,6 +168,21 @@ export async function submitRoll(payload, userId) {
     delete hunchLockedDie[userId];
   }
 
+  // V3: Clean up Hunch predictions after rolling
+  let hunchPrediction = tableData.hunchPrediction;
+  let hunchExact = tableData.hunchExact;
+  let hunchRolls = tableData.hunchRolls;
+
+  if (tableData.hunchRolls?.[userId] || tableData.hunchPrediction?.[userId]) {
+    hunchPrediction = { ...tableData.hunchPrediction };
+    hunchExact = { ...tableData.hunchExact };
+    hunchRolls = { ...tableData.hunchRolls };
+
+    delete hunchPrediction[userId];
+    delete hunchExact[userId];
+    delete hunchRolls[userId];
+  }
+
   let updatedTable = {
     ...tableData,
     rolls,
@@ -160,6 +193,9 @@ export async function submitRoll(payload, userId) {
     goadBackfire,
     hunchLocked,
     hunchLockedDie,
+    hunchPrediction,
+    hunchExact,
+    hunchRolls
   };
 
   if (!isOpeningPhase) {
