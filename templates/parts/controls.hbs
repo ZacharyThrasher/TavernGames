@@ -195,14 +195,7 @@
   {{/if}}
 
   {{!-- Cheat button - available when you have dice --}}
-  {{#if canCheat}}
-  <div class="control-section cheat-section">
-    <button type="button" class="btn btn-cheat" data-action="cheat">
-      <i class="fa-solid fa-mask"></i> Cheat
-    </button>
-    <p class="hint cheat-hint">Sleight of hand... Choose Deception or Sleight of Hand.</p>
-  </div>
-  {{/if}}
+
 
   {{!-- Goad button - V2.0: available during betting phase (can target holders!) --}}
   {{#if canGoad}}
@@ -292,16 +285,7 @@
 
     {{#if isInGame}}
     {{!-- V2.0: Scan action - investigate before accusing --}}
-    {{#if canScan}}
-    {{#if scanTargets.length}}
-    <div class="scan-section">
-      <button type="button" class="btn btn-scan" data-action="scan">
-        <i class="fa-solid fa-magnifying-glass"></i> Scan ({{scanCost}}gp)
-      </button>
-      <p class="hint scan-hint">Investigate a player for cheating. Costs {{scanCost}}gp per target.</p>
-    </div>
-    {{/if}}
-    {{/if}}
+
 
     {{/if}}
 

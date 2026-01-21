@@ -107,6 +107,8 @@ export async function handlePlayerAction(action, payload, userId) {
     }
     case "newRound":
       return returnToLobby();
+    case "finishTurn":
+      return finishTurn(userId);
     default:
       return getState();
   }

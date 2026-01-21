@@ -634,6 +634,9 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
           cheatType: "physical",
           skill: "slt"
         }, game.user.id);
+      } else if (updatedState.tableData?.phase === "betting") {
+        // Did not cheat - finish turn (resume form cheat_decision pause)
+        await tavernSocket.executeAsGM("playerAction", "finishTurn", {}, game.user.id);
       }
     }
   }
