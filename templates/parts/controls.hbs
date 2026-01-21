@@ -110,7 +110,7 @@
     </p>
     {{/if}}
 
-    {{#unless isGM}}
+    {{#unless isHouse}}
     <div class="liquid-mode-toggle">
       <button type="button" class="btn-toggle-liquid {{#if liquidMode}}active{{/if}}" data-action="toggleLiquidMode"
         title="Pay with your Liver! (Constitution Save)">
@@ -156,7 +156,7 @@
 
   {{!-- V3: Bonus Action Skills Section --}}
   {{#if isBettingPhase}}
-  {{#unless isGM}}
+  {{#unless isHouse}}
   <div class="control-section skill-section">
     <h4><i class="fa-solid fa-star"></i> Bonus Action (Skills)</h4>
     <div class="skill-buttons">
