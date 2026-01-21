@@ -1,6 +1,7 @@
 import { playSound } from "../sounds.js";
+import { addHistoryEntry } from "../state.js";
 
-export { playSound };
+export { playSound, addHistoryEntry };
 
 export async function createChatCard({ title, subtitle = "", message, icon = "fa-solid fa-dice-d20" }) {
   const content = `
