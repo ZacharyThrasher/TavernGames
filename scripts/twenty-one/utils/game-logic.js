@@ -1,6 +1,6 @@
-import { MODULE_ID, getState, updateState } from "../state.js";
+import { MODULE_ID, getState, updateState } from "../../state.js";
 import { getActorForUser } from "./actors.js";
-import { createChatCard, playSound } from "./chat.js";
+import { createChatCard, playSound } from "../../ui/chat.js";
 import { tavernSocket } from "../../socket.js";
 
 // V2.0: d12 removed, variable costs

@@ -1,3 +1,7 @@
+import { playSound } from "../sounds.js";
+
+export { playSound };
+
 export async function createChatCard({ title, subtitle = "", message, icon = "fa-solid fa-dice-d20" }) {
   const content = `
     <div class="tavern-card">
