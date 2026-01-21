@@ -123,7 +123,14 @@ export async function submitRoll(payload, userId) {
 
   const busts = { ...tableData.busts };
   const isBust = totals[userId] > 21;
-  if (isBust) {
+  // V3.4: Don't immediately mark bust - let cheat dialog appear first
+  // We'll set pendingBust flag instead, which gets resolved after cheat decision
+  let pendingBust = false;
+  if (isBust && !isOpeningPhase) {
+    // In betting phase, delay bust until after cheat dialog
+    pendingBust = true;
+  } else if (isBust) {
+    // In opening phase, bust immediately (no cheat allowed)
     busts[userId] = true;
   }
 
@@ -145,16 +152,30 @@ export async function submitRoll(payload, userId) {
     specialMsg = " *Spilled drink! 1gp cleaning fee.*";
   }
 
-  await addHistoryEntry({
-    type: isBust ? "bust" : "roll",
-    player: userName,
-    die: `d${die}`,
-    result,
-    total: totals[userId],
-    message: isBust
-      ? `${userName} rolled d${die} and BUSTED with ${totals[userId]}!${specialMsg}`
-      : `${userName} rolled a d${die}${rollCostMsg}...${specialMsg}`,
-  });
+  // V3.4: Only post bust message if opening phase (no cheat opportunity)
+  // In betting phase, the bust message will be posted after cheat decision
+  if (!pendingBust) {
+    await addHistoryEntry({
+      type: isBust ? "bust" : "roll",
+      player: userName,
+      die: `d${die}`,
+      result,
+      total: totals[userId],
+      message: isBust
+        ? `${userName} rolled d${die} and BUSTED with ${totals[userId]}!${specialMsg}`
+        : `${userName} rolled a d${die}${rollCostMsg}...${specialMsg}`,
+    });
+  } else {
+    // Still log the roll, but not the bust yet
+    await addHistoryEntry({
+      type: "roll",
+      player: userName,
+      die: `d${die}`,
+      result,
+      total: totals[userId],
+      message: `${userName} rolled a d${die}${rollCostMsg}...${specialMsg}`,
+    });
+  }
 
   const goadBackfire = { ...tableData.goadBackfire };
   if (goadBackfire[userId]?.mustRoll) {
@@ -195,7 +216,9 @@ export async function submitRoll(payload, userId) {
     hunchLockedDie,
     hunchPrediction,
     hunchExact,
-    hunchRolls
+    hunchRolls,
+    // V3.4: Track pending bust for cheat decision
+    pendingBust: pendingBust ? userId : null,
   };
 
   if (!isOpeningPhase) {
@@ -260,7 +283,25 @@ export async function finishTurn(userId) {
 
   const updatedTable = { ...tableData, pendingAction: null };
 
-  const isBust = tableData.busts[userId];
+  // V3.4: Resolve pending bust after cheat decision
+  if (tableData.pendingBust === userId) {
+    const currentTotal = tableData.totals[userId] ?? 0;
+    if (currentTotal > 21) {
+      // Still busted after cheat decision
+      updatedTable.busts = { ...updatedTable.busts, [userId]: true };
+      const userName = game.users.get(userId)?.name ?? "Unknown";
+      await addHistoryEntry({
+        type: "bust",
+        player: userName,
+        total: currentTotal,
+        message: `${userName} BUSTED with ${currentTotal}!`,
+      });
+    }
+    // Clear the pending bust flag
+    updatedTable.pendingBust = null;
+  }
+
+  const isBust = updatedTable.busts?.[userId];
 
   if (isBust) {
     updatedTable.currentPlayer = getNextActivePlayer(state, updatedTable);

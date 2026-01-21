@@ -124,11 +124,11 @@ export function getNextActivePlayer(state, tableData) {
         ? order.indexOf(tableData.currentPlayer)
         : -1;
 
-    // V3: Find next player who hasn't held, busted, or folded
+    // V3.4: Find next player who hasn't held, busted, folded, or been caught
     for (let i = 1; i <= order.length; i++) {
         const nextIndex = (currentIndex + i) % order.length;
         const nextId = order[nextIndex];
-        if (!tableData.holds[nextId] && !tableData.busts[nextId] && !tableData.folded?.[nextId]) {
+        if (!tableData.holds[nextId] && !tableData.busts[nextId] && !tableData.folded?.[nextId] && !tableData.caught?.[nextId]) {
             return nextId;
         }
     }
@@ -136,9 +136,9 @@ export function getNextActivePlayer(state, tableData) {
 }
 
 export function allPlayersFinished(state, tableData) {
-    // V3: Use betting order if available, include folded players
+    // V3.4: Use betting order if available, include folded and caught players
     const order = tableData.bettingOrder ?? state.turnOrder;
-    return order.every((id) => tableData.holds[id] || tableData.busts[id] || tableData.folded?.[id]);
+    return order.every((id) => tableData.holds[id] || tableData.busts[id] || tableData.folded?.[id] || tableData.caught?.[id]);
 }
 
 /**

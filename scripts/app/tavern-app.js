@@ -190,11 +190,11 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       ? (game.users.get(theCutPlayer)?.character?.name ?? game.users.get(theCutPlayer)?.name ?? "Unknown")
       : null;
 
-    // Check if player can hold (only in betting phase)
+    // Check if player can hold (only in betting phase, NOT during cut)
     const myRolls = tableData.rolls?.[userId] ?? [];
     const isFolded = tableData.folded?.[userId] ?? false; // V3
     const hasActed = tableData.hasActed?.[userId] ?? false; // V3
-    const canHold = myTurn && isBettingPhase && !tableData.hunchLocked?.[userId];
+    const canHold = myTurn && isBettingPhase && !isCutPhase && !tableData.hunchLocked?.[userId];
     const openingRollsRemaining = Math.max(0, 2 - myRolls.length);
 
     // V3: Hunch lock tracking
@@ -258,8 +258,9 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       }) : [];
 
     // V3: Goad context - can goad during betting phase if it's your turn, not busted, and haven't used it this round
+    // V3.4: Block during cut phase
     const hasGoadedThisRound = tableData.goadedThisRound?.[userId] ?? false;
-    const canGoad = isBettingPhase && myTurn && isInGame && !isBusted && !isFolded && !isGM && !hasGoadedThisRound && !tableData.skillUsedThisTurn;
+    const canGoad = isBettingPhase && !isCutPhase && myTurn && isInGame && !isBusted && !isFolded && !isGM && !hasGoadedThisRound && !tableData.skillUsedThisTurn;
 
     // V3: Valid goad targets: other players not busted, not GM, not Sloppy, not Folded
     const goadTargets = canGoad ? players
@@ -274,10 +275,12 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       }) : [];
 
     // V3: Hunch context - can use during betting phase if it's your turn and not locked
-    const canHunch = isBettingPhase && myTurn && isInGame && !isBusted && !isFolded && !isHolding && !isGM && !hunchLocked && !tableData.skillUsedThisTurn;
+    // V3.4: Block during cut phase
+    const canHunch = isBettingPhase && !isCutPhase && myTurn && isInGame && !isBusted && !isFolded && !isHolding && !isGM && !hunchLocked && !tableData.skillUsedThisTurn;
 
     // V3: Profile context - can use during betting phase if it's your turn
-    const profileTargets = (isBettingPhase && myTurn && !isBusted && !isFolded && !isGM && !tableData.skillUsedThisTurn) ? players
+    // V3.4: Block during cut phase
+    const profileTargets = (isBettingPhase && !isCutPhase && myTurn && !isBusted && !isFolded && !isGM && !tableData.skillUsedThisTurn) ? players
       .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !game.users.get(p.id)?.isGM && !tableData.folded?.[p.id])
       .map(p => {
         const user = game.users.get(p.id);
@@ -288,8 +291,9 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const canProfile = profileTargets.length > 0;
 
     // Bump table context - can bump during betting phase if not busted/held, and haven't used it this round
+    // V3.4: Block during cut phase
     const hasBumpedThisRound = tableData.bumpedThisRound?.[userId] ?? false;
-    const canBump = isBettingPhase && myTurn && isInGame && !isBusted && !isHolding && !isGM && !hasBumpedThisRound && !tableData.skillUsedThisTurn;
+    const canBump = isBettingPhase && !isCutPhase && myTurn && isInGame && !isBusted && !isHolding && !isGM && !hasBumpedThisRound && !tableData.skillUsedThisTurn;
 
     // Valid bump targets: other players with dice, not self, not busted, not GM (holders ARE valid targets!)
     const bumpTargets = canBump ? players

@@ -94,6 +94,8 @@
   {{/if}}
 
   {{#if myTurn}}
+  {{!-- V3.4: During cut phase, ONLY show cut UI (handled above), not your-turn controls --}}
+  {{#unless isCutPhase}}
   <div class="control-section your-turn">
     <h3><i class="fa-solid fa-dice"></i> Your Turn!</h3>
 
@@ -102,8 +104,6 @@
       <strong>Opening Round:</strong> Roll {{openingRollsRemaining}} more {{#if (eq openingRollsRemaining
       1)}}die{{else}}dice{{/if}}.
     </p>
-    {{else if isCutPhase}}
-    {{!-- Handled above --}}
     {{else}}
     <p class="turn-hint phase-betting">
       <strong>Betting Round:</strong> Choose your action!
@@ -152,6 +152,7 @@
     </div>
     {{/if}}
   </div>
+  {{/unless}}
 
   {{!-- V3: Bonus Action Skills Section --}}
   {{#if isBettingPhase}}

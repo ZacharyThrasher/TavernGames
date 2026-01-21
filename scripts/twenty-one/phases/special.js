@@ -41,19 +41,30 @@ export async function useCut(userId, reroll = false) {
       console.warn("Tavern Twenty-One | Could not show dice to player:", e);
     }
 
+    // V3.4: Public chat does NOT reveal the new value
     await createChatCard({
       title: "The Cut",
       subtitle: `${userName} takes the cut!`,
-      message: `Re-rolled hole die: ${oldValue} → <strong>${roll.total}</strong>`,
+      message: `Re-rolled their hole die. <em>The new value remains hidden...</em>`,
       icon: "fa-solid fa-scissors",
+    });
+
+    // V3.4: Whisper actual values only to the cut player and GM
+    const gmIds = state.turnOrder.filter(id => game.users.get(id)?.isGM);
+    await ChatMessage.create({
+      content: `<div class="tavern-skill-result success">
+        <strong>The Cut</strong><br>
+        Your hole die: ${oldValue} → <strong>${roll.total}</strong><br>
+        <em>New Total: ${tableData.totals[userId]}</em>
+      </div>`,
+      whisper: [userId, ...gmIds],
+      speaker: { alias: "Tavern Twenty-One" },
     });
 
     await addHistoryEntry({
       type: "cut",
       player: userName,
-      oldValue,
-      newValue: roll.total,
-      message: `${userName} used The Cut: ${oldValue} → ${roll.total}`,
+      message: `${userName} used The Cut (hole die re-rolled).`,
     });
   } else {
     await createChatCard({
