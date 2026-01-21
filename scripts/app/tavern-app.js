@@ -550,83 +550,75 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   /**
    * V3.5: Show dialog for GM to choose between House and NPC mode
+   * V3.5.1: Uses currently selected token instead of showing a list
    */
   static async _showGMJoinDialog() {
-    // Get list of NPC actors the GM can use
-    const npcActors = game.actors.filter(a =>
-      a.type === "npc" && a.isOwner
-    ).map(a => ({
-      id: a.id,
-      name: a.name,
-      img: a.img || "icons/svg/mystery-man.svg",
-    }));
+    // Check if GM has a token selected on canvas
+    const selectedToken = canvas.tokens?.controlled?.[0];
+    const selectedActor = selectedToken?.actor;
 
+    // If an NPC is selected, offer to use that one directly
+    if (selectedActor && selectedActor.type === "npc") {
+      return new Promise((resolve) => {
+        const dialog = new Dialog({
+          title: "Join the Game",
+          content: `
+            <div class="tavern-gm-join-dialog">
+              <p>How would you like to join?</p>
+              <div class="selected-npc">
+                <img src="${selectedActor.img || 'icons/svg/mystery-man.svg'}" alt="${selectedActor.name}" style="width: 64px; height: 64px; border-radius: 8px;">
+                <strong>${selectedActor.name}</strong>
+              </div>
+            </div>
+          `,
+          buttons: {
+            house: {
+              icon: '<i class="fa-solid fa-building-columns"></i>',
+              label: "Play as House",
+              callback: () => resolve({ playAsNpc: false }),
+            },
+            npc: {
+              icon: '<i class="fa-solid fa-user-secret"></i>',
+              label: `Play as ${selectedActor.name}`,
+              callback: () => resolve({
+                playAsNpc: true,
+                actorId: selectedActor.id,
+                actorName: selectedActor.name,
+                actorImg: selectedActor.img || "icons/svg/mystery-man.svg",
+              }),
+            },
+          },
+          default: "npc",
+          close: () => resolve(null),
+        }, {
+          width: 350,
+          classes: ["tavern-gm-join"],
+        });
+        dialog.render(true);
+      });
+    }
+
+    // No NPC selected - simple House vs "select a token" choice
     return new Promise((resolve) => {
       const dialog = new Dialog({
-        title: "Join as...",
+        title: "Join the Game",
         content: `
           <div class="tavern-gm-join-dialog">
-            <p>How would you like to join the game?</p>
-            <div class="join-options">
-              <button type="button" class="join-option" data-choice="house">
-                <i class="fa-solid fa-building-columns"></i>
-                <span>Play as The House</span>
-                <small>Traditional dealer role</small>
-              </button>
-              <button type="button" class="join-option" data-choice="npc">
-                <i class="fa-solid fa-user-secret"></i>
-                <span>Play as an NPC</span>
-                <small>Full player abilities</small>
-              </button>
-            </div>
-            ${npcActors.length > 0 ? `
-              <div class="npc-selector" style="display: none;">
-                <h4>Select an NPC:</h4>
-                <div class="npc-grid">
-                  ${npcActors.map(a => `
-                    <div class="npc-option" data-actor-id="${a.id}" data-actor-name="${a.name}" data-actor-img="${a.img}">
-                      <img src="${a.img}" alt="${a.name}">
-                      <span>${a.name}</span>
-                    </div>
-                  `).join("")}
-                </div>
-              </div>
-            ` : `
-              <div class="npc-selector" style="display: none;">
-                <p class="no-npcs">No NPC actors available. Create an NPC first.</p>
-              </div>
-            `}
+            <p>How would you like to join?</p>
+            <p class="hint"><em>Tip: Select an NPC token on the canvas first to play as that character.</em></p>
           </div>
         `,
-        buttons: {},
-        render: (html) => {
-          // Handle House choice
-          html.find('[data-choice="house"]').on("click", () => {
-            resolve({ playAsNpc: false });
-            dialog.close();
-          });
-
-          // Handle NPC choice - show selector
-          html.find('[data-choice="npc"]').on("click", () => {
-            html.find('.join-options').hide();
-            html.find('.npc-selector').show();
-          });
-
-          // Handle NPC selection
-          html.find('.npc-option').on("click", (e) => {
-            const $target = $(e.currentTarget);
-            resolve({
-              playAsNpc: true,
-              actorId: $target.data("actor-id"),
-              actorName: $target.data("actor-name"),
-              actorImg: $target.data("actor-img"),
-            });
-            dialog.close();
-          });
+        buttons: {
+          house: {
+            icon: '<i class="fa-solid fa-building-columns"></i>',
+            label: "Play as House",
+            callback: () => resolve({ playAsNpc: false }),
+          },
         },
+        default: "house",
         close: () => resolve(null),
       }, {
-        width: 400,
+        width: 350,
         classes: ["tavern-gm-join"],
       });
       dialog.render(true);
