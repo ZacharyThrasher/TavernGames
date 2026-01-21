@@ -11,9 +11,9 @@
  * - Nat 1: Auto-caught + pay 1× ante
  */
 
-import { MODULE_ID, getState, updateState, addHistoryEntry } from "../state.js";
+import { MODULE_ID, getState, updateState, addHistoryEntry } from "../../state.js";
 import { deductFromActor, getActorForUser, getGMUserIds, notifyUser } from "../utils/actors.js";
-import { createChatCard, playSound } from "../utils/chat.js";
+import { createChatCard, playSound } from "../../ui/chat.js";
 import { emptyTableData } from "../constants.js";
 
 /**

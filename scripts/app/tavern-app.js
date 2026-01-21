@@ -1,6 +1,6 @@
 import { MODULE_ID, getState } from "../state.js";
 import { tavernSocket } from "../socket.js";
-import { getDieCost } from "../twenty-one.js";
+import { getDieCost } from "../twenty-one/constants.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 

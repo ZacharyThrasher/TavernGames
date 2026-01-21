@@ -10,9 +10,9 @@
  */
 
 import { MODULE_ID } from "../constants.js";
-import { getState, updateState, emptyTableData } from "../state.js";
+import { getState, updateState, emptyTableData } from "../../state.js";
 import { getActorForUser, getGMUserIds, notifyUser } from "../utils/actors.js";
-import { createChatCard, addHistoryEntry, playSound } from "../utils/chat.js";
+import { createChatCard, addHistoryEntry, playSound } from "../../ui/chat.js";
 
 export async function profile(payload, userId) {
     const state = getState();

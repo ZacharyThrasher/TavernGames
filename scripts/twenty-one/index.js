@@ -8,17 +8,6 @@ export * from "./skills/hunch.js";
 export * from "./skills/profile.js";
 
 // Core Game Logic & Phases
-export {
-    startRound,
-    submitRoll,
-    hold,
-    revealDice,
-    finishRound,
-    returnToLobby,
-    accuse,
-    skipInspection,
-    useCut,
-    fold,
-    submitDuelRoll,
-    finishTurn
-} from "../../twenty-one.js";
+export * from "./phases/core.js";
+export * from "./phases/turn.js";
+export * from "./phases/special.js";
