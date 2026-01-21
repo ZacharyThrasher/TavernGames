@@ -39,7 +39,10 @@ export async function submitRoll(payload, userId) {
   let rollCost = 0;
   if (!isOpeningPhase) {
     const user = game.users.get(userId);
-    if (!user?.isGM) {
+    // V3.5: GM-as-NPC pays for dice like regular players
+    const playerData = state.players?.[userId];
+    const isHouse = user?.isGM && !playerData?.playingAsNpc;
+    if (!isHouse) {
       rollCost = getDieCost(die, ante);
 
       if (rollCost > 0) {
@@ -136,8 +139,12 @@ export async function submitRoll(payload, userId) {
 
   const userName = game.users.get(userId)?.name ?? "Unknown";
 
+  // V3.5: Show roll cost message for GM-as-NPC too
+  const msgUser = game.users.get(userId);
+  const msgPlayerData = state.players?.[userId];
+  const isMsgHouse = msgUser?.isGM && !msgPlayerData?.playingAsNpc;
   let rollCostMsg = "";
-  if (!isOpeningPhase && !game.users.get(userId)?.isGM) {
+  if (!isOpeningPhase && !isMsgHouse) {
     if (rollCost === 0) {
       rollCostMsg = " (FREE)";
     } else {

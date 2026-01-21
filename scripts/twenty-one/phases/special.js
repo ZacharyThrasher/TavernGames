@@ -295,8 +295,10 @@ export async function accuse(payload, userId) {
     return state;
   }
 
+  // V3.5: Can't accuse the house, but GM-as-NPC is a valid target
   const targetUser = game.users.get(targetId);
-  if (targetUser?.isGM) {
+  const isTargetHouse = targetUser?.isGM && !state.players?.[targetId]?.playingAsNpc;
+  if (isTargetHouse) {
     ui.notifications.warn("You can't accuse the house!");
     return state;
   }

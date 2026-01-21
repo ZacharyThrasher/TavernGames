@@ -1599,8 +1599,11 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const canAffordGold = gp >= cost;
     const isGM = game.user.isGM;
 
-    // GM always "pays" with gold (house money)
-    if (isGM) return "gold";
+    // V3.5: House always "pays" with gold (house money), GM-as-NPC checks actual gold
+    const state = getState();
+    const playerData = state.players?.[game.user.id];
+    const isHouse = isGM && !playerData?.playingAsNpc;
+    if (isHouse) return "gold";
 
     // If holding Shift, force prompt even if they can afford it
     // Or if they can't afford it, force prompt

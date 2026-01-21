@@ -79,11 +79,14 @@ export async function payOutWinners(payouts, flatShare) {
   for (const [oderId, amount] of Object.entries(payouts)) {
     const user = game.users.get(oderId);
 
-    // GM doesn't receive gold payouts (house money)
-    if (user?.isGM) continue;
+    // V3.5: House doesn't receive gold payouts, but GM-as-NPC does
+    const isHouse = user?.isGM && !state?.players?.[oderId]?.playingAsNpc;
+    if (isHouse) continue;
 
+    // V3.5: NPCs use system.currency.gp - GM should set initial gold there
     const actor = getActorForUser(oderId);
     if (!actor) continue;
+
     const current = actor.system?.currency?.gp ?? 0;
     await actor.update({ "system.currency.gp": current + amount });
   }

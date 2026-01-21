@@ -26,8 +26,10 @@ async function checkPassivePerception(state, cheaterId, cheaterName, cheatRoll) 
     for (const playerId of state.turnOrder) {
         if (playerId === cheaterId) continue;
 
+        // V3.5: GM-as-NPC is a player who can notice cheating
         const playerUser = game.users.get(playerId);
-        if (playerUser?.isGM) continue;
+        const isPlayerHouse = playerUser?.isGM && !state.players?.[playerId]?.playingAsNpc;
+        if (isPlayerHouse) continue;
 
         const actor = getActorForUser(playerId);
         if (!actor) continue;
