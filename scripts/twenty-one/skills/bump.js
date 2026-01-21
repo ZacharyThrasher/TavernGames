@@ -249,8 +249,11 @@ export async function bumpTable(payload, userId) {
         });
 
         // Create success chat card
+        const oldVisibleTotal = tableData.visibleTotals?.[targetId] ?? 0;
+        const newVisibleTotal = updatedVisibleTotals[targetId] ?? 0;
+
         let resultMessage = wasPublic
-            ? `<strong>${targetName}'s</strong> d${dieSides} (was ${oldValue}) → <strong>${newValue}</strong><br>Total: ${oldTotal} → <strong>${newTotal}</strong>`
+            ? `<strong>${targetName}'s</strong> d${dieSides} (was ${oldValue}) → <strong>${newValue}</strong><br>Visible Total: ${oldVisibleTotal} → <strong>${newVisibleTotal}</strong>`
             : `<strong>${targetName}'s</strong> hole die (d${dieSides}) was bumped!<br><em>The new value remains hidden...</em>`;
 
         if (targetBusted && wasPublic) {
@@ -426,8 +429,11 @@ export async function bumpRetaliation(payload, userId) {
     // Don't reveal values if it was a hole die
     let resultMessage;
     if (wasPublic) {
+        const oldVisibleTotal = tableData.visibleTotals?.[attackerId] ?? 0;
+        const newVisibleTotal = updatedVisibleTotals[attackerId] ?? 0;
+
         resultMessage = `<strong>${attackerName}'s</strong> d${dieSides} (was ${oldValue}) → <strong>${newValue}</strong><br>`;
-        resultMessage += `Total: ${oldTotal} → <strong>${newTotal}</strong>`;
+        resultMessage += `Visible Total: ${oldVisibleTotal} → <strong>${newVisibleTotal}</strong>`;
         if (attackerBusted) {
             resultMessage += `<br><span style="color: #ff6666; font-weight: bold;">BUST!</span>`;
         }
