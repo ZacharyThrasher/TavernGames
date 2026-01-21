@@ -558,8 +558,9 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const myRolls = updatedState.tableData?.rolls?.[game.user.id] ?? [];
     const lastDieIndex = myRolls.length - 1;
 
-    // Check for cheat opportunity (Player only, No Bust)
-    const canCheat = lastDieIndex >= 0 && !updatedState.tableData?.busts?.[game.user.id] && !game.user.isGM;
+    // Check for cheat opportunity (Player only)
+    // V3: Allow cheating even if busted (to unbust!)
+    const canCheat = lastDieIndex >= 0 && !game.user.isGM;
 
     if (canCheat) {
       const lastDie = myRolls[lastDieIndex];
