@@ -40,7 +40,7 @@ Hooks.once("socketlib.ready", () => {
 
 Hooks.once("ready", async () => {
   console.log("Tavern Twenty-One | Module ready");
-  
+
   if (game.user.isGM) {
     await ensureStateMacro();
   }
@@ -52,7 +52,17 @@ Hooks.once("ready", async () => {
     close: () => app.close(),
   };
 
-  // Watch for state changes via the macro
+  // V4: Watch for state changes via World Settings (replaces Macro hook)
+  // This hook fires when any setting is changed
+  Hooks.on("updateSetting", (setting) => {
+    // Check if this is our game state setting
+    if (setting.key === `${MODULE_ID}.gameState` && app.rendered) {
+      console.log("Tavern Twenty-One | State changed, re-rendering UI");
+      app.render();
+    }
+  });
+
+  // V4: Also keep legacy Macro hook for backwards compatibility during migration
   const macro = game.macros.getName(STATE_MACRO_NAME);
   if (macro) {
     Hooks.on("updateMacro", (updated) => {
@@ -62,3 +72,4 @@ Hooks.once("ready", async () => {
     });
   }
 });
+
