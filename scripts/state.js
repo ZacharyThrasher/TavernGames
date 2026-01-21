@@ -1,5 +1,6 @@
 export const MODULE_ID = "tavern-dice-master";
 export const STATE_MACRO_NAME = "TavernState";
+export { emptyTableData } from "./twenty-one/constants.js";
 
 export function registerSettings() {
   game.settings.register(MODULE_ID, "fixedAnte", {
