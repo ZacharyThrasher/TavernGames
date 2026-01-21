@@ -28,10 +28,14 @@ export function canAffordAnte(state, ante) {
     if (isHouse) continue;
 
     const actor = getActorForUser(userId);
-    console.log(`Tavern | canAffordAnte: userId=${userId}, actor=${actor?.name}, type=${actor?.type}, currency=`, actor?.system?.currency);
     if (!actor) {
       return { ok: false, name: user?.name ?? "Unknown", reason: "no character" };
     }
+
+    // V3.5: Skip gold check for NPCs - they store currency differently (as loot items)
+    // GM is choosing to play as this NPC, so we trust they can afford it
+    if (actor.type === "npc") continue;
+
     const gp = actor.system?.currency?.gp ?? 0;
     if (gp < ante) {
       return { ok: false, name: actor.name, reason: "insufficient gold" };
