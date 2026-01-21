@@ -36,6 +36,8 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       goad: TavernApp.onGoad,
       bumpTable: TavernApp.onBumpTable,
       bumpRetaliation: TavernApp.onBumpRetaliation,
+      // V4: Side bets
+      sideBet: TavernApp.onSideBet,
       // Phases
       duelRoll: TavernApp.onDuelRoll,
       skipInspection: TavernApp.onSkipInspection,
@@ -1088,8 +1090,13 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }
   }
 
+  /**
+   * V4: Accuse - Click-to-target a specific die
+   * Flow: Select player portrait -> Select specific die -> Confirm
+   */
   static async onAccuse(event, target) {
     const state = getState();
+    const tableData = state.tableData ?? {};
     const ante = game.settings.get(MODULE_ID, "fixedAnte");
     const accusationCost = ante * 2;
 
@@ -1102,41 +1109,90 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }
 
     const targetName = selectedPortrait.dataset.targetName ?? "Unknown";
+    const targetRolls = tableData.rolls?.[targetId] ?? [];
 
-    // V2.0: No skill selection - direct accusation
+    if (targetRolls.length === 0) {
+      return ui.notifications.warn("That player has no dice to accuse.");
+    }
+
+    // Build die selection UI
+    const diceOptions = targetRolls.map((roll, idx) => {
+      const isBlind = roll.blind ?? false;
+      const isHole = !(roll.public ?? true);
+      const displayResult = isBlind ? "?" : (isHole ? "?" : roll.result);
+      const label = isBlind ? `d${roll.die} (Blind)` : (isHole ? `d${roll.die} (Hole)` : `d${roll.die}: ${roll.result}`);
+
+      return `<div class="accuse-die-option" data-die-index="${idx}" tabindex="0" style="
+        display: inline-flex; flex-direction: column; align-items: center; gap: 4px;
+        padding: 12px; margin: 4px; border: 3px solid #555; border-radius: 8px;
+        cursor: pointer; background: rgba(0,0,0,0.3); min-width: 60px;
+      ">
+        <i class="fas fa-dice-${TavernApp.DICE_ICONS[roll.die] || 'd6'}" style="font-size: 24px; color: #ddc888;"></i>
+        <span style="font-size: 18px; font-weight: bold;">${displayResult}</span>
+        <span style="font-size: 11px; color: #888;">${label}</span>
+      </div>`;
+    }).join("");
+
     const content = `
       <form>
-        <p>Accuse <strong>${targetName}</strong> of cheating?</p>
-        <p><strong>Cost:</strong> ${accusationCost}gp (2× ante)</p>
+        <p>Select which die to accuse on <strong>${targetName}</strong>:</p>
+        <div class="accuse-dice-grid" style="display: flex; flex-wrap: wrap; justify-content: center; margin: 12px 0;">
+          ${diceOptions}
+        </div>
         <hr>
-        <p style="color: #4a4; font-weight: bold;">✓ If correct: Refund + ${ante * 5}gp bounty!</p>
-        <p style="color: #c44; font-weight: bold;">✗ If wrong: Lose ${accusationCost}gp fee</p>
+        <p><strong>Cost:</strong> ${accusationCost}gp (2× ante)</p>
+        <p style="color: #4a4; font-weight: bold;">✓ If that die was cheated: Refund + ${ante * 5}gp bounty!</p>
+        <p style="color: #c44; font-weight: bold;">✗ If that die is clean: Lose ${accusationCost}gp</p>
+        <p style="color: #a88; font-size: 0.9em;"><em>Note: Even if they cheated on another die, accusing the wrong one fails!</em></p>
       </form>
+      <style>
+        .accuse-die-option:hover { border-color: #888; background: rgba(255,255,255,0.1); }
+        .accuse-die-option.selected { border-color: #c44; background: rgba(180, 60, 60, 0.3); box-shadow: 0 0 10px rgba(180, 60, 60, 0.5); }
+      </style>
     `;
 
+    let selectedDieIndex = null;
+
     const result = await new Promise(resolve => {
-      new Dialog({
-        title: "Make Accusation",
+      const dialog = new Dialog({
+        title: `Accuse ${targetName}`,
         content,
         buttons: {
           accuse: {
             label: "Accuse!",
             icon: '<i class="fa-solid fa-hand-point-right"></i>',
-            callback: () => resolve(true)
+            callback: () => resolve(selectedDieIndex !== null ? { targetId, dieIndex: selectedDieIndex } : null)
           },
           cancel: {
             label: "Cancel",
             icon: '<i class="fa-solid fa-times"></i>',
-            callback: () => resolve(false)
+            callback: () => resolve(null)
           }
         },
         default: "accuse",
-        close: () => resolve(false)
-      }).render(true);
+        render: (html) => {
+          const dieOptions = html.find('.accuse-die-option');
+          dieOptions.on('click', function () {
+            dieOptions.removeClass('selected');
+            $(this).addClass('selected');
+            selectedDieIndex = parseInt($(this).data('die-index'));
+          });
+          dieOptions.on('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              $(this).click();
+            }
+          });
+        },
+        close: () => resolve(null)
+      });
+      dialog.render(true);
     });
 
-    if (result) {
-      await tavernSocket.executeAsGM("playerAction", "accuse", { targetId }, game.user.id);
+    if (result && result.dieIndex !== undefined) {
+      await tavernSocket.executeAsGM("playerAction", "accuse", result, game.user.id);
+    } else if (result) {
+      ui.notifications.warn("Select a specific die to accuse.");
     }
   }
 
@@ -1535,5 +1591,109 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       });
       d.render(true);
     });
+  }
+
+  /**
+   * V4: Place a side bet on a player to win the round
+   */
+  static async onSideBet(event, target) {
+    const state = getState();
+    const tableData = state.tableData ?? {};
+    const ante = game.settings.get(MODULE_ID, "fixedAnte");
+    const userId = game.user.id;
+
+    // Build list of valid champions (active players, not busted/caught)
+    const validChampions = state.turnOrder
+      .filter(id => !tableData.busts?.[id] && !tableData.caught?.[id] && id !== userId)
+      .map(id => {
+        const actor = game.users.get(id)?.character;
+        const img = actor?.img || game.users.get(id)?.avatar || "icons/svg/mystery-man.svg";
+        const name = state.players?.[id]?.name ?? game.users.get(id)?.name ?? "Unknown";
+        const visibleTotal = tableData.visibleTotals?.[id] ?? 0;
+        return { id, name, img, visibleTotal };
+      });
+
+    if (validChampions.length === 0) {
+      return ui.notifications.warn("No valid players to bet on.");
+    }
+
+    // Build champion selection UI
+    const championOptions = validChampions.map(c => `
+      <div class="side-bet-champion" data-champion-id="${c.id}" tabindex="0" style="
+        display: inline-flex; flex-direction: column; align-items: center; gap: 4px;
+        padding: 10px; margin: 4px; border: 3px solid #555; border-radius: 8px;
+        cursor: pointer; background: rgba(0,0,0,0.3); min-width: 80px;
+      ">
+        <img src="${c.img}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover;" />
+        <span style="font-weight: bold; font-size: 12px;">${c.name}</span>
+        <span style="font-size: 11px; color: #888;">Visible: ${c.visibleTotal}</span>
+      </div>
+    `).join("");
+
+    const content = `
+      <form>
+        <p><strong>Pick your Champion:</strong></p>
+        <div class="side-bet-champions" style="display: flex; flex-wrap: wrap; justify-content: center; margin: 12px 0;">
+          ${championOptions}
+        </div>
+        <hr>
+        <div class="form-group">
+          <label>Bet Amount (minimum ${ante}gp):</label>
+          <input type="number" name="betAmount" value="${ante}" min="${ante}" step="${ante}" style="width: 100%;" />
+        </div>
+        <p style="color: #4a4; font-weight: bold; margin-top: 8px;">✓ If they win: 2:1 payout!</p>
+        <p style="color: #c44;">✗ If they lose: You lose your bet</p>
+      </form>
+      <style>
+        .side-bet-champion:hover { border-color: #888; background: rgba(255,255,255,0.1); }
+        .side-bet-champion.selected { border-color: #4a4; background: rgba(60, 180, 60, 0.2); box-shadow: 0 0 10px rgba(60, 180, 60, 0.3); }
+      </style>
+    `;
+
+    let selectedChampionId = null;
+
+    const result = await new Promise(resolve => {
+      const dialog = new Dialog({
+        title: "Place Side Bet",
+        content,
+        buttons: {
+          bet: {
+            label: "Place Bet!",
+            icon: '<i class="fa-solid fa-sack-dollar"></i>',
+            callback: (html) => {
+              if (!selectedChampionId) return resolve(null);
+              const amount = parseInt(html.find('[name="betAmount"]').val()) || ante;
+              resolve({ championId: selectedChampionId, amount });
+            }
+          },
+          cancel: {
+            label: "Cancel",
+            icon: '<i class="fa-solid fa-times"></i>',
+            callback: () => resolve(null)
+          }
+        },
+        default: "bet",
+        render: (html) => {
+          const championCards = html.find('.side-bet-champion');
+          championCards.on('click', function () {
+            championCards.removeClass('selected');
+            $(this).addClass('selected');
+            selectedChampionId = $(this).data('champion-id');
+          });
+          championCards.on('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              $(this).click();
+            }
+          });
+        },
+        close: () => resolve(null)
+      });
+      dialog.render(true);
+    });
+
+    if (result) {
+      await tavernSocket.executeAsGM("playerAction", "sideBet", result, game.user.id);
+    }
   }
 }

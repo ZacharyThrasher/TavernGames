@@ -1,5 +1,6 @@
 import { MODULE_ID, getState, updateState } from "./state.js";
 import { startRound, submitRoll, hold, revealDice, finishRound, returnToLobby, cheat, accuse, skipInspection, goad, resistGoad, bumpTable, bumpRetaliation, hunch, profile, useCut, fold, submitDuelRoll, finishTurn } from "./twenty-one/index.js";
+import { placeSideBet } from "./twenty-one/phases/side-bets.js";
 import { playSound } from "./sounds.js";
 
 function ensureGM() {
@@ -110,6 +111,9 @@ export async function handlePlayerAction(action, payload, userId) {
       return bumpTable(payload, userId);
     case "bumpRetaliation":
       return bumpRetaliation(payload, userId);
+    // V4: Side bets
+    case "sideBet":
+      return placeSideBet(payload, userId);
     // Duel & phases
     case "duelRoll":
       return submitDuelRoll(userId);

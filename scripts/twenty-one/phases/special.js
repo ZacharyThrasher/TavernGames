@@ -265,6 +265,11 @@ async function resolveDuel() {
   });
 }
 
+/**
+ * V4: Accuse a specific die of being cheated
+ * @param {Object} payload - { targetId, dieIndex }
+ * @param {string} userId - The accusing player
+ */
 export async function accuse(payload, userId) {
   const state = getState();
   if (state.status === "LOBBY" || state.status === "PAYOUT") {
@@ -283,7 +288,7 @@ export async function accuse(payload, userId) {
 
   const tableData = state.tableData ?? emptyTableData();
   const ante = game.settings.get(MODULE_ID, "fixedAnte");
-  const { targetId } = payload;
+  const { targetId, dieIndex } = payload;
 
   if (!targetId || !state.turnOrder.includes(targetId)) {
     ui.notifications.warn("Invalid accusation target.");
@@ -313,6 +318,13 @@ export async function accuse(payload, userId) {
     return state;
   }
 
+  // V4: Validate die index
+  const targetRolls = tableData.rolls?.[targetId] ?? [];
+  if (dieIndex === undefined || dieIndex < 0 || dieIndex >= targetRolls.length) {
+    ui.notifications.warn("Invalid die selection.");
+    return state;
+  }
+
   const accusationCost = ante * 2;
   const canAfford = await deductFromActor(userId, accusationCost);
   if (!canAfford) {
@@ -325,9 +337,15 @@ export async function accuse(payload, userId) {
   const accuserName = accuserActor?.name ?? game.users.get(userId)?.name ?? "Unknown";
   const targetName = getActorForUser(targetId)?.name ?? game.users.get(targetId)?.name ?? "Unknown";
 
+  // V4: Check if THIS SPECIFIC DIE was cheated
   const targetCheaterData = tableData.cheaters?.[targetId];
-  const hasCheated = targetCheaterData?.cheats?.length > 0 || targetCheaterData?.deceptionRolls?.length > 0;
+  const cheatsOnDie = targetCheaterData?.cheats?.filter(c => c.dieIndex === dieIndex) ?? [];
+  const legacyCheatOnDie = targetCheaterData?.deceptionRolls?.filter(c => c.dieIndex === dieIndex) ?? [];
+  const dieWasCheated = cheatsOnDie.length > 0 || legacyCheatOnDie.length > 0;
+
   const alreadyCaught = tableData.caught?.[targetId];
+  const targetDie = targetRolls[dieIndex];
+  const dieLabel = `d${targetDie.die}`;
 
   // "You can't accuse a player who has already been caught."
   if (alreadyCaught) {
@@ -336,11 +354,12 @@ export async function accuse(payload, userId) {
     return state;
   }
 
-  const updatedAccusedThisRound = { ...tableData.accusedThisRound, [userId]: targetId };
+  const updatedAccusedThisRound = { ...tableData.accusedThisRound, [userId]: { targetId, dieIndex } };
   let updatedCaught = { ...tableData.caught };
   let newPot = state.pot;
 
-  if (hasCheated) {
+  if (dieWasCheated) {
+    // V4: Correct accusation - specific die was cheated
     updatedCaught[targetId] = true;
     const bounty = ante * 5;
     let actualBounty = 0;
@@ -356,9 +375,9 @@ export async function accuse(payload, userId) {
 
     await createChatCard({
       title: "Cheater Caught!",
-      subtitle: `${accuserName} was right!`,
-      message: `<strong>${accuserName}</strong> accused <strong>${targetName}</strong>!<br>
-        <strong>${targetName}</strong> was caught cheating and forfeits the round.<br>
+      subtitle: `${accuserName} nailed it!`,
+      message: `<strong>${accuserName}</strong> accused <strong>${targetName}</strong>'s <strong>${dieLabel}</strong>!<br>
+        <strong>That die WAS cheated!</strong> ${targetName} forfeits the round.<br>
         <em>${accuserName} receives ${accusationCost}gp refund + ${bountyMsg} = <strong>${totalReward}gp</strong>!</em>`,
       icon: "fa-solid fa-gavel",
     });
@@ -368,17 +387,20 @@ export async function accuse(payload, userId) {
       type: "cheat_caught",
       accuser: accuserName,
       caught: targetName,
+      dieIndex,
       reward: totalReward,
-      message: `${accuserName} caught ${targetName} cheating!`,
+      message: `${accuserName} caught ${targetName} cheating on their ${dieLabel}!`,
     });
 
   } else {
+    // V4: Wrong accusation - even if they cheated on ANOTHER die, this specific one was clean
     newPot += accusationCost;
 
     await createChatCard({
       title: "False Accusation!",
-      subtitle: `${targetName} is innocent.`,
-      message: `<strong>${accuserName}</strong> accused <strong>${targetName}</strong> but was wrong!<br>
+      subtitle: `That die was clean.`,
+      message: `<strong>${accuserName}</strong> accused <strong>${targetName}</strong>'s <strong>${dieLabel}</strong>!<br>
+        <em>That specific die was NOT cheated.</em><br>
         ${accuserName} loses their ${accusationCost}gp accusation fee.`,
       icon: "fa-solid fa-face-frown",
     });
@@ -388,8 +410,9 @@ export async function accuse(payload, userId) {
       type: "accusation_failed",
       accuser: accuserName,
       target: targetName,
+      dieIndex,
       cost: accusationCost,
-      message: `${accuserName} falsely accused ${targetName} and loses ${accusationCost}gp.`,
+      message: `${accuserName} falsely accused ${targetName}'s ${dieLabel} and loses ${accusationCost}gp.`,
     });
   }
 

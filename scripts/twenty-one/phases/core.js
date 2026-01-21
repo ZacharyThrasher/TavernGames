@@ -7,6 +7,7 @@ import { tavernSocket } from "../../socket.js";
 import { getActorForUser } from "../utils/actors.js";
 import { calculateBettingOrder, getGMUserIds } from "../utils/game-logic.js";
 import { emptyTableData, DUEL_CHALLENGES } from "../constants.js";
+import { processSideBetPayouts } from "./side-bets.js";
 
 export async function startRound() {
   const state = getState();
@@ -367,8 +368,12 @@ export async function finishRound() {
     const payouts = { [winners[0]]: finalPot };
     await payOutWinners(payouts);
     await playSound("win");
+    // V4: Process side bet payouts
+    await processSideBetPayouts(winners[0]);
   } else if (winners.length === 0) {
     await playSound("lose");
+    // V4: No winner - side bets lost
+    await processSideBetPayouts(null);
   }
 
   return updateState({
