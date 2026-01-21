@@ -338,31 +338,37 @@ export async function finishRound() {
     });
   }
 
-  if (winners.length === 1) {
-    const payouts = { [winners[0]]: state.pot };
-    await payOutWinners(payouts);
-    await playSound("win");
-  } else if (winners.length === 0) {
-    await playSound("lose");
-  }
-
+  // V3.5: Collect cleaning fees BEFORE payout - they go into the pot
   const cleaningFees = tableData.cleaningFees ?? {};
   const cleaningFeeMessages = [];
+  let totalCleaningFees = 0;
   for (const [odId, fee] of Object.entries(cleaningFees)) {
     if (fee > 0) {
       await deductFromActor(odId, fee);
+      totalCleaningFees += fee;
       const userName = game.users.get(odId)?.name ?? "Unknown";
       cleaningFeeMessages.push(`${userName}: ${fee}gp`);
     }
   }
 
+  // Add cleaning fees to pot before winner takes it
+  const finalPot = state.pot + totalCleaningFees;
+
   if (cleaningFeeMessages.length > 0) {
     await createChatCard({
       title: "Cleaning Fees",
-      subtitle: "Spilled Drinks",
-      message: `Cleaning fees collected:<br>${cleaningFeeMessages.join("<br>")}`,
+      subtitle: "Spilled Drinks → Added to Pot",
+      message: `Cleaning fees collected (${totalCleaningFees}gp added to pot):<br>${cleaningFeeMessages.join("<br>")}`,
       icon: "fa-solid fa-broom",
     });
+  }
+
+  if (winners.length === 1) {
+    const payouts = { [winners[0]]: finalPot };
+    await payOutWinners(payouts);
+    await playSound("win");
+  } else if (winners.length === 0) {
+    await playSound("lose");
   }
 
   return updateState({

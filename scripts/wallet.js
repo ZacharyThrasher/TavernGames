@@ -11,10 +11,12 @@ function getActorForUser(userId) {
 export function canAffordAnte(state, ante) {
   for (const userId of state.turnOrder) {
     const user = game.users.get(userId);
-    
-    // GM can always play as "the house" - no gold check required
-    if (user?.isGM) continue;
-    
+
+    // V3.5: Only house doesn't pay - GM-as-NPC pays like regular players
+    const playerData = state.players?.[userId];
+    const isHouse = user?.isGM && !playerData?.playingAsNpc;
+    if (isHouse) continue;
+
     const actor = getActorForUser(userId);
     if (!actor) {
       return { ok: false, name: user?.name ?? "Unknown", reason: "no character" };
@@ -30,10 +32,12 @@ export function canAffordAnte(state, ante) {
 export async function deductAnteFromActors(state, ante) {
   for (const userId of state.turnOrder) {
     const user = game.users.get(userId);
-    
-    // GM plays as "the house" - don't deduct gold
-    if (user?.isGM) continue;
-    
+
+    // V3.5: Only house doesn't pay - GM-as-NPC pays like regular players
+    const playerData = state.players?.[userId];
+    const isHouse = user?.isGM && !playerData?.playingAsNpc;
+    if (isHouse) continue;
+
     const actor = getActorForUser(userId);
     if (!actor) continue;
     const current = actor.system?.currency?.gp ?? 0;
@@ -59,10 +63,10 @@ export async function payOutWinners(payouts, flatShare) {
 
   for (const [oderId, amount] of Object.entries(payouts)) {
     const user = game.users.get(oderId);
-    
+
     // GM doesn't receive gold payouts (house money)
     if (user?.isGM) continue;
-    
+
     const actor = getActorForUser(oderId);
     if (!actor) continue;
     const current = actor.system?.currency?.gp ?? 0;
@@ -74,18 +78,20 @@ export async function payOutWinners(payouts, flatShare) {
  * Deduct gold from a single player's actor.
  * Returns true if successful, false if they can't afford it.
  */
-export async function deductFromActor(userId, amount) {
+export async function deductFromActor(userId, amount, state = null) {
   const user = game.users.get(userId);
-  
-  // GM doesn't pay gold
-  if (user?.isGM) return true;
-  
+
+  // V3.5: Only house doesn't pay - GM-as-NPC pays like regular players
+  const playerData = state?.players?.[userId];
+  const isHouse = user?.isGM && !playerData?.playingAsNpc;
+  if (isHouse) return true;
+
   const actor = getActorForUser(userId);
   if (!actor) return false;
-  
+
   const current = actor.system?.currency?.gp ?? 0;
   if (current < amount) return false;
-  
+
   await actor.update({ "system.currency.gp": current - amount });
   return true;
 }

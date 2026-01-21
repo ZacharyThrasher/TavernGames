@@ -659,9 +659,12 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const ante = game.settings.get(MODULE_ID, "fixedAnte");
     const isBettingPhase = state.tableData?.phase === "betting";
 
-    // Cost only applies during betting phase (and non-GM)
+    // Cost only applies during betting phase (and not house)
+    // V3.5: GM-as-NPC pays for dice like regular players
     const isGM = game.user.isGM;
-    const cost = (isBettingPhase && !isGM) ? getDieCost(parseInt(die), ante) : 0;
+    const gmPlayerData = state.players?.[game.user.id];
+    const isHouse = isGM && !gmPlayerData?.playingAsNpc;
+    const cost = (isBettingPhase && !isHouse) ? getDieCost(parseInt(die), ante) : 0;
 
     let payWithDrink = false;
 
@@ -692,9 +695,12 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const myRolls = updatedState.tableData?.rolls?.[game.user.id] ?? [];
     const lastDieIndex = myRolls.length - 1;
 
-    // Check for cheat opportunity (Player only)
+    // Check for cheat opportunity (Players and GM-as-NPC can cheat)
     // V3: Allow cheating even if busted (to unbust!)
-    const canCheat = lastDieIndex >= 0 && !game.user.isGM;
+    // V3.5: GM-as-NPC CAN cheat
+    const cheatPlayerData = updatedState.players?.[game.user.id];
+    const cheatIsHouse = game.user.isGM && !cheatPlayerData?.playingAsNpc;
+    const canCheat = lastDieIndex >= 0 && !cheatIsHouse;
 
     if (canCheat) {
       const lastDie = myRolls[lastDieIndex];
