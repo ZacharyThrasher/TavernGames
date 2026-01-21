@@ -237,7 +237,10 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const isPlayerHouse = (pid) => {
       const u = game.users.get(pid);
       if (!u?.isGM) return false;
-      return !state.players?.[pid]?.playingAsNpc;
+      const playerInfo = state.players?.[pid];
+      const isNpc = playerInfo?.playingAsNpc;
+      console.log(`Tavern | isPlayerHouse(${pid}): isGM=${u?.isGM}, playingAsNpc=${isNpc}, result=${!isNpc}`);
+      return !isNpc;
     };
     const accuseTargets = !accusedThisRound ? players
       .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !isPlayerHouse(p.id))
