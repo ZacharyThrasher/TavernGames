@@ -35,6 +35,7 @@ export function canAffordAnte(state, ante) {
     // V3.5: Check gold for all actors (PCs and NPCs use system.currency.gp)
     // NPCs need their gold set in the actor sheet's currency section
     const gp = actor.system?.currency?.gp ?? 0;
+    console.log(`Tavern | canAffordAnte check: actor=${actor.name}, type=${actor.type}, gp=${gp}, ante=${ante}`);
     if (gp < ante) {
       // For NPCs, give a more helpful message
       if (actor.type === "npc") {
