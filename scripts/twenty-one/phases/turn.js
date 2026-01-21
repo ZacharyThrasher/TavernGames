@@ -232,6 +232,9 @@ export async function finishTurn(userId) {
     updatedTable.currentPlayer = getNextActivePlayer(state, updatedTable);
   }
 
+  // V3: Reset skill usage flag for the new player
+  updatedTable.skillUsedThisTurn = false;
+
   const next = await updateState({ tableData: updatedTable });
 
   if (allPlayersFinished(state, updatedTable)) {
@@ -278,6 +281,7 @@ export async function hold(userId) {
   const holds = { ...tableData.holds, [userId]: true };
   const updatedTable = { ...tableData, holds };
   updatedTable.currentPlayer = getNextActivePlayer(state, updatedTable);
+  updatedTable.skillUsedThisTurn = false;
 
   const userName = game.users.get(userId)?.name ?? "Unknown";
   await addHistoryEntry({
@@ -334,6 +338,7 @@ export async function fold(userId) {
 
   tableData.folded = { ...tableData.folded, [userId]: true };
   tableData.currentPlayer = getNextActivePlayer(state, tableData);
+  tableData.skillUsedThisTurn = false;
 
   await createChatCard({
     title: "Fold",

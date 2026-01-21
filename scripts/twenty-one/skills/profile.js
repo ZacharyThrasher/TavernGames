@@ -43,6 +43,12 @@ export async function profile(payload, userId) {
         return state;
     }
 
+    // Limit: One skill per turn
+    if (tableData.skillUsedThisTurn) {
+        await notifyUser(userId, "You have already used a skill this turn.");
+        return state;
+    }
+
     // Can't profile yourself
     if (targetId === userId) {
         await notifyUser(userId, "You can't Profile yourself!");
@@ -238,6 +244,8 @@ export async function profile(payload, userId) {
                 : success ? `${userName} successfully profiled ${targetName}.`
                     : `${userName} failed to profile ${targetName} - got counter-read!`,
     });
+
+    tableData.skillUsedThisTurn = true;
 
     return updateState({ tableData });
 }

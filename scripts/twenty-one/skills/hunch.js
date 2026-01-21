@@ -9,10 +9,11 @@
  * - Nat 1: Locked into d20 Hit
  */
 
-import { MODULE_ID, getState, updateState, addHistoryEntry } from "../../state.js";
+import { MODULE_ID, getState, updateState } from "../../state.js";
 import { HUNCH_DC, HUNCH_THRESHOLDS, VALID_DICE, emptyTableData } from "../constants.js";
-import { createChatCard } from "../../ui/chat.js";
+import { createChatCard, addHistoryEntry } from "../../ui/chat.js";
 import { playSound } from "../../sounds.js";
+import { getActorForUser, getGMUserIds, notifyUser } from "../utils/actors.js";
 
 
 export async function hunch(userId) {
@@ -33,6 +34,12 @@ export async function hunch(userId) {
     // Must be in betting phase
     if (tableData.phase !== "betting") {
         await notifyUser(userId, "Hunch can only be used during the betting phase.");
+        return state;
+    }
+
+    // Limit: One skill per turn
+    if (tableData.skillUsedThisTurn) {
+        await notifyUser(userId, "You have already used a skill this turn.");
         return state;
     }
 
@@ -184,6 +191,8 @@ export async function hunch(userId) {
                 : success ? `${userName} successfully used Hunch.`
                     : `${userName}'s hunch failed - locked into a Hit.`,
     });
+
+    tableData.skillUsedThisTurn = true;
 
     return updateState({ tableData });
 }

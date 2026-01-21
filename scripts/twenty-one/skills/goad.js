@@ -52,6 +52,12 @@ export async function goad(payload, userId) {
         return state;
     }
 
+    // Limit: One skill per turn
+    if (tableData.skillUsedThisTurn) {
+        await notifyUser(userId, "You have already used a skill this turn.");
+        return state;
+    }
+
     // Player must not have busted or folded
     if (tableData.busts?.[userId] || tableData.folded?.[userId]) {
         ui.notifications.warn("You can't goad anyone!");
@@ -223,6 +229,7 @@ export async function goad(payload, userId) {
             holds: updatedHolds,
             goadedThisRound: updatedGoadedThisRound,
             goadBackfire: updatedGoadBackfire,
+            skillUsedThisTurn: true,
         };
 
         await addHistoryEntry({
@@ -255,6 +262,7 @@ export async function goad(payload, userId) {
             ...tableData,
             goadedThisRound: updatedGoadedThisRound,
             goadBackfire: updatedGoadBackfire,
+            skillUsedThisTurn: true,
         };
 
         await addHistoryEntry({
