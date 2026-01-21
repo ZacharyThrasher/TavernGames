@@ -558,7 +558,10 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const myRolls = updatedState.tableData?.rolls?.[game.user.id] ?? [];
     const lastDieIndex = myRolls.length - 1;
 
-    if (lastDieIndex >= 0 && !updatedState.tableData?.busts?.[game.user.id] && !game.user.isGM) {
+    // Check for cheat opportunity (Player only, No Bust)
+    const canCheat = lastDieIndex >= 0 && !updatedState.tableData?.busts?.[game.user.id] && !game.user.isGM;
+
+    if (canCheat) {
       const lastDie = myRolls[lastDieIndex];
       const actor = game.user.character;
       const sltMod = actor?.system?.skills?.slt?.total ?? 0;
@@ -628,6 +631,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
       if (result) {
         // Submit the cheat with DEX/Sleight of Hand
+        // Note: cheat action returns chained finishTurn
         await tavernSocket.executeAsGM("playerAction", "cheat", {
           dieIndex: lastDieIndex,
           adjustment: result,
@@ -635,7 +639,12 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
           skill: "slt"
         }, game.user.id);
       } else if (updatedState.tableData?.phase === "betting") {
-        // Did not cheat - finish turn (resume form cheat_decision pause)
+        // Did not cheat - finish turn (resume from cheat_decision pause)
+        await tavernSocket.executeAsGM("playerAction", "finishTurn", {}, game.user.id);
+      }
+    } else {
+      // GM or Bust - automatically finish turn
+      if (updatedState.tableData?.phase === "betting") {
         await tavernSocket.executeAsGM("playerAction", "finishTurn", {}, game.user.id);
       }
     }
