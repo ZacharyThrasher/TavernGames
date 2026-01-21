@@ -317,6 +317,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     // V3.5: GM-as-NPC CAN use skills
     const hasBumpedThisRound = tableData.bumpedThisRound?.[userId] ?? false;
     const canBump = isBettingPhase && !isCutPhase && myTurn && isInGame && !isBusted && !isHolding && !isHouse && !hasBumpedThisRound && !tableData.skillUsedThisTurn;
+    console.log(`Tavern | canBump=${canBump} (betting=${isBettingPhase}, cut=${isCutPhase}, myTurn=${myTurn}, inGame=${isInGame}, busted=${isBusted}, holding=${isHolding}, isHouse=${isHouse}, bumped=${hasBumpedThisRound}, skillUsed=${tableData.skillUsedThisTurn})`);
 
     // Valid bump targets: other players with dice, not self, not busted, not house (holders ARE valid targets!)
     // V3.5: GM-as-NPC IS a valid target
