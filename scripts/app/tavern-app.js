@@ -824,8 +824,14 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const players = Object.values(state.players ?? {});
 
     // Build list of valid targets
+    // V3.5: GM-as-NPC IS a valid target
+    const isPlayerHouse = (pid) => {
+      const u = game.users.get(pid);
+      if (!u?.isGM) return false;
+      return !state.players?.[pid]?.playingAsNpc;
+    };
     const validTargets = players
-      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !game.users.get(p.id)?.isGM && !tableData.folded?.[p.id])
+      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !isPlayerHouse(p.id) && !tableData.folded?.[p.id])
       .map(p => {
         const user = game.users.get(p.id);
         const actor = user?.character;
@@ -1143,9 +1149,15 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const ante = game.settings.get(MODULE_ID, "fixedAnte");
     const scannedBy = tableData.scannedBy ?? {};
 
-    // Build list of valid targets (not self, not busted, not GM, not already scanned by this user)
+    // Build list of valid targets (not self, not busted, not house, not already scanned by this user)
+    // V3.5: GM-as-NPC IS a valid target
+    const isPlayerHouse = (pid) => {
+      const u = game.users.get(pid);
+      if (!u?.isGM) return false;
+      return !state.players?.[pid]?.playingAsNpc;
+    };
     const validTargets = players
-      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !game.users.get(p.id)?.isGM)
+      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !isPlayerHouse(p.id))
       .filter(p => !scannedBy[p.id]?.includes(userId))
       .map(p => {
         const user = game.users.get(p.id);
@@ -1269,10 +1281,16 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const userId = game.user.id;
     const players = Object.values(state.players ?? {});
 
-    // V2.0: Valid goad targets - not self, not busted, not GM
+    // V2.0: Valid goad targets - not self, not busted, not house
     // HOLDERS ARE VALID TARGETS - that's the whole point!
+    // V3.5: GM-as-NPC IS a valid target
+    const isPlayerHouse = (pid) => {
+      const u = game.users.get(pid);
+      if (!u?.isGM) return false;
+      return !state.players?.[pid]?.playingAsNpc;
+    };
     const validTargets = players
-      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !game.users.get(p.id)?.isGM)
+      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !isPlayerHouse(p.id))
       .map(p => {
         const user = game.users.get(p.id);
         const actor = user?.character;
@@ -1369,9 +1387,15 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const userId = game.user.id;
     const players = Object.values(state.players ?? {});
 
-    // Build list of valid targets (not self, not busted, not GM, has dice)
+    // Build list of valid targets (not self, not busted, not house, has dice)
+    // V3.5: GM-as-NPC IS a valid target
+    const isPlayerHouse = (pid) => {
+      const u = game.users.get(pid);
+      if (!u?.isGM) return false;
+      return !state.players?.[pid]?.playingAsNpc;
+    };
     const validTargets = players
-      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !game.users.get(p.id)?.isGM)
+      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !isPlayerHouse(p.id))
       .filter(p => (tableData.rolls?.[p.id]?.length ?? 0) > 0)
       .map(p => {
         const user = game.users.get(p.id);
