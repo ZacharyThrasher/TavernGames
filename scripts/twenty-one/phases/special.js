@@ -272,8 +272,11 @@ export async function accuse(payload, userId) {
     return state;
   }
 
+  // V3.5: House cannot accuse, but GM-as-NPC can
   const user = game.users.get(userId);
-  if (user?.isGM) {
+  const playerData = state.players?.[userId];
+  const isHouse = user?.isGM && !playerData?.playingAsNpc;
+  if (isHouse) {
     ui.notifications.warn("The house observes but does not accuse.");
     return state;
   }
