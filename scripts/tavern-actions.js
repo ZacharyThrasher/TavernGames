@@ -1,5 +1,5 @@
 import { MODULE_ID, getState, updateState } from "./state.js";
-import { startRound, submitRoll, hold, revealDice, finishRound, returnToLobby, cheat, accuse, skipInspection, goad, resistGoad, bumpTable, bumpRetaliation, hunch, profile, useCut, fold, submitDuelRoll } from "./twenty-one.js";
+import { startRound, submitRoll, hold, revealDice, finishRound, returnToLobby, cheat, accuse, skipInspection, goad, resistGoad, bumpTable, bumpRetaliation, hunch, profile, useCut, fold, submitDuelRoll, finishTurn } from "./twenty-one/index.js";
 import { playSound } from "./sounds.js";
 
 function ensureGM() {
@@ -83,7 +83,8 @@ export async function handlePlayerAction(action, payload, userId) {
       return profile(payload, userId);
     // Skills
     case "cheat":
-      return cheat(payload, userId);
+      await cheat(payload, userId);
+      return finishTurn(userId);
     case "accuse":
       return accuse(payload, userId);
     case "goad":
