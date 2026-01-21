@@ -259,7 +259,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
     // V3: Goad context - can goad during betting phase if it's your turn, not busted, and haven't used it this round
     const hasGoadedThisRound = tableData.goadedThisRound?.[userId] ?? false;
-    const canGoad = isBettingPhase && myTurn && isInGame && !isBusted && !isFolded && !isGM && !hasGoadedThisRound;
+    const canGoad = isBettingPhase && myTurn && isInGame && !isBusted && !isFolded && !isGM && !hasGoadedThisRound && !tableData.skillUsedThisTurn;
 
     // V3: Valid goad targets: other players not busted, not GM, not Sloppy, not Folded
     const goadTargets = canGoad ? players
@@ -274,10 +274,10 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       }) : [];
 
     // V3: Hunch context - can use during betting phase if it's your turn and not locked
-    const canHunch = isBettingPhase && myTurn && isInGame && !isBusted && !isFolded && !isHolding && !isGM && !hunchLocked;
+    const canHunch = isBettingPhase && myTurn && isInGame && !isBusted && !isFolded && !isHolding && !isGM && !hunchLocked && !tableData.skillUsedThisTurn;
 
     // V3: Profile context - can use during betting phase if it's your turn
-    const profileTargets = (isBettingPhase && myTurn && !isBusted && !isFolded && !isGM) ? players
+    const profileTargets = (isBettingPhase && myTurn && !isBusted && !isFolded && !isGM && !tableData.skillUsedThisTurn) ? players
       .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !game.users.get(p.id)?.isGM && !tableData.folded?.[p.id])
       .map(p => {
         const user = game.users.get(p.id);
@@ -289,7 +289,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
     // Bump table context - can bump during betting phase if not busted/held, and haven't used it this round
     const hasBumpedThisRound = tableData.bumpedThisRound?.[userId] ?? false;
-    const canBump = isBettingPhase && myTurn && isInGame && !isBusted && !isHolding && !isGM && !hasBumpedThisRound;
+    const canBump = isBettingPhase && myTurn && isInGame && !isBusted && !isHolding && !isGM && !hasBumpedThisRound && !tableData.skillUsedThisTurn;
 
     // Valid bump targets: other players with dice, not self, not busted, not GM (holders ARE valid targets!)
     const bumpTargets = canBump ? players
@@ -702,11 +702,11 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       return ui.notifications.warn("No valid targets to profile.");
     }
 
-    // If only one target, profile them directly
-    if (validTargets.length === 1) {
-      await tavernSocket.executeAsGM("playerAction", "profile", { targetId: validTargets[0].id }, game.user.id);
-      return;
+    if (validTargets.length === 0) {
+      return ui.notifications.warn("No valid targets to profile.");
     }
+
+    // Auto-select removed - always prompt for target (as requested)
 
     // Get skill modifiers
     const actor = game.user.character;
