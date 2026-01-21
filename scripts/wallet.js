@@ -32,15 +32,12 @@ export function canAffordAnte(state, ante) {
       return { ok: false, name: user?.name ?? "Unknown", reason: "no character" };
     }
 
-    // V3.5: Check gold for all actors (PCs and NPCs use system.currency.gp)
-    // NPCs need their gold set in the actor sheet's currency section
+    // V3.5: Skip gold check for NPCs - D&D 5e stores NPC gold as loot items, 
+    // not in system.currency.gp. GM is playing as NPC, trust they can afford it.
+    if (actor.type === "npc") continue;
+
     const gp = actor.system?.currency?.gp ?? 0;
-    console.log(`Tavern | canAffordAnte check: actor=${actor.name}, type=${actor.type}, gp=${gp}, ante=${ante}`);
     if (gp < ante) {
-      // For NPCs, give a more helpful message
-      if (actor.type === "npc") {
-        return { ok: false, name: actor.name, reason: `has ${gp}gp - set gold in the NPC's Currency section` };
-      }
       return { ok: false, name: actor.name, reason: "insufficient gold" };
     }
   }
