@@ -367,8 +367,29 @@ export async function finishRound() {
     const payouts = { [winners[0]]: finalPot };
     await payOutWinners(payouts);
     await playSound("win");
+
+    // V3.5: Victory Banner & Fanfare
+    const winnerName = game.users.get(winners[0])?.name ?? "Unknown";
+    tavernSocket.executeForEveryone("showWinnerBanner", winnerName);
+
+    await createChatCard({
+      title: "🎉 WINNER! 🎉",
+      subtitle: `${winnerName} takes the pot!`,
+      message: `${winnerName} wins ${finalPot}gp!`,
+      icon: "fa-solid fa-trophy",
+    });
   } else if (winners.length === 0) {
     await playSound("lose");
+
+    // V3.5: House Win Banner
+    tavernSocket.executeForEveryone("showWinnerBanner", "The House");
+
+    await createChatCard({
+      title: "House Wins",
+      subtitle: "The House Always Wins",
+      message: `The pot of ${finalPot}gp goes to the house.`,
+      icon: "fa-solid fa-dungeon",
+    });
   }
 
   return updateState({

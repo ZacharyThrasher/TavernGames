@@ -51,6 +51,10 @@ export async function deductFromActor(userId, amount) {
     const actor = getActorForUser(userId);
     if (!actor) return true; // No actor = free pass
 
+    // V3.5: Skip deduction for NPCs - trust the GM to manage their gold
+    // This allows the game to proceed even if the NPC sheet has 0gp
+    if (actor.type === "npc") return true;
+
     const currentGP = actor.system?.currency?.gp ?? 0;
     if (currentGP < amount) return false;
 

@@ -155,8 +155,17 @@ export async function submitRoll(payload, userId) {
   let specialMsg = "";
   if (die === 20 && naturalRoll === 20) {
     specialMsg = " **NATURAL 20 = INSTANT 21!**";
+    // V3.5: Golden pulse for Nat 20/21
+    // We can use the same socket event with a "pulse" type if we add it,
+    // or just let the chat card handle the excitement.
+    // For now, let's shake the screen with joy!
+    tavernSocket.executeForEveryone("triggerShake", "medium");
   } else if (naturalRoll === 1) {
     specialMsg = " *Spilled drink! 1gp cleaning fee.*";
+    tavernSocket.executeForEveryone("triggerShake", "medium");
+  } else if (newValue > 21) {
+    // V3.5: Shake on bust
+    tavernSocket.executeForEveryone("triggerShake", "medium");
   }
 
   // V3.4: Only post bust message if opening phase (no cheat opportunity)

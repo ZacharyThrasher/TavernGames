@@ -257,68 +257,121 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     // V3.5: GM-as-NPC CAN accuse like regular players
     const canAccuse = isInGame && !accusedThisRound && !isBusted && accuseTargets.length > 0 && !isHouse;
 
-    // V2.0: Scan context - can scan during staredown if you're in the game and not busted
-    // V3.5: GM-as-NPC CAN scan like regular players
-    // Cost: 1x ante per target, cannot scan same target twice
-    const scannedBy = tableData.scannedBy ?? {};
-    const canScan = isInspection && state.players?.[userId] && !isBusted && !isHouse;
-    const scanCost = ante;
+    // V3.5: Apply spotlight effect if in Reveal Phase or Duel
+    if (state.status === "REVEAL" || state.status === "DUEL") {
+      players.forEach(p => {
+        p.isSpotlight = !p.folded && !p.busted;
+        p.isDimmed = p.folded || p.busted;
+      });
+    }
 
-    // Build scan targets - players you haven't already scanned
-    // V3.5: GM-as-NPC IS a valid target (uses isPlayerHouse from above)
-    const scanTargets = canScan ? players
-      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !isPlayerHouse(p.id))
-      .filter(p => !scannedBy[p.id]?.includes(userId)) // Not already scanned by this player
-      .map(p => {
-        const user = game.users.get(p.id);
-        const actor = user?.character;
-        const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
-        return { id: p.id, name: p.name, img };
-      }) : [];
+    return {
+      actor,
+      isGM,
+      isInGame,
+      isHouse,
+      ante,
+      pot: state.pot,
+      ...state,
+      players,
+      accuseTargets, // Filtered list is correct now
+      tableData,
+      canAccuse,
+      isBettingPhase: state.status === "BETTING",
+      isRevealPhase: state.status === "REVEAL",
+      isCutPhase: state.status === "CUT",
+      isPayoutPhase: state.status === "PAYOUT",
+      liquidMode: game.settings.get(MODULE_ID, "liquidMode"),
+    };
+  }
 
-    // V3: Goad context - can goad during betting phase if it's your turn, not busted, and haven't used it this round
-    // V3.4: Block during cut phase
-    // V3.5: GM-as-NPC CAN use skills
-    const hasGoadedThisRound = tableData.goadedThisRound?.[userId] ?? false;
-    const canGoad = isBettingPhase && !isCutPhase && myTurn && isInGame && !isBusted && !isFolded && !isHouse && !hasGoadedThisRound && !tableData.skillUsedThisTurn;
+  /* -------------------------------------------- */
+  /*  V3.5: Juice & Drama Helpers                 */
+  /* -------------------------------------------- */
 
-    // V3: Valid goad targets: other players not busted, not house, not Sloppy, not Folded
-    // V3.5: GM-as-NPC IS a valid target
-    const goadTargets = canGoad ? players
-      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !isPlayerHouse(p.id))
-      .filter(p => !tableData.sloppy?.[p.id] && !tableData.folded?.[p.id]) // V3: Can't goad Sloppy or Folded
-      .map(p => {
-        const user = game.users.get(p.id);
-        const actor = user?.character;
-        const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
-        const isTargetHolding = tableData.holds?.[p.id] ?? false;
-        return { id: p.id, name: p.name, img, isHolding: isTargetHolding };
-      }) : [];
+  /**
+   * Trigger screen shake effect
+   * @param {string} type - "medium" (default) or "heavy"
+   */
+  static triggerShake(type = "medium") {
+    const app = document.querySelector(".tavern-dice-master");
+    if (app) {
+      app.classList.remove("shake");
+      void app.offsetWidth; // Trigger reflow
+      app.classList.add("shake");
+    }
+  }
 
-    // V3: Hunch context - can use during betting phase if it's your turn and not locked
-    // V3.4: Block during cut phase
-    // V3.5: GM-as-NPC CAN use skills
-    const canHunch = isBettingPhase && !isCutPhase && myTurn && isInGame && !isBusted && !isFolded && !isHolding && !isHouse && !hunchLocked && !tableData.skillUsedThisTurn;
+  /**
+   * Show winner banner
+   * @param {string} name - Winner name
+   */
+  static showWinnerBanner(name) {
+    const banner = $(`<div class="winner-banner">WINNER: ${name}</div>`);
+    $("body").append(banner);
+    setTimeout(() => banner.remove(), 4000);
+  }
+  // V3.5: GM-as-NPC CAN scan like regular players
+  // Cost: 1x ante per target, cannot scan same target twice
+  const scannedBy = tableData.scannedBy ?? {};
+  const canScan = isInspection && state.players?.[userId] && !isBusted && !isHouse;
+  const scanCost = ante;
 
-    // V3: Profile context - can use during betting phase if it's your turn
-    // V3.4: Block during cut phase
-    // V3.5: GM-as-NPC IS a valid target
-    const profileTargets = (isBettingPhase && !isCutPhase && myTurn && !isBusted && !isFolded && !isHouse && !tableData.skillUsedThisTurn) ? players
-      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !isPlayerHouse(p.id) && !tableData.folded?.[p.id])
-      .map(p => {
-        const user = game.users.get(p.id);
-        const actor = user?.character;
-        const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
-        return { id: p.id, name: p.name, img };
-      }) : [];
-    const canProfile = profileTargets.length > 0;
+  // Build scan targets - players you haven't already scanned
+  // V3.5: GM-as-NPC IS a valid target (uses isPlayerHouse from above)
+  const scanTargets = canScan ? players
+    .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !isPlayerHouse(p.id))
+    .filter(p => !scannedBy[p.id]?.includes(userId)) // Not already scanned by this player
+    .map(p => {
+      const user = game.users.get(p.id);
+      const actor = user?.character;
+      const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
+      return { id: p.id, name: p.name, img };
+    }) : [];
 
-    // Bump table context - can bump during betting phase if not busted/held, and haven't used it this round
-    // V3.4: Block during cut phase
-    // V3.5: GM-as-NPC CAN use skills
-    const hasBumpedThisRound = tableData.bumpedThisRound?.[userId] ?? false;
-    const canBump = isBettingPhase && !isCutPhase && myTurn && isInGame && !isBusted && !isHolding && !isHouse && !hasBumpedThisRound && !tableData.skillUsedThisTurn;
-    console.log(`Tavern | canBump=${canBump} (betting=${isBettingPhase}, cut=${isCutPhase}, myTurn=${myTurn}, inGame=${isInGame}, busted=${isBusted}, holding=${isHolding}, isHouse=${isHouse}, bumped=${hasBumpedThisRound}, skillUsed=${tableData.skillUsedThisTurn})`);
+  // V3: Goad context - can goad during betting phase if it's your turn, not busted, and haven't used it this round
+  // V3.4: Block during cut phase
+  // V3.5: GM-as-NPC CAN use skills
+  const hasGoadedThisRound = tableData.goadedThisRound?.[userId] ?? false;
+  const canGoad = isBettingPhase && !isCutPhase && myTurn && isInGame && !isBusted && !isFolded && !isHouse && !hasGoadedThisRound && !tableData.skillUsedThisTurn;
+
+  // V3: Valid goad targets: other players not busted, not house, not Sloppy, not Folded
+  // V3.5: GM-as-NPC IS a valid target
+  const goadTargets = canGoad ? players
+    .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !isPlayerHouse(p.id))
+    .filter(p => !tableData.sloppy?.[p.id] && !tableData.folded?.[p.id]) // V3: Can't goad Sloppy or Folded
+    .map(p => {
+      const user = game.users.get(p.id);
+      const actor = user?.character;
+      const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
+      const isTargetHolding = tableData.holds?.[p.id] ?? false;
+      return { id: p.id, name: p.name, img, isHolding: isTargetHolding };
+    }) : [];
+
+  // V3: Hunch context - can use during betting phase if it's your turn and not locked
+  // V3.4: Block during cut phase
+  // V3.5: GM-as-NPC CAN use skills
+  const canHunch = isBettingPhase && !isCutPhase && myTurn && isInGame && !isBusted && !isFolded && !isHolding && !isHouse && !hunchLocked && !tableData.skillUsedThisTurn;
+
+  // V3: Profile context - can use during betting phase if it's your turn
+  // V3.4: Block during cut phase
+  // V3.5: GM-as-NPC IS a valid target
+  const profileTargets = (isBettingPhase && !isCutPhase && myTurn && !isBusted && !isFolded && !isHouse && !tableData.skillUsedThisTurn) ? players
+    .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !isPlayerHouse(p.id) && !tableData.folded?.[p.id])
+    .map(p => {
+      const user = game.users.get(p.id);
+      const actor = user?.character;
+      const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
+      return { id: p.id, name: p.name, img };
+    }) : [];
+  const canProfile = profileTargets.length > 0;
+
+  // Bump table context - can bump during betting phase if not busted/held, and haven't used it this round
+  // V3.4: Block during cut phase
+  // V3.5: GM-as-NPC CAN use skills
+  const hasBumpedThisRound = tableData.bumpedThisRound?.[userId] ?? false;
+  const canBump = isBettingPhase && !isCutPhase && myTurn && isInGame && !isBusted && !isHolding && !isHouse && !hasBumpedThisRound && !tableData.skillUsedThisTurn;
+    console.log(`Tavern | canBump=${canBump} (betting = ${ isBettingPhase }, cut = ${ isCutPhase }, myTurn = ${ myTurn }, inGame = ${ isInGame }, busted = ${ isBusted }, holding = ${ isHolding }, isHouse = ${ isHouse }, bumped = ${ hasBumpedThisRound }, skillUsed = ${ tableData.skillUsedThisTurn })`);
 
     // Valid bump targets: other players with dice, not self, not busted, not house (holders ARE valid targets!)
     // V3.5: GM-as-NPC IS a valid target
@@ -328,7 +381,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         const isNotBusted = !tableData.busts?.[p.id];
         const isNotHouse = !isPlayerHouse(p.id);
         const hasRolls = (tableData.rolls?.[p.id]?.length ?? 0) > 0;
-        console.log(`Tavern | Bump filter for ${p.name}(${p.id}): notSelf=${isNotSelf}, notBusted=${isNotBusted}, notHouse=${isNotHouse}, hasRolls=${hasRolls}`);
+        console.log(`Tavern | Bump filter for ${ p.name }(${ p.id }): notSelf = ${ isNotSelf }, notBusted = ${ isNotBusted }, notHouse = ${ isNotHouse }, hasRolls = ${ hasRolls } `);
         return isNotSelf && isNotBusted && isNotHouse && hasRolls;
       })
       .map(p => {
@@ -458,7 +511,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
   _formatCostLabel(cost, ante, isBettingPhase) {
     if (!isBettingPhase) return ""; // No cost shown during opening
     if (cost === 0) return "FREE";
-    return `${cost}gp`;
+    return `${ cost } gp`;
   }
 
   _formatTimeAgo(timestamp) {
@@ -466,9 +519,9 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const seconds = Math.floor((Date.now() - timestamp) / 1000);
     if (seconds < 60) return "just now";
     const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return `${minutes}m ago`;
+    if (minutes < 60) return `${ minutes }m ago`;
     const hours = Math.floor(minutes / 60);
-    return `${hours}h ago`;
+    return `${ hours }h ago`;
   }
 
   _getHistoryIcon(type) {
@@ -521,7 +574,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         const newAnte = parseInt(e.target.value);
         if (newAnte >= 1 && newAnte <= 1000) {
           await game.settings.set(MODULE_ID, "fixedAnte", newAnte);
-          ui.notifications.info(`Ante set to ${newAnte}gp`);
+          ui.notifications.info(`Ante set to ${ newAnte } gp`);
         } else {
           e.target.value = game.settings.get(MODULE_ID, "fixedAnte");
           ui.notifications.warn("Ante must be between 1 and 1000 gp");
@@ -574,14 +627,14 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         const dialog = new Dialog({
           title: "Join the Game",
           content: `
-            <div class="tavern-gm-join-dialog">
+  < div class="tavern-gm-join-dialog" >
               <p>How would you like to join?</p>
               <div class="selected-npc">
                 <img src="${selectedActor.img || 'icons/svg/mystery-man.svg'}" alt="${selectedActor.name}" style="width: 64px; height: 64px; border-radius: 8px;">
                 <strong>${selectedActor.name}</strong>
               </div>
-            </div>
-          `,
+            </div >
+  `,
           buttons: {
             house: {
               icon: '<i class="fa-solid fa-building-columns"></i>',
@@ -590,7 +643,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
             },
             npc: {
               icon: '<i class="fa-solid fa-user-secret"></i>',
-              label: `Play as ${selectedActor.name}`,
+              label: `Play as ${ selectedActor.name } `,
               callback: () => resolve({
                 playAsNpc: true,
                 actorId: selectedActor.id,
@@ -614,11 +667,11 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       const dialog = new Dialog({
         title: "Join the Game",
         content: `
-          <div class="tavern-gm-join-dialog">
+  < div class="tavern-gm-join-dialog" >
             <p>How would you like to join?</p>
             <p class="hint"><em>Tip: Select an NPC token on the canvas first to play as that character.</em></p>
-          </div>
-        `,
+          </div >
+  `,
         buttons: {
           house: {
             icon: '<i class="fa-solid fa-building-columns"></i>',
@@ -679,40 +732,40 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       if (cost > 0 && gp < cost) {
         const confirm = await Dialog.confirm({
           title: "Insufficient Gold",
-          content: `<p>You don't have enough gold (${cost}gp).</p><p><strong>Put it on the Tab?</strong></p>`
+          content: `< p > You don't have enough gold (${cost}gp).</p><p><strong>Put it on the Tab?</strong></p>`
         });
-        if (!confirm) return;
-        payWithDrink = true;
+if (!confirm) return;
+payWithDrink = true;
       }
     }
 
-    const updatedState = await tavernSocket.executeAsGM("playerAction", "roll", { die, payWithDrink }, game.user.id);
+const updatedState = await tavernSocket.executeAsGM("playerAction", "roll", { die, payWithDrink }, game.user.id);
 
-    // V3: Auto-pop cheat UI after roll (DEX/Sleight of Hand only)
-    // Wait for dice animation to complete
-    await new Promise(resolve => setTimeout(resolve, 1500));
+// V3: Auto-pop cheat UI after roll (DEX/Sleight of Hand only)
+// Wait for dice animation to complete
+await new Promise(resolve => setTimeout(resolve, 1500));
 
-    // Removed redundant getState call - use returned state from socket
-    const myRolls = updatedState.tableData?.rolls?.[game.user.id] ?? [];
-    const lastDieIndex = myRolls.length - 1;
+// Removed redundant getState call - use returned state from socket
+const myRolls = updatedState.tableData?.rolls?.[game.user.id] ?? [];
+const lastDieIndex = myRolls.length - 1;
 
-    // Check for cheat opportunity (Players and GM-as-NPC can cheat)
-    // V3: Allow cheating even if busted (to unbust!)
-    // V3.5: GM-as-NPC CAN cheat
-    const cheatPlayerData = updatedState.players?.[game.user.id];
-    const cheatIsHouse = game.user.isGM && !cheatPlayerData?.playingAsNpc;
-    const canCheat = lastDieIndex >= 0 && !cheatIsHouse;
+// Check for cheat opportunity (Players and GM-as-NPC can cheat)
+// V3: Allow cheating even if busted (to unbust!)
+// V3.5: GM-as-NPC CAN cheat
+const cheatPlayerData = updatedState.players?.[game.user.id];
+const cheatIsHouse = game.user.isGM && !cheatPlayerData?.playingAsNpc;
+const canCheat = lastDieIndex >= 0 && !cheatIsHouse;
 
-    if (canCheat) {
-      const lastDie = myRolls[lastDieIndex];
-      const actor = game.user.character;
-      const sltMod = actor?.system?.skills?.slt?.total ?? 0;
-      const heatDC = updatedState.tableData?.heatDC ?? 10;
+if (canCheat) {
+  const lastDie = myRolls[lastDieIndex];
+  const actor = game.user.character;
+  const sltMod = actor?.system?.skills?.slt?.total ?? 0;
+  const heatDC = updatedState.tableData?.heatDC ?? 10;
 
-      // Quick cheat dialog for the new die
-      const result = await Dialog.wait({
-        title: "Quick Cheat?",
-        content: `
+  // Quick cheat dialog for the new die
+  const result = await Dialog.wait({
+    title: "Quick Cheat?",
+    content: `
           <div style="text-align: center; padding: 12px;">
             <p>Your d${lastDie.die} landed on <strong>${lastDie.result}</strong></p>
             <p style="font-size: 0.9em; color: #888;">Sleight of Hand: +${sltMod} | Heat DC: ${heatDC}</p>
@@ -753,123 +806,123 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
             });
           </script>
         `,
-        buttons: {
-          cheat: {
-            label: "Cheat",
-            icon: '<i class="fa-solid fa-hand-sparkles"></i>',
-            callback: (html) => {
-              const adj = parseInt(html.find('[name="adj"]:checked').val());
-              return isNaN(adj) ? null : adj;
-            }
-          },
-          skip: {
-            label: "Play Honest",
-            icon: '<i class="fa-solid fa-thumbs-up"></i>',
-            callback: () => null
-          }
-        },
-        default: "skip"
-      });
+    buttons: {
+      cheat: {
+        label: "Cheat",
+        icon: '<i class="fa-solid fa-hand-sparkles"></i>',
+        callback: (html) => {
+          const adj = parseInt(html.find('[name="adj"]:checked').val());
+          return isNaN(adj) ? null : adj;
+        }
+      },
+      skip: {
+        label: "Play Honest",
+        icon: '<i class="fa-solid fa-thumbs-up"></i>',
+        callback: () => null
+      }
+    },
+    default: "skip"
+  });
 
-      if (result) {
-        // Submit the cheat with DEX/Sleight of Hand
-        // Note: cheat action returns chained finishTurn
-        await tavernSocket.executeAsGM("playerAction", "cheat", {
-          dieIndex: lastDieIndex,
-          adjustment: result,
-          cheatType: "physical",
-          skill: "slt"
-        }, game.user.id);
-      } else if (updatedState.tableData?.phase === "betting") {
-        // Did not cheat - finish turn (resume from cheat_decision pause)
-        await tavernSocket.executeAsGM("playerAction", "finishTurn", {}, game.user.id);
-      }
-    } else {
-      // GM or Bust - automatically finish turn
-      if (updatedState.tableData?.phase === "betting") {
-        await tavernSocket.executeAsGM("playerAction", "finishTurn", {}, game.user.id);
-      }
-    }
+  if (result) {
+    // Submit the cheat with DEX/Sleight of Hand
+    // Note: cheat action returns chained finishTurn
+    await tavernSocket.executeAsGM("playerAction", "cheat", {
+      dieIndex: lastDieIndex,
+      adjustment: result,
+      cheatType: "physical",
+      skill: "slt"
+    }, game.user.id);
+  } else if (updatedState.tableData?.phase === "betting") {
+    // Did not cheat - finish turn (resume from cheat_decision pause)
+    await tavernSocket.executeAsGM("playerAction", "finishTurn", {}, game.user.id);
+  }
+} else {
+  // GM or Bust - automatically finish turn
+  if (updatedState.tableData?.phase === "betting") {
+    await tavernSocket.executeAsGM("playerAction", "finishTurn", {}, game.user.id);
+  }
+}
   }
 
   static async onToggleLiquidMode(event, target) {
-    const current = game.settings.get(MODULE_ID, "liquidMode");
-    await game.settings.set(MODULE_ID, "liquidMode", !current);
-    if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
-  }
+  const current = game.settings.get(MODULE_ID, "liquidMode");
+  await game.settings.set(MODULE_ID, "liquidMode", !current);
+  if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
+}
 
   static async onHold() {
-    await tavernSocket.executeAsGM("playerAction", "hold", {}, game.user.id);
-  }
+  await tavernSocket.executeAsGM("playerAction", "hold", {}, game.user.id);
+}
 
   // V3: Fold action
   static async onFold() {
-    await tavernSocket.executeAsGM("playerAction", "fold", {}, game.user.id);
-  }
+  await tavernSocket.executeAsGM("playerAction", "fold", {}, game.user.id);
+}
 
   // V3: Use The Cut action
   static async onUseCut(event, target) {
-    const reroll = target?.dataset?.reroll === "true";
-    await tavernSocket.executeAsGM("playerAction", "useCut", { reroll }, game.user.id);
-  }
+  const reroll = target?.dataset?.reroll === "true";
+  await tavernSocket.executeAsGM("playerAction", "useCut", { reroll }, game.user.id);
+}
 
   // V3: Resist a goad by paying
   static async onResistGoad() {
-    await tavernSocket.executeAsGM("playerAction", "resistGoad", {}, game.user.id);
-  }
+  await tavernSocket.executeAsGM("playerAction", "resistGoad", {}, game.user.id);
+}
 
   // V3: Hunch skill - get intuition about next roll
   static async onHunch() {
-    await tavernSocket.executeAsGM("playerAction", "hunch", {}, game.user.id);
-  }
+  await tavernSocket.executeAsGM("playerAction", "hunch", {}, game.user.id);
+}
 
   // V3: Profile skill - read an opponent
   static async onProfile(event, target) {
-    const state = getState();
-    const tableData = state.tableData ?? {};
-    const userId = game.user.id;
-    const players = Object.values(state.players ?? {});
+  const state = getState();
+  const tableData = state.tableData ?? {};
+  const userId = game.user.id;
+  const players = Object.values(state.players ?? {});
 
-    // Build list of valid targets
-    // V3.5: GM-as-NPC IS a valid target
-    const isPlayerHouse = (pid) => {
-      const u = game.users.get(pid);
-      if (!u?.isGM) return false;
-      return !state.players?.[pid]?.playingAsNpc;
-    };
-    const validTargets = players
-      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !isPlayerHouse(p.id) && !tableData.folded?.[p.id])
-      .map(p => {
-        const user = game.users.get(p.id);
-        const actor = user?.character;
-        const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
-        return { id: p.id, name: p.name, img };
-      });
+  // Build list of valid targets
+  // V3.5: GM-as-NPC IS a valid target
+  const isPlayerHouse = (pid) => {
+    const u = game.users.get(pid);
+    if (!u?.isGM) return false;
+    return !state.players?.[pid]?.playingAsNpc;
+  };
+  const validTargets = players
+    .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !isPlayerHouse(p.id) && !tableData.folded?.[p.id])
+    .map(p => {
+      const user = game.users.get(p.id);
+      const actor = user?.character;
+      const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
+      return { id: p.id, name: p.name, img };
+    });
 
-    if (validTargets.length === 0) {
-      return ui.notifications.warn("No valid targets to profile.");
-    }
+  if (validTargets.length === 0) {
+    return ui.notifications.warn("No valid targets to profile.");
+  }
 
-    if (validTargets.length === 0) {
-      return ui.notifications.warn("No valid targets to profile.");
-    }
+  if (validTargets.length === 0) {
+    return ui.notifications.warn("No valid targets to profile.");
+  }
 
-    // Auto-select removed - always prompt for target (as requested)
+  // Auto-select removed - always prompt for target (as requested)
 
-    // Get skill modifiers
-    const actor = game.user.character;
-    const invMod = actor?.system?.skills?.inv?.total ?? 0;
-    const hasActor = !!actor;
+  // Get skill modifiers
+  const actor = game.user.character;
+  const invMod = actor?.system?.skills?.inv?.total ?? 0;
+  const hasActor = !!actor;
 
-    // Build target selection with portraits
-    const targetOptions = validTargets.map(t =>
-      `<div class="profile-portrait" data-target-id="${t.id}" data-target-name="${t.name}" tabindex="0" style="display: inline-block; text-align: center; padding: 8px; margin: 4px; border: 2px solid transparent; border-radius: 8px; cursor: pointer;">
+  // Build target selection with portraits
+  const targetOptions = validTargets.map(t =>
+    `<div class="profile-portrait" data-target-id="${t.id}" data-target-name="${t.name}" tabindex="0" style="display: inline-block; text-align: center; padding: 8px; margin: 4px; border: 2px solid transparent; border-radius: 8px; cursor: pointer;">
         <img src="${t.img}" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;" />
         <div style="font-size: 0.85em; margin-top: 4px;">${t.name}</div>
       </div>`
-    ).join("");
+  ).join("");
 
-    const content = `
+  const content = `
       <form>
         <p style="font-weight: bold; margin-bottom: 8px;">Who do you want to read?</p>
         <div class="profile-targets" style="display: flex; flex-wrap: wrap; justify-content: center; margin-bottom: 12px;">
@@ -887,71 +940,71 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       </style>
     `;
 
-    let selectedTargetId = null;
+  let selectedTargetId = null;
 
-    const result = await Dialog.prompt({
-      title: "Profile",
-      content,
-      label: "Profile",
-      render: (html) => {
-        const portraits = html.find('.profile-portrait');
-        portraits.on('click', function () {
-          portraits.removeClass('selected');
-          $(this).addClass('selected');
-          selectedTargetId = $(this).data('target-id');
-        });
-        portraits.on('keydown', function (e) {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            $(this).click();
-          }
-        });
-      },
-      callback: (html) => {
-        if (!selectedTargetId) return null;
-        return { targetId: selectedTargetId };
-      },
-      rejectClose: false,
-    });
+  const result = await Dialog.prompt({
+    title: "Profile",
+    content,
+    label: "Profile",
+    render: (html) => {
+      const portraits = html.find('.profile-portrait');
+      portraits.on('click', function () {
+        portraits.removeClass('selected');
+        $(this).addClass('selected');
+        selectedTargetId = $(this).data('target-id');
+      });
+      portraits.on('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          $(this).click();
+        }
+      });
+    },
+    callback: (html) => {
+      if (!selectedTargetId) return null;
+      return { targetId: selectedTargetId };
+    },
+    rejectClose: false,
+  });
 
-    if (result) {
-      await tavernSocket.executeAsGM("playerAction", "profile", result, game.user.id);
-    }
+  if (result) {
+    await tavernSocket.executeAsGM("playerAction", "profile", result, game.user.id);
   }
+}
 
   static async onCheat(event, target) {
-    const state = getState();
-    const userId = game.user.id;
-    const myRolls = state.tableData?.rolls?.[userId] ?? [];
+  const state = getState();
+  const userId = game.user.id;
+  const myRolls = state.tableData?.rolls?.[userId] ?? [];
 
-    if (myRolls.length === 0) {
-      return ui.notifications.warn("You have no dice to cheat with!");
-    }
+  if (myRolls.length === 0) {
+    return ui.notifications.warn("You have no dice to cheat with!");
+  }
 
-    // Get skill/ability modifiers from character sheet
-    const actor = game.user.character;
-    const hasActor = !!actor;
+  // Get skill/ability modifiers from character sheet
+  const actor = game.user.character;
+  const hasActor = !!actor;
 
-    // Physical skills
-    const sltMod = actor?.system?.skills?.slt?.total ?? 0;
-    const decMod = actor?.system?.skills?.dec?.total ?? 0;
+  // Physical skills
+  const sltMod = actor?.system?.skills?.slt?.total ?? 0;
+  const decMod = actor?.system?.skills?.dec?.total ?? 0;
 
-    // Magical abilities (use modifier, not total)
-    const intMod = actor?.system?.abilities?.int?.mod ?? 0;
-    const wisMod = actor?.system?.abilities?.wis?.mod ?? 0;
-    const chaMod = actor?.system?.abilities?.cha?.mod ?? 0;
+  // Magical abilities (use modifier, not total)
+  const intMod = actor?.system?.abilities?.int?.mod ?? 0;
+  const wisMod = actor?.system?.abilities?.wis?.mod ?? 0;
+  const chaMod = actor?.system?.abilities?.cha?.mod ?? 0;
 
-    // Build a dialog for selecting which die to cheat and the adjustment
-    const diceOptions = myRolls.map((r, idx) => {
-      const visibility = r.public ? "Visible" : "Hole";
-      return `<option value="${idx}" data-max="${r.die}" data-current="${r.result}">Die ${idx + 1}: d${r.die} (${visibility}, current: ${r.result})</option>`;
-    }).join("");
+  // Build a dialog for selecting which die to cheat and the adjustment
+  const diceOptions = myRolls.map((r, idx) => {
+    const visibility = r.public ? "Visible" : "Hole";
+    return `<option value="${idx}" data-max="${r.die}" data-current="${r.result}">Die ${idx + 1}: d${r.die} (${visibility}, current: ${r.result})</option>`;
+  }).join("");
 
-    // Get initial values from first die
-    const initialMax = myRolls[0]?.die ?? 20;
-    const initialCurrent = myRolls[0]?.result ?? 1;
+  // Get initial values from first die
+  const initialMax = myRolls[0]?.die ?? 20;
+  const initialCurrent = myRolls[0]?.result ?? 1;
 
-    const content = `
+  const content = `
       <form>
         <div class="form-group">
           <label>Select Die to Modify:</label>
@@ -1069,44 +1122,44 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       </script>
     `;
 
-    const result = await Dialog.prompt({
-      title: "Cheat - V3.0",
-      content,
-      label: "Attempt Cheat",
-      callback: (html) => {
-        const dieIndex = parseInt(html.find('[name="dieIndex"]').val());
-        const adjustment = parseInt(html.find('[name="adjustment"]:checked').val());
-        const cheatType = html.find('[name="cheatType"]:checked').val();
-        const skill = cheatType === "physical"
-          ? html.find('[name="physicalSkill"]').val()
-          : html.find('[name="magicalSkill"]').val();
-        return { dieIndex, adjustment, cheatType, skill };
-      },
-      rejectClose: false,
-    });
+  const result = await Dialog.prompt({
+    title: "Cheat - V3.0",
+    content,
+    label: "Attempt Cheat",
+    callback: (html) => {
+      const dieIndex = parseInt(html.find('[name="dieIndex"]').val());
+      const adjustment = parseInt(html.find('[name="adjustment"]:checked').val());
+      const cheatType = html.find('[name="cheatType"]:checked').val();
+      const skill = cheatType === "physical"
+        ? html.find('[name="physicalSkill"]').val()
+        : html.find('[name="magicalSkill"]').val();
+      return { dieIndex, adjustment, cheatType, skill };
+    },
+    rejectClose: false,
+  });
 
-    if (result) {
-      await tavernSocket.executeAsGM("playerAction", "cheat", result, game.user.id);
-    }
+  if (result) {
+    await tavernSocket.executeAsGM("playerAction", "cheat", result, game.user.id);
   }
+}
 
   static async onAccuse(event, target) {
-    const state = getState();
-    const ante = game.settings.get(MODULE_ID, "fixedAnte");
-    const accusationCost = ante * 2;
+  const state = getState();
+  const ante = game.settings.get(MODULE_ID, "fixedAnte");
+  const accusationCost = ante * 2;
 
-    // Get selected target from portrait
-    const selectedPortrait = document.querySelector('.accuse-portrait.selected');
-    const targetId = selectedPortrait?.dataset?.targetId;
+  // Get selected target from portrait
+  const selectedPortrait = document.querySelector('.accuse-portrait.selected');
+  const targetId = selectedPortrait?.dataset?.targetId;
 
-    if (!targetId) {
-      return ui.notifications.warn("Select a player to accuse.");
-    }
+  if (!targetId) {
+    return ui.notifications.warn("Select a player to accuse.");
+  }
 
-    const targetName = selectedPortrait.dataset.targetName ?? "Unknown";
+  const targetName = selectedPortrait.dataset.targetName ?? "Unknown";
 
-    // V2.0: No skill selection - direct accusation
-    const content = `
+  // V2.0: No skill selection - direct accusation
+  const content = `
       <form>
         <p>Accuse <strong>${targetName}</strong> of cheating?</p>
         <p><strong>Cost:</strong> ${accusationCost}gp (2× ante)</p>
@@ -1116,31 +1169,31 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       </form>
     `;
 
-    const result = await new Promise(resolve => {
-      new Dialog({
-        title: "Make Accusation",
-        content,
-        buttons: {
-          accuse: {
-            label: "Accuse!",
-            icon: '<i class="fa-solid fa-hand-point-right"></i>',
-            callback: () => resolve(true)
-          },
-          cancel: {
-            label: "Cancel",
-            icon: '<i class="fa-solid fa-times"></i>',
-            callback: () => resolve(false)
-          }
+  const result = await new Promise(resolve => {
+    new Dialog({
+      title: "Make Accusation",
+      content,
+      buttons: {
+        accuse: {
+          label: "Accuse!",
+          icon: '<i class="fa-solid fa-hand-point-right"></i>',
+          callback: () => resolve(true)
         },
-        default: "accuse",
-        close: () => resolve(false)
-      }).render(true);
-    });
+        cancel: {
+          label: "Cancel",
+          icon: '<i class="fa-solid fa-times"></i>',
+          callback: () => resolve(false)
+        }
+      },
+      default: "accuse",
+      close: () => resolve(false)
+    }).render(true);
+  });
 
-    if (result) {
-      await tavernSocket.executeAsGM("playerAction", "accuse", { targetId }, game.user.id);
-    }
+  if (result) {
+    await tavernSocket.executeAsGM("playerAction", "accuse", { targetId }, game.user.id);
   }
+}
 
   /**
    * V2.0: Scan - Investigate a player for cheating during Staredown.
@@ -1149,49 +1202,49 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
    * - Success: Whisper reveals cheat type + location (Public/Hole), NOT the actual number
    */
   static async onScan(event, target) {
-    const state = getState();
-    const tableData = state.tableData ?? {};
-    const userId = game.user.id;
-    const players = Object.values(state.players ?? {});
-    const ante = game.settings.get(MODULE_ID, "fixedAnte");
-    const scannedBy = tableData.scannedBy ?? {};
+  const state = getState();
+  const tableData = state.tableData ?? {};
+  const userId = game.user.id;
+  const players = Object.values(state.players ?? {});
+  const ante = game.settings.get(MODULE_ID, "fixedAnte");
+  const scannedBy = tableData.scannedBy ?? {};
 
-    // Build list of valid targets (not self, not busted, not house, not already scanned by this user)
-    // V3.5: GM-as-NPC IS a valid target
-    const isPlayerHouse = (pid) => {
-      const u = game.users.get(pid);
-      if (!u?.isGM) return false;
-      return !state.players?.[pid]?.playingAsNpc;
-    };
-    const validTargets = players
-      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !isPlayerHouse(p.id))
-      .filter(p => !scannedBy[p.id]?.includes(userId))
-      .map(p => {
-        const user = game.users.get(p.id);
-        const actor = user?.character;
-        const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
-        return { id: p.id, name: p.name, img };
-      });
+  // Build list of valid targets (not self, not busted, not house, not already scanned by this user)
+  // V3.5: GM-as-NPC IS a valid target
+  const isPlayerHouse = (pid) => {
+    const u = game.users.get(pid);
+    if (!u?.isGM) return false;
+    return !state.players?.[pid]?.playingAsNpc;
+  };
+  const validTargets = players
+    .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !isPlayerHouse(p.id))
+    .filter(p => !scannedBy[p.id]?.includes(userId))
+    .map(p => {
+      const user = game.users.get(p.id);
+      const actor = user?.character;
+      const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
+      return { id: p.id, name: p.name, img };
+    });
 
-    if (validTargets.length === 0) {
-      return ui.notifications.warn("No valid targets to scan.");
-    }
+  if (validTargets.length === 0) {
+    return ui.notifications.warn("No valid targets to scan.");
+  }
 
-    // Get skill modifiers
-    const actor = game.user.character;
-    const insMod = actor?.system?.skills?.ins?.total ?? 0;
-    const arcMod = actor?.system?.skills?.arc?.total ?? 0;
-    const hasActor = !!actor;
+  // Get skill modifiers
+  const actor = game.user.character;
+  const insMod = actor?.system?.skills?.ins?.total ?? 0;
+  const arcMod = actor?.system?.skills?.arc?.total ?? 0;
+  const hasActor = !!actor;
 
-    // Build target selection with portraits
-    const targetOptions = validTargets.map(t =>
-      `<div class="scan-portrait" data-target-id="${t.id}" data-target-name="${t.name}" tabindex="0" style="display: inline-block; text-align: center; padding: 8px; margin: 4px; border: 2px solid transparent; border-radius: 8px; cursor: pointer;">
+  // Build target selection with portraits
+  const targetOptions = validTargets.map(t =>
+    `<div class="scan-portrait" data-target-id="${t.id}" data-target-name="${t.name}" tabindex="0" style="display: inline-block; text-align: center; padding: 8px; margin: 4px; border: 2px solid transparent; border-radius: 8px; cursor: pointer;">
         <img src="${t.img}" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;" />
         <div style="font-size: 0.85em; margin-top: 4px;">${t.name}</div>
       </div>`
-    ).join("");
+  ).join("");
 
-    const content = `
+  const content = `
       <form>
         <p style="font-weight: bold; margin-bottom: 8px;">Select a player to scan:</p>
         <p><strong>Cost:</strong> ${ante}gp (1x ante)</p>
@@ -1231,49 +1284,49 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       </style>
     `;
 
-    let selectedTargetId = null;
+  let selectedTargetId = null;
 
-    const result = await Dialog.prompt({
-      title: "Scan for Cheating",
-      content,
-      label: "Scan",
-      render: (html) => {
-        // Portrait selection
-        const portraits = html.find('.scan-portrait');
-        portraits.on('click', function () {
-          portraits.removeClass('selected');
-          $(this).addClass('selected');
-          selectedTargetId = $(this).data('target-id');
-        });
-        portraits.on('keydown', function (e) {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            $(this).click();
-          }
-        });
+  const result = await Dialog.prompt({
+    title: "Scan for Cheating",
+    content,
+    label: "Scan",
+    render: (html) => {
+      // Portrait selection
+      const portraits = html.find('.scan-portrait');
+      portraits.on('click', function () {
+        portraits.removeClass('selected');
+        $(this).addClass('selected');
+        selectedTargetId = $(this).data('target-id');
+      });
+      portraits.on('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          $(this).click();
+        }
+      });
 
-        // Scan type selection
-        const typeOptions = html.find('.scan-type-option');
-        typeOptions.on('click', function () {
-          typeOptions.removeClass('selected');
-          $(this).addClass('selected');
-          $(this).find('input[type="radio"]').prop('checked', true);
-        });
-        // Set initial selection
-        html.find('.scan-type-option[data-type="insight"]').addClass('selected');
-      },
-      callback: (html) => {
-        if (!selectedTargetId) return null;
-        const scanType = html.find('[name="scanType"]:checked').val();
-        return { targetId: selectedTargetId, scanType };
-      },
-      rejectClose: false,
-    });
+      // Scan type selection
+      const typeOptions = html.find('.scan-type-option');
+      typeOptions.on('click', function () {
+        typeOptions.removeClass('selected');
+        $(this).addClass('selected');
+        $(this).find('input[type="radio"]').prop('checked', true);
+      });
+      // Set initial selection
+      html.find('.scan-type-option[data-type="insight"]').addClass('selected');
+    },
+    callback: (html) => {
+      if (!selectedTargetId) return null;
+      const scanType = html.find('[name="scanType"]:checked').val();
+      return { targetId: selectedTargetId, scanType };
+    },
+    rejectClose: false,
+  });
 
-    if (result) {
-      await tavernSocket.executeAsGM("playerAction", "scan", result, game.user.id);
-    }
+  if (result) {
+    await tavernSocket.executeAsGM("playerAction", "scan", result, game.user.id);
   }
+}
 
   /**
    * V2.0: Goad - Force someone to ROLL (even if they held!)
@@ -1283,52 +1336,52 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
    * Backfire: Attacker must roll a die of their choice
    */
   static async onGoad(event, target) {
-    const state = getState();
-    const tableData = state.tableData ?? {};
-    const userId = game.user.id;
-    const players = Object.values(state.players ?? {});
+  const state = getState();
+  const tableData = state.tableData ?? {};
+  const userId = game.user.id;
+  const players = Object.values(state.players ?? {});
 
-    // V2.0: Valid goad targets - not self, not busted, not house
-    // HOLDERS ARE VALID TARGETS - that's the whole point!
-    // V3.5: GM-as-NPC IS a valid target
-    const isPlayerHouse = (pid) => {
-      const u = game.users.get(pid);
-      if (!u?.isGM) return false;
-      return !state.players?.[pid]?.playingAsNpc;
-    };
-    const validTargets = players
-      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !isPlayerHouse(p.id))
-      .map(p => {
-        const user = game.users.get(p.id);
-        const actor = user?.character;
-        const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
-        const isHolding = tableData.holds?.[p.id] ?? false;
-        return { id: p.id, name: p.name, img, isHolding };
-      });
+  // V2.0: Valid goad targets - not self, not busted, not house
+  // HOLDERS ARE VALID TARGETS - that's the whole point!
+  // V3.5: GM-as-NPC IS a valid target
+  const isPlayerHouse = (pid) => {
+    const u = game.users.get(pid);
+    if (!u?.isGM) return false;
+    return !state.players?.[pid]?.playingAsNpc;
+  };
+  const validTargets = players
+    .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !isPlayerHouse(p.id))
+    .map(p => {
+      const user = game.users.get(p.id);
+      const actor = user?.character;
+      const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
+      const isHolding = tableData.holds?.[p.id] ?? false;
+      return { id: p.id, name: p.name, img, isHolding };
+    });
 
-    if (validTargets.length === 0) {
-      return ui.notifications.warn("No valid targets to goad.");
-    }
+  if (validTargets.length === 0) {
+    return ui.notifications.warn("No valid targets to goad.");
+  }
 
-    // Get skill modifiers
-    const actor = game.user.character;
-    const itmMod = actor?.system?.skills?.itm?.total ?? 0;
-    const perMod = actor?.system?.skills?.per?.total ?? 0;
-    const hasActor = !!actor;
+  // Get skill modifiers
+  const actor = game.user.character;
+  const itmMod = actor?.system?.skills?.itm?.total ?? 0;
+  const perMod = actor?.system?.skills?.per?.total ?? 0;
+  const hasActor = !!actor;
 
-    // Default to whichever skill is higher
-    const defaultSkill = itmMod >= perMod ? "itm" : "per";
+  // Default to whichever skill is higher
+  const defaultSkill = itmMod >= perMod ? "itm" : "per";
 
-    // Build target selection with portraits (mark holders!)
-    const targetOptions = validTargets.map(t =>
-      `<div class="goad-portrait${t.isHolding ? ' is-holding' : ''}" data-target-id="${t.id}" data-target-name="${t.name}" tabindex="0" style="display: inline-block; text-align: center; padding: 8px; margin: 4px; border: 2px solid transparent; border-radius: 8px; cursor: pointer;">
+  // Build target selection with portraits (mark holders!)
+  const targetOptions = validTargets.map(t =>
+    `<div class="goad-portrait${t.isHolding ? ' is-holding' : ''}" data-target-id="${t.id}" data-target-name="${t.name}" tabindex="0" style="display: inline-block; text-align: center; padding: 8px; margin: 4px; border: 2px solid transparent; border-radius: 8px; cursor: pointer;">
         <img src="${t.img}" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; ${t.isHolding ? 'box-shadow: 0 0 8px #4a7c4e;' : ''}" />
         <div style="font-size: 0.85em; margin-top: 4px;">${t.name}</div>
         ${t.isHolding ? '<div style="font-size: 0.75em; color: #4a7c4e; font-weight: bold;">HOLDING</div>' : ''}
       </div>`
-    ).join("");
+  ).join("");
 
-    const content = `
+  const content = `
       <form>
         <p style="font-weight: bold; margin-bottom: 8px;">Select a target to goad into rolling:</p>
         <div class="goad-targets" style="display: flex; flex-wrap: wrap; justify-content: center; margin-bottom: 12px;">
@@ -1355,89 +1408,89 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       </style>
     `;
 
-    let selectedTargetId = null;
+  let selectedTargetId = null;
 
-    const result = await Dialog.prompt({
-      title: "Goad",
-      content,
-      label: "Goad!",
-      render: (html) => {
-        const portraits = html.find('.goad-portrait');
-        portraits.on('click', function () {
-          portraits.removeClass('selected');
-          $(this).addClass('selected');
-          selectedTargetId = $(this).data('target-id');
-        });
-        portraits.on('keydown', function (e) {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            $(this).click();
-          }
-        });
-      },
-      callback: (html) => {
-        if (!selectedTargetId) return null;
-        const attackerSkill = html.find('[name="attackerSkill"]').val();
-        return { targetId: selectedTargetId, attackerSkill };
-      },
-      rejectClose: false,
-    });
+  const result = await Dialog.prompt({
+    title: "Goad",
+    content,
+    label: "Goad!",
+    render: (html) => {
+      const portraits = html.find('.goad-portrait');
+      portraits.on('click', function () {
+        portraits.removeClass('selected');
+        $(this).addClass('selected');
+        selectedTargetId = $(this).data('target-id');
+      });
+      portraits.on('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          $(this).click();
+        }
+      });
+    },
+    callback: (html) => {
+      if (!selectedTargetId) return null;
+      const attackerSkill = html.find('[name="attackerSkill"]').val();
+      return { targetId: selectedTargetId, attackerSkill };
+    },
+    rejectClose: false,
+  });
 
-    if (result) {
-      await tavernSocket.executeAsGM("playerAction", "goad", result, game.user.id);
-    }
+  if (result) {
+    await tavernSocket.executeAsGM("playerAction", "goad", result, game.user.id);
   }
+}
 
   static async onBumpTable(event, target) {
-    const state = getState();
-    const tableData = state.tableData ?? {};
-    const userId = game.user.id;
-    const players = Object.values(state.players ?? {});
+  const state = getState();
+  const tableData = state.tableData ?? {};
+  const userId = game.user.id;
+  const players = Object.values(state.players ?? {});
 
-    // Build list of valid targets (not self, not busted, not house, has dice)
-    // V3.5: GM-as-NPC IS a valid target
-    const isPlayerHouse = (pid) => {
-      const u = game.users.get(pid);
-      if (!u?.isGM) return false;
-      return !state.players?.[pid]?.playingAsNpc;
-    };
-    const validTargets = players
-      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !isPlayerHouse(p.id))
-      .filter(p => (tableData.rolls?.[p.id]?.length ?? 0) > 0)
-      .map(p => {
-        const user = game.users.get(p.id);
-        const actor = user?.character;
-        const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
-        // V2.0: Include visibility info for each die
-        const dice = (tableData.rolls?.[p.id] ?? []).map((r, idx) => ({
-          index: idx,
-          die: r.die,
-          result: r.result,
-          isPublic: r.public ?? true,
-          isHole: idx === 1 && tableData.phase !== "betting" ? false : !r.public // 2nd opening die is hole
-        }));
-        const isHolding = tableData.holds?.[p.id] ?? false;
-        return { id: p.id, name: p.name, img, dice, isHolding };
-      });
+  // Build list of valid targets (not self, not busted, not house, has dice)
+  // V3.5: GM-as-NPC IS a valid target
+  const isPlayerHouse = (pid) => {
+    const u = game.users.get(pid);
+    if (!u?.isGM) return false;
+    return !state.players?.[pid]?.playingAsNpc;
+  };
+  const validTargets = players
+    .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !isPlayerHouse(p.id))
+    .filter(p => (tableData.rolls?.[p.id]?.length ?? 0) > 0)
+    .map(p => {
+      const user = game.users.get(p.id);
+      const actor = user?.character;
+      const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
+      // V2.0: Include visibility info for each die
+      const dice = (tableData.rolls?.[p.id] ?? []).map((r, idx) => ({
+        index: idx,
+        die: r.die,
+        result: r.result,
+        isPublic: r.public ?? true,
+        isHole: idx === 1 && tableData.phase !== "betting" ? false : !r.public // 2nd opening die is hole
+      }));
+      const isHolding = tableData.holds?.[p.id] ?? false;
+      return { id: p.id, name: p.name, img, dice, isHolding };
+    });
 
-    if (validTargets.length === 0) {
-      return ui.notifications.warn("No valid targets to bump.");
-    }
+  if (validTargets.length === 0) {
+    return ui.notifications.warn("No valid targets to bump.");
+  }
 
-    // Get Athletics modifier
-    const actor = game.user.character;
-    const athMod = actor?.system?.skills?.ath?.total ?? 0;
-    const hasActor = !!actor;
+  // Get Athletics modifier
+  const actor = game.user.character;
+  const athMod = actor?.system?.skills?.ath?.total ?? 0;
+  const hasActor = !!actor;
 
-    // Build target selection with portraits
-    const targetOptions = validTargets.map(t =>
-      `<div class="bump-portrait" data-target-id="${t.id}" data-target-name="${t.name}" tabindex="0" style="display: inline-block; text-align: center; padding: 8px; margin: 4px; border: 2px solid transparent; border-radius: 8px; cursor: pointer;">
+  // Build target selection with portraits
+  const targetOptions = validTargets.map(t =>
+    `<div class="bump-portrait" data-target-id="${t.id}" data-target-name="${t.name}" tabindex="0" style="display: inline-block; text-align: center; padding: 8px; margin: 4px; border: 2px solid transparent; border-radius: 8px; cursor: pointer;">
         <img src="${t.img}" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;" />
         <div style="font-size: 0.85em; margin-top: 4px;">${t.name}${t.isHolding ? ' <span style="color: #4a7c4e;">(Holding)</span>' : ''}</div>
       </div>`
-    ).join("");
+  ).join("");
 
-    const content = `
+  const content = `
       <form>
         <p style="font-weight: bold; margin-bottom: 8px;">Select a target to bump:</p>
         <div class="bump-targets" style="display: flex; flex-wrap: wrap; justify-content: center; margin-bottom: 12px;">
@@ -1466,120 +1519,120 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       </style>
     `;
 
-    let selectedTargetId = null;
-    let selectedDieIndex = null;
+  let selectedTargetId = null;
+  let selectedDieIndex = null;
 
-    const result = await Dialog.prompt({
-      title: "Bump the Table",
-      content,
-      label: "Bump!",
-      render: (html) => {
-        const portraits = html.find('.bump-portrait');
-        const dieSelection = html.find('#bump-die-selection');
-        const diceContainer = html.find('#bump-dice-container');
+  const result = await Dialog.prompt({
+    title: "Bump the Table",
+    content,
+    label: "Bump!",
+    render: (html) => {
+      const portraits = html.find('.bump-portrait');
+      const dieSelection = html.find('#bump-die-selection');
+      const diceContainer = html.find('#bump-dice-container');
 
-        portraits.on('click', function () {
-          portraits.removeClass('selected');
-          $(this).addClass('selected');
-          selectedTargetId = $(this).data('target-id');
-          selectedDieIndex = null;
+      portraits.on('click', function () {
+        portraits.removeClass('selected');
+        $(this).addClass('selected');
+        selectedTargetId = $(this).data('target-id');
+        selectedDieIndex = null;
 
-          // Find target's dice and show selection with V2.0 visibility info
-          const targetData = validTargets.find(t => t.id === selectedTargetId);
-          if (targetData && targetData.dice.length > 0) {
-            diceContainer.empty();
-            targetData.dice.forEach((d, idx) => {
-              const isHole = !d.isPublic;
-              const visLabel = isHole ? "HOLE" : "Visible";
-              const holeClass = isHole ? "hole-die" : "";
-              const btn = $(`<button type="button" class="bump-die-btn ${holeClass}" data-die-index="${idx}">
+        // Find target's dice and show selection with V2.0 visibility info
+        const targetData = validTargets.find(t => t.id === selectedTargetId);
+        if (targetData && targetData.dice.length > 0) {
+          diceContainer.empty();
+          targetData.dice.forEach((d, idx) => {
+            const isHole = !d.isPublic;
+            const visLabel = isHole ? "HOLE" : "Visible";
+            const holeClass = isHole ? "hole-die" : "";
+            const btn = $(`<button type="button" class="bump-die-btn ${holeClass}" data-die-index="${idx}">
                 <img src="icons/svg/d${d.die}-grey.svg" style="width: 24px; height: 24px;" />
                 <span class="die-label">d${d.die}</span>
                 <span class="die-visibility">${visLabel}</span>
               </button>`);
-              btn.on('click', function (e) {
-                e.preventDefault();
-                diceContainer.find('.bump-die-btn').removeClass('selected');
-                $(this).addClass('selected');
-                selectedDieIndex = idx;
-              });
-              diceContainer.append(btn);
+            btn.on('click', function (e) {
+              e.preventDefault();
+              diceContainer.find('.bump-die-btn').removeClass('selected');
+              $(this).addClass('selected');
+              selectedDieIndex = idx;
             });
-            dieSelection.show();
-          }
-        });
+            diceContainer.append(btn);
+          });
+          dieSelection.show();
+        }
+      });
 
-        portraits.on('keydown', function (e) {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            $(this).click();
-          }
-        });
-      },
-      callback: (html) => {
-        if (!selectedTargetId || selectedDieIndex === null) return null;
-        return { targetId: selectedTargetId, dieIndex: selectedDieIndex };
-      },
-      rejectClose: false,
-    });
+      portraits.on('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          $(this).click();
+        }
+      });
+    },
+    callback: (html) => {
+      if (!selectedTargetId || selectedDieIndex === null) return null;
+      return { targetId: selectedTargetId, dieIndex: selectedDieIndex };
+    },
+    rejectClose: false,
+  });
 
-    if (result) {
-      await tavernSocket.executeAsGM("playerAction", "bumpTable", result, game.user.id);
-    }
+  if (result) {
+    await tavernSocket.executeAsGM("playerAction", "bumpTable", result, game.user.id);
   }
+}
 
   static async onBumpRetaliation(event, target) {
-    const dieIndex = parseInt(target?.dataset?.dieIndex);
-    if (isNaN(dieIndex)) {
-      return ui.notifications.warn("Invalid die selection.");
-    }
-    await tavernSocket.executeAsGM("playerAction", "bumpRetaliation", { dieIndex }, game.user.id);
+  const dieIndex = parseInt(target?.dataset?.dieIndex);
+  if (isNaN(dieIndex)) {
+    return ui.notifications.warn("Invalid die selection.");
   }
+  await tavernSocket.executeAsGM("playerAction", "bumpRetaliation", { dieIndex }, game.user.id);
+}
 
   static async onInspect() {
-    const state = getState();
-    const inspectionCost = Math.floor(state.pot / 2);
-    const confirm = await Dialog.confirm({
-      title: "Call for Inspection",
-      content: `
+  const state = getState();
+  const inspectionCost = Math.floor(state.pot / 2);
+  const confirm = await Dialog.confirm({
+    title: "Call for Inspection",
+    content: `
         <p><strong>Cost:</strong> ${inspectionCost}gp (half the pot)</p>
         <p>Roll Perception to try to catch cheaters.</p>
         <hr>
         <p style="color: #c44; font-weight: bold;">WARNING: If you find no cheaters, you forfeit your winnings!</p>
         <p class="hint" style="font-size: 0.9em; color: #666;">Only call if you're confident someone cheated.</p>
       `,
-    });
-    if (confirm) {
-      await tavernSocket.executeAsGM("playerAction", "inspect", {}, game.user.id);
-    }
+  });
+  if (confirm) {
+    await tavernSocket.executeAsGM("playerAction", "inspect", {}, game.user.id);
   }
+}
 
   static async onSkipInspection() {
-    await tavernSocket.executeAsGM("playerAction", "skipInspection", {}, game.user.id);
-  }
+  await tavernSocket.executeAsGM("playerAction", "skipInspection", {}, game.user.id);
+}
 
   static async onReveal() {
-    await tavernSocket.executeAsGM("playerAction", "reveal", {}, game.user.id);
-  }
+  await tavernSocket.executeAsGM("playerAction", "reveal", {}, game.user.id);
+}
 
   static async onNewRound() {
-    await tavernSocket.executeAsGM("playerAction", "newRound", {}, game.user.id);
-  }
+  await tavernSocket.executeAsGM("playerAction", "newRound", {}, game.user.id);
+}
 
   static async onReset() {
-    const confirm = await Dialog.confirm({
-      title: "Reset Table",
-      content: "<p>Clear all players and reset the table?</p>",
-    });
-    if (confirm) {
-      await tavernSocket.executeAsGM("resetTable");
-    }
+  const confirm = await Dialog.confirm({
+    title: "Reset Table",
+    content: "<p>Clear all players and reset the table?</p>",
+  });
+  if (confirm) {
+    await tavernSocket.executeAsGM("resetTable");
   }
+}
 
   // V2.0: Handle duel roll submission
   static async onDuelRoll() {
-    await tavernSocket.executeAsGM("playerAction", "duelRoll", {}, game.user.id);
-  }
+  await tavernSocket.executeAsGM("playerAction", "duelRoll", {}, game.user.id);
+}
 
   /**
    * Iron Liver: Liquid Currency - Prompt for payment method (Gold or Drink)
@@ -1589,28 +1642,28 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
    * @returns {Promise<string|null>} "gold", "drink", or null (cancel)
    */
   static async promptPayment(cost, ante, purpose) {
-    if (cost <= 0) return "gold"; // Free actions don't need payment
+  if (cost <= 0) return "gold"; // Free actions don't need payment
 
-    const drinksNeeded = Math.ceil(cost / ante);
+  const drinksNeeded = Math.ceil(cost / ante);
 
-    // Check gold
-    const actor = game.user.character;
-    const gp = actor?.system?.currency?.gp ?? 0;
-    const canAffordGold = gp >= cost;
-    const isGM = game.user.isGM;
+  // Check gold
+  const actor = game.user.character;
+  const gp = actor?.system?.currency?.gp ?? 0;
+  const canAffordGold = gp >= cost;
+  const isGM = game.user.isGM;
 
-    // V3.5: House always "pays" with gold (house money), GM-as-NPC checks actual gold
-    const state = getState();
-    const playerData = state.players?.[game.user.id];
-    const isHouse = isGM && !playerData?.playingAsNpc;
-    if (isHouse) return "gold";
+  // V3.5: House always "pays" with gold (house money), GM-as-NPC checks actual gold
+  const state = getState();
+  const playerData = state.players?.[game.user.id];
+  const isHouse = isGM && !playerData?.playingAsNpc;
+  if (isHouse) return "gold";
 
-    // If holding Shift, force prompt even if they can afford it
-    // Or if they can't afford it, force prompt
-    if (!event.shiftKey && canAffordGold) return "gold";
+  // If holding Shift, force prompt even if they can afford it
+  // Or if they can't afford it, force prompt
+  if (!event.shiftKey && canAffordGold) return "gold";
 
-    // Build dialog
-    const content = `
+  // Build dialog
+  const content = `
       <div class="tavern-payment-dialog">
         <p class="payment-title">Payment Required: <strong>${cost}gp</strong></p>
         <p class="payment-purpose">${purpose}</p>
@@ -1653,21 +1706,21 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       </style>
     `;
 
-    return new Promise((resolve) => {
-      const d = new Dialog({
-        title: "Payment Method",
-        content,
-        buttons: {},
-        render: (html) => {
-          html.find('.btn-payment').on('click', function () {
-            const method = $(this).data('method');
-            d.close();
-            resolve(method);
-          });
-        },
-        close: () => resolve(null)
-      });
-      d.render(true);
+  return new Promise((resolve) => {
+    const d = new Dialog({
+      title: "Payment Method",
+      content,
+      buttons: {},
+      render: (html) => {
+        html.find('.btn-payment').on('click', function () {
+          const method = $(this).data('method');
+          d.close();
+          resolve(method);
+        });
+      },
+      close: () => resolve(null)
     });
-  }
+    d.render(true);
+  });
+}
 }
