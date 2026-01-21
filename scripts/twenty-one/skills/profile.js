@@ -139,6 +139,7 @@ export async function profile(payload, userId) {
       </div>`,
             flavor: `${userName} rolled ${d20} + ${invMod} = ${attackTotal} vs passive ${defenseTotal} — <strong style="color: gold;">NAT 20!</strong>`,
             whisper: [userId, ...gmIds],
+            blind: true, // V3.5.2: Hide from GM-as-NPC
             rolls: [roll],
         });
 
@@ -160,6 +161,7 @@ export async function profile(payload, userId) {
       </div>`,
             flavor: `Investigation vs Deception — ${userName} got exposed!`,
             whisper: [targetId, ...gmIds],
+            blind: true, // V3.5.2: Hide from GM-as-NPC
             rolls: [roll],
         });
 
@@ -170,6 +172,7 @@ export async function profile(payload, userId) {
       </div>`,
             flavor: `${userName} rolled ${d20} + ${invMod} = ${attackTotal} — <strong style="color: #ff4444;">NAT 1!</strong>`,
             whisper: [userId, ...gmIds],
+            blind: true, // V3.5.2: Hide from GM-as-NPC
             rolls: [roll],
         });
 
@@ -188,6 +191,7 @@ export async function profile(payload, userId) {
       </div>`,
             flavor: `${userName} rolled ${d20} + ${invMod} = ${attackTotal} vs passive ${defenseTotal} — Success!`,
             whisper: [userId, ...gmIds],
+            blind: true, // V3.5.2: Hide from GM-as-NPC
             rolls: [roll],
         });
 
@@ -205,6 +209,7 @@ export async function profile(payload, userId) {
       </div>`,
             flavor: `Investigation vs Deception — ${userName} got read!`,
             whisper: [targetId, ...gmIds],
+            blind: true, // V3.5.2: Hide from GM-as-NPC
             rolls: [roll],
         });
 
@@ -215,6 +220,7 @@ export async function profile(payload, userId) {
       </div>`,
             flavor: `${userName} rolled ${d20} + ${invMod} = ${attackTotal} vs passive ${defenseTotal} — Failed!`,
             whisper: [userId, ...gmIds],
+            blind: true, // V3.5.2: Hide from GM-as-NPC
             rolls: [roll],
         });
 

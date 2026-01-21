@@ -71,10 +71,16 @@ export async function cheat(payload, userId) {
         return state;
     }
 
-    // Prevent cheating in 1v1 with GM (no one to detect you)
-    const nonGMPlayers = state.turnOrder.filter(id => !game.users.get(id)?.isGM);
-    if (nonGMPlayers.length <= 1) {
-        await notifyUser(userId, "Cheating requires at least 2 players (the GM always knows).");
+    // Prevent cheating in 1v1 with House (no one to detect you)
+    // V3.5.2: GM-as-NPC counts as a player, only exclude GM acting as house
+    const nonHousePlayers = state.turnOrder.filter(id => {
+        const u = game.users.get(id);
+        if (!u?.isGM) return true; // Regular player
+        // GM playing as NPC counts as a player
+        return state.players?.[id]?.playingAsNpc;
+    });
+    if (nonHousePlayers.length <= 1) {
+        await notifyUser(userId, "Cheating requires at least 2 players (the house always knows).");
         return state;
     }
 
@@ -192,6 +198,7 @@ export async function cheat(payload, userId) {
     </div></div>`,
         flavor: flavorText,
         whisper: whisperIds,
+        blind: true, // V3.5.2: Hide from GM-as-NPC
         type: CONST.CHAT_MESSAGE_TYPES.OTHER,
         speaker: { alias: skillName },
         rolls: [roll],
