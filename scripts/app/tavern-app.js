@@ -311,23 +311,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     $("body").append(banner);
     setTimeout(() => banner.remove(), 4000);
   }
-  // V3.5: GM-as-NPC CAN scan like regular players
-  // Cost: 1x ante per target, cannot scan same target twice
-  const scannedBy = tableData.scannedBy ?? {};
-  const canScan = isInspection && state.players?.[userId] && !isBusted && !isHouse;
-  const scanCost = ante;
 
-  // Build scan targets - players you haven't already scanned
-  // V3.5: GM-as-NPC IS a valid target (uses isPlayerHouse from above)
-  const scanTargets = canScan ? players
-    .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !isPlayerHouse(p.id))
-    .filter(p => !scannedBy[p.id]?.includes(userId)) // Not already scanned by this player
-    .map(p => {
-      const user = game.users.get(p.id);
-      const actor = user?.character;
-      const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
-      return { id: p.id, name: p.name, img };
-    }) : [];
 
   // V3: Goad context - can goad during betting phase if it's your turn, not busted, and haven't used it this round
   // V3.4: Block during cut phase
