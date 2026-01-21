@@ -60,6 +60,12 @@ export async function bumpTable(payload, userId) {
         return state;
     }
 
+    // Limit: One skill per turn
+    if (tableData.skillUsedThisTurn) {
+        await notifyUser(userId, "You have already used a skill this turn.");
+        return state;
+    }
+
     const { targetId } = payload;
     const dieIndex = Number(payload.dieIndex);
 
@@ -274,7 +280,7 @@ export async function bumpTable(payload, userId) {
 
         await playSound("dice");
 
-        return updateState({ tableData: updatedTableData });
+        return updateState({ tableData: { ...updatedTableData, skillUsedThisTurn: true } });
 
     } else {
         // FAILURE: Set pending retaliation state - target chooses attacker's die
@@ -318,7 +324,7 @@ export async function bumpTable(payload, userId) {
             icon: "fa-solid fa-hand-fist",
         });
 
-        return updateState({ tableData: updatedTableData, pot: newPot });
+        return updateState({ tableData: { ...updatedTableData, skillUsedThisTurn: true }, pot: newPot });
     }
 }
 
