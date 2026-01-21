@@ -78,6 +78,8 @@ export async function useCut(userId, reroll = false) {
   tableData.phase = "betting";
   tableData.theCutUsed = true;
   tableData.currentPlayer = tableData.bettingOrder.find(id => !tableData.busts[id]) ?? null;
+  // V3.5.2: Reset skill usage for first player after cut phase
+  tableData.skillUsedThisTurn = false;
 
   const ante = game.settings.get(MODULE_ID, "fixedAnte");
   const orderNames = tableData.bettingOrder

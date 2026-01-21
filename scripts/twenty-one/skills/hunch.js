@@ -97,6 +97,7 @@ export async function hunch(userId) {
       </div>`,
             flavor: `${userName} rolled ${d20} + ${wisMod} = ${rollTotal} (DC ${HUNCH_DC}) — <strong style="color: gold;">NAT 20!</strong>`,
             whisper: [userId, ...gmIds],
+            blind: true, // V3.5.2: Hide from GMs not in whisper list
             rolls: [roll],
         });
 
@@ -119,6 +120,7 @@ export async function hunch(userId) {
       </div>`,
             flavor: `${userName} rolled ${d20} + ${wisMod} = ${rollTotal} — <strong style="color: #ff4444;">NAT 1!</strong>`,
             whisper: [userId, ...gmIds],
+            blind: true, // V3.5.2: Hide from GMs not in whisper list
             rolls: [roll],
         });
 
@@ -151,6 +153,7 @@ export async function hunch(userId) {
       </div>`,
             flavor: `${userName} rolled ${d20} + ${wisMod} = ${rollTotal} vs DC ${HUNCH_DC} — Success!`,
             whisper: [userId, ...gmIds],
+            blind: true, // V3.5.2: Hide from GMs not in whisper list
             rolls: [roll],
         });
 
@@ -172,6 +175,7 @@ export async function hunch(userId) {
       </div>`,
             flavor: `${userName} rolled ${d20} + ${wisMod} = ${rollTotal} vs DC ${HUNCH_DC} — Failed!`,
             whisper: [userId, ...gmIds],
+            blind: true, // V3.5.2: Hide from GMs not in whisper list
             rolls: [roll],
         });
 
