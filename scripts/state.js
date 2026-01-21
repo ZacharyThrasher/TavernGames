@@ -1,5 +1,5 @@
 export const MODULE_ID = "tavern-dice-master";
-export const STATE_MACRO_NAME = "TavernState";
+export const STATE_MACRO_NAME = "TavernState"; // Keep for migration
 export { emptyTableData } from "./twenty-one/constants.js";
 
 export function registerSettings() {
@@ -31,6 +31,16 @@ export function registerSettings() {
     type: Boolean,
     default: false,
   });
+
+  // V4: Game State (World setting, hidden from config UI)
+  game.settings.register(MODULE_ID, "gameState", {
+    name: "Game State",
+    hint: "Internal game state storage.",
+    scope: "world",
+    config: false,
+    type: Object,
+    default: {},
+  });
 }
 
 export async function preloadTemplates() {
@@ -44,7 +54,7 @@ export async function preloadTemplates() {
 
 export function defaultState() {
   return {
-    version: 3,
+    version: 4, // V4: Bumped for World Settings migration
     status: "LOBBY", // LOBBY, PLAYING, INSPECTION, REVEALING, PAYOUT
     pot: 0,
     turnOrder: [],
@@ -65,53 +75,91 @@ export function defaultState() {
       failedInspector: null,   // User who made false accusation (forfeits winnings)
     },
     history: [],
+    // V4: NPC Bank
+    npcWallets: {},
   };
 }
 
-export async function ensureStateMacro() {
-  const existing = game.macros.getName(STATE_MACRO_NAME);
-  if (existing) {
-    const current = existing.getFlag(MODULE_ID, "state");
-    if (!current) {
-      // No state at all, create fresh
-      await existing.setFlag(MODULE_ID, "state", defaultState());
-    } else if (current.version < 3) {
-      // Migrate old state - preserve players if any
+/**
+ * V4: Initialize state, migrating from Macro if needed
+ */
+export async function initializeState() {
+  if (!game.user.isGM) return; // Only GM can initialize/migrate
+
+  const currentState = game.settings.get(MODULE_ID, "gameState");
+
+  // If we already have state in World Settings, check version
+  if (currentState && currentState.version) {
+    if (currentState.version < 4) {
+      // Migrate from older World Settings version
       const migrated = {
         ...defaultState(),
-        players: current.players ?? {},
-        turnOrder: current.turnOrder ?? [],
-        status: "LOBBY",
+        players: currentState.players ?? {},
+        turnOrder: currentState.turnOrder ?? [],
+        pot: currentState.pot ?? 0,
+        history: currentState.history ?? [],
+        status: "LOBBY", // Reset to lobby on migration
       };
-      await existing.setFlag(MODULE_ID, "state", migrated);
+      await game.settings.set(MODULE_ID, "gameState", migrated);
+      console.log("Tavern Twenty-One | Migrated state to V4 (World Settings)");
     }
-    return existing;
+    return;
   }
 
-  const macro = await Macro.create({
-    name: STATE_MACRO_NAME,
-    type: "script",
-    command: "",
-    img: "icons/sundries/gaming/dice-runed-brown.webp",
-    ownership: { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER },
-  });
-  await macro.setFlag(MODULE_ID, "state", defaultState());
-  return macro;
+  // Check for old Macro-based state and migrate
+  const oldMacro = game.macros.getName(STATE_MACRO_NAME);
+  if (oldMacro) {
+    const macroState = oldMacro.getFlag(MODULE_ID, "state");
+    if (macroState) {
+      // Migrate from Macro to World Settings
+      const migrated = {
+        ...defaultState(),
+        players: macroState.players ?? {},
+        turnOrder: macroState.turnOrder ?? [],
+        pot: macroState.pot ?? 0,
+        history: macroState.history ?? [],
+        status: "LOBBY", // Reset to lobby on migration
+      };
+      await game.settings.set(MODULE_ID, "gameState", migrated);
+
+      // Clean up old macro (optional - keep for safety)
+      // await oldMacro.delete();
+      console.log("Tavern Twenty-One | Migrated state from Macro to World Settings");
+      ui.notifications.info("Tavern Games: State migrated to new storage system.");
+      return;
+    }
+  }
+
+  // No existing state - create fresh
+  if (!currentState || Object.keys(currentState).length === 0) {
+    await game.settings.set(MODULE_ID, "gameState", defaultState());
+    console.log("Tavern Twenty-One | Initialized fresh state in World Settings");
+  }
 }
 
-export function getStateMacro() {
-  return game.macros.getName(STATE_MACRO_NAME);
+/**
+ * V4: Legacy function for backwards compatibility - no longer creates Macro
+ */
+export async function ensureStateMacro() {
+  await initializeState();
+  return null; // No longer returns a macro
 }
 
+/**
+ * V4: Get current game state from World Settings
+ */
 export function getState() {
-  return getStateMacro()?.getFlag(MODULE_ID, "state") ?? defaultState();
+  const state = game.settings.get(MODULE_ID, "gameState");
+  if (!state || Object.keys(state).length === 0) {
+    return defaultState();
+  }
+  return state;
 }
 
+/**
+ * V4: Update game state in World Settings
+ */
 export async function updateState(patch) {
-  const macro = getStateMacro();
-  if (!macro) {
-    throw new Error("Tavern state macro not found.");
-  }
   const current = getState();
 
   // Manual merge to ensure arrays are replaced, not merged by index
@@ -130,15 +178,16 @@ export async function updateState(patch) {
     turnOrder: patch.turnOrder !== undefined
       ? [...patch.turnOrder]
       : current.turnOrder,
+    // V4: Replace npcWallets entirely if present
+    npcWallets: patch.npcWallets !== undefined
+      ? { ...patch.npcWallets }
+      : current.npcWallets,
   };
 
   console.log("Tavern Twenty-One | Updating state:", { current, patch, next });
   console.log("Tavern Twenty-One | turnOrder after update:", next.turnOrder);
 
-  // IMPORTANT: Foundry's setFlag uses mergeObject which merges arrays by index.
-  // To ensure clean replacement, unset the flag first, then set the new state.
-  await macro.unsetFlag(MODULE_ID, "state");
-  await macro.setFlag(MODULE_ID, "state", next);
+  await game.settings.set(MODULE_ID, "gameState", next);
   return next;
 }
 
@@ -158,3 +207,10 @@ export async function addHistoryEntry(entry) {
 export async function clearHistory() {
   return updateState({ history: [] });
 }
+
+// V4: Legacy aliases for backwards compatibility
+export function getStateMacro() {
+  console.warn("Tavern Twenty-One | getStateMacro() is deprecated. State is now stored in World Settings.");
+  return null;
+}
+

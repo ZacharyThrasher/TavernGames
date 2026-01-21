@@ -1,7 +1,7 @@
-import { MODULE_ID, getState } from "./state.js";
+import { MODULE_ID, getState, updateState } from "./state.js";
 
 // V3.5: Updated to return NPC actor for GM-as-NPC
-function getActorForUser(userId) {
+export function getActorForUser(userId) {
   const user = game.users.get(userId);
   if (!user) return null;
 
@@ -18,6 +18,53 @@ function getActorForUser(userId) {
   return game.actors.get(actorId) ?? null;
 }
 
+/**
+ * V4: Check if a player is an NPC (GM playing as NPC)
+ */
+function isNpcPlayer(userId) {
+  const state = getState();
+  const playerData = state?.players?.[userId];
+  return playerData?.playingAsNpc ?? false;
+}
+
+/**
+ * V4: Get NPC wallet balance from module state
+ */
+export function getNpcWallet(userId) {
+  const state = getState();
+  return state.npcWallets?.[userId] ?? 0;
+}
+
+/**
+ * V4: Set NPC wallet balance in module state
+ */
+export async function setNpcWallet(userId, amount) {
+  const state = getState();
+  const npcWallets = { ...state.npcWallets, [userId]: amount };
+  await updateState({ npcWallets });
+}
+
+/**
+ * V4: Update NPC wallet by delta (positive for add, negative for deduct)
+ */
+export async function updateNpcWallet(userId, delta) {
+  const current = getNpcWallet(userId);
+  const newAmount = Math.max(0, current + delta);
+  await setNpcWallet(userId, newAmount);
+  return newAmount;
+}
+
+/**
+ * V4: Get gold balance for a player (uses NPC wallet for NPCs, actor sheet for PCs)
+ */
+export function getPlayerGold(userId) {
+  if (isNpcPlayer(userId)) {
+    return getNpcWallet(userId);
+  }
+  const actor = getActorForUser(userId);
+  return actor?.system?.currency?.gp ?? 0;
+}
+
 export function canAffordAnte(state, ante) {
   for (const userId of state.turnOrder) {
     const user = game.users.get(userId);
@@ -27,20 +74,22 @@ export function canAffordAnte(state, ante) {
     const isHouse = user?.isGM && !playerData?.playingAsNpc;
     if (isHouse) continue;
 
-    const actor = getActorForUser(userId);
-    if (!actor) {
-      return { ok: false, name: user?.name ?? "Unknown", reason: "no character" };
-    }
-
-    // V3.5: Check gold for all actors (PCs and NPCs use system.currency.gp)
-    // NPCs need their gold set in the actor sheet's currency section
-    const gp = actor.system?.currency?.gp ?? 0;
-    if (gp < ante) {
-      // For NPCs, give a more helpful message
-      if (actor.type === "npc") {
-        return { ok: false, name: actor.name, reason: `has ${gp}gp - set gold in the NPC's Currency section` };
+    // V4: NPCs use module wallet, PCs use actor sheet
+    if (isNpcPlayer(userId)) {
+      const wallet = getNpcWallet(userId);
+      if (wallet < ante) {
+        const actor = getActorForUser(userId);
+        return { ok: false, name: actor?.name ?? "NPC", reason: `has ${wallet}gp in their table wallet` };
       }
-      return { ok: false, name: actor.name, reason: "insufficient gold" };
+    } else {
+      const actor = getActorForUser(userId);
+      if (!actor) {
+        return { ok: false, name: user?.name ?? "Unknown", reason: "no character" };
+      }
+      const gp = actor.system?.currency?.gp ?? 0;
+      if (gp < ante) {
+        return { ok: false, name: actor.name, reason: "insufficient gold" };
+      }
     }
   }
   return { ok: true };
@@ -55,10 +104,15 @@ export async function deductAnteFromActors(state, ante) {
     const isHouse = user?.isGM && !playerData?.playingAsNpc;
     if (isHouse) continue;
 
-    const actor = getActorForUser(userId);
-    if (!actor) continue;
-    const current = actor.system?.currency?.gp ?? 0;
-    await actor.update({ "system.currency.gp": current - ante });
+    // V4: NPCs use module wallet
+    if (isNpcPlayer(userId)) {
+      await updateNpcWallet(userId, -ante);
+    } else {
+      const actor = getActorForUser(userId);
+      if (!actor) continue;
+      const current = actor.system?.currency?.gp ?? 0;
+      await actor.update({ "system.currency.gp": current - ante });
+    }
   }
 }
 
@@ -78,6 +132,8 @@ export async function payOutWinners(payouts, flatShare) {
     payouts = payoutMap;
   }
 
+  const state = getState();
+
   for (const [oderId, amount] of Object.entries(payouts)) {
     const user = game.users.get(oderId);
 
@@ -85,12 +141,15 @@ export async function payOutWinners(payouts, flatShare) {
     const isHouse = user?.isGM && !state?.players?.[oderId]?.playingAsNpc;
     if (isHouse) continue;
 
-    // V3.5: NPCs use system.currency.gp - GM should set initial gold there
-    const actor = getActorForUser(oderId);
-    if (!actor) continue;
-
-    const current = actor.system?.currency?.gp ?? 0;
-    await actor.update({ "system.currency.gp": current + amount });
+    // V4: NPCs use module wallet
+    if (isNpcPlayer(oderId)) {
+      await updateNpcWallet(oderId, amount);
+    } else {
+      const actor = getActorForUser(oderId);
+      if (!actor) continue;
+      const current = actor.system?.currency?.gp ?? 0;
+      await actor.update({ "system.currency.gp": current + amount });
+    }
   }
 }
 
@@ -98,13 +157,22 @@ export async function payOutWinners(payouts, flatShare) {
  * Deduct gold from a single player's actor.
  * Returns true if successful, false if they can't afford it.
  */
-export async function deductFromActor(userId, amount, state = null) {
+export async function deductFromActor(userId, amount, stateOverride = null) {
+  const state = stateOverride ?? getState();
   const user = game.users.get(userId);
 
   // V3.5: Only house doesn't pay - GM-as-NPC pays like regular players
   const playerData = state?.players?.[userId];
   const isHouse = user?.isGM && !playerData?.playingAsNpc;
   if (isHouse) return true;
+
+  // V4: NPCs use module wallet
+  if (isNpcPlayer(userId)) {
+    const wallet = getNpcWallet(userId);
+    if (wallet < amount) return false;
+    await updateNpcWallet(userId, -amount);
+    return true;
+  }
 
   const actor = getActorForUser(userId);
   if (!actor) return false;
@@ -115,3 +183,26 @@ export async function deductFromActor(userId, amount, state = null) {
   await actor.update({ "system.currency.gp": current - amount });
   return true;
 }
+
+/**
+ * V4: Generate NPC cash-out summary for GM
+ */
+export function getNpcCashOutSummary(userId) {
+  const state = getState();
+  const playerData = state?.players?.[userId];
+
+  if (!isNpcPlayer(userId)) return null;
+
+  const currentWallet = getNpcWallet(userId);
+  const initialWallet = playerData?.initialWallet ?? 0;
+  const netChange = currentWallet - initialWallet;
+
+  return {
+    name: playerData?.npcName ?? "NPC",
+    initial: initialWallet,
+    current: currentWallet,
+    netChange,
+    netChangeDisplay: netChange >= 0 ? `+${netChange}` : `${netChange}`,
+  };
+}
+
