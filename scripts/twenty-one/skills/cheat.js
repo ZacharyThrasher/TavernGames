@@ -13,7 +13,7 @@
 
 import { MODULE_ID, getState, updateState, addHistoryEntry } from "../../state.js";
 import { deductFromActor, getActorForUser, getGMUserIds, notifyUser } from "../utils/actors.js";
-import { createChatCard, playSound } from "../../ui/chat.js";
+import { createChatCard } from "../../ui/chat.js";
 import { emptyTableData } from "../constants.js";
 
 /**
@@ -155,20 +155,14 @@ export async function cheat(payload, userId) {
 
     // Whisper to player AND GM - use rolls array to trigger 3D dice (Dice So Nice)
     const gmIds = getGMUserIds();
-    const whisperIds = [userId, ...gmIds];
-
-    await ChatMessage.create({
-        content: `<div class="dice-roll"><div class="dice-result">
-      <div class="dice-formula">1d20 + ${modifier}</div>
-      <h4 class="dice-total">${rollTotal}</h4>
-    </div></div>`,
-        flavor: flavorText,
-        whisper: whisperIds,
-        blind: true, // V3.5.2: Hide from GM-as-NPC
-        type: CONST.CHAT_MESSAGE_TYPES.OTHER,
-        speaker: { alias: skillName },
-        rolls: [roll],
-    });
+    
+    // V4: No chat message for the roll itself (per user request to "remove cheat chat entirely")
+    // Just notify the player via UI so they know if they succeeded or failed
+    if (!fumbled) {
+        const resultMsg = success ? "Cheat Successful" : "Cheat Failed (Heat increased)";
+        // Using notifyUser helper would be better if imported, but ui.notifications is safe here
+        ui.notifications.info(`${skillName}: ${resultMsg}`);
+    }
 
     // Update the die value
     const updatedRolls = { ...tableData.rolls };
@@ -203,7 +197,7 @@ export async function cheat(payload, userId) {
         updatedBusts[userId] = true;
         await deductFromActor(userId, ante);
         newPot = state.pot + ante;
-        await playSound("lose");
+
     }
 
     if (updatedTotals[userId] > 21) {
@@ -289,7 +283,7 @@ export async function cheat(payload, userId) {
             message: `${characterName} tried to cheat but fumbled badly - everyone saw it!<br><em>They are caught and forfeit the round.</em>`,
             icon: "fa-solid fa-hand-fist",
         });
-        await playSound("lose");
+
     }
 
 

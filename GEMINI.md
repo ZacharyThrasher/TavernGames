@@ -3,74 +3,53 @@
 ## Architecture Overview
 - **Type:** FoundryVTT Module (v11+ ApplicationV2).
 - **System:** Designed for `dnd5e` but architecturally distinct.
-- **State Management:** Unique "GM-Server" pattern.
-    -   Global state is stored in a **Foundry Macro** document named `"TavernState"` within `flags['tavern-dice-master']`.
-    -   State updates trigger standard Foundry `updateMacro` hooks, causing all clients to re-render.
-- **Networking:** Uses `socketlib`.
-    -   Clients interact via `tavernSocket.executeAsGM(action, payload)`.
-    -   GM executes logic, updates State (Macro), and changes propagate.
+- **State Management:** **V4 Architecture (Current)**
+    -   Global state is stored in **World Settings** (`game.settings.get('tavern-dice-master', 'gameState')`).
+    -   State updates trigger standard Foundry `updateSetting` hooks, causing all clients to re-render.
+- **Networking:** Uses `socketlib` for client-server interaction.
 
 ## Core Game Mechanics: "Twenty-One"
-A Blackjack-style dice game with RPG skill integration. Goal: Closest to 21 without going over.
+A Blackjack-style dice game with RPG skill integration.
 
 ### Phases
-1.  **Opening:**
-    -   Players pay **Ante** (Configurable).
-    -   Dealt **2d10**: 1 Public (Visible), 1 Hole (Hidden).
-2.  **The Cut (V3):**
-    -   Player with the lowest visible die gets option to re-roll their Hole die.
+1.  **Opening:** Ante up. Dealt 2d10 (1 Public, 1 Hole).
+2.  **The Cut:** Lowest visible die can reroll Hole die.
 3.  **Betting / Turns:**
-    -   Turn-based loop.
-    -   **Actions:**
-        -   **Roll/Hit:** Buy a die (d4, d6, d8, d10, d20). Costs vary (d4=2x Ante, d20=Free/Cheap).
-        -   **Hold:** Stop rolling.
-        -   **Fold:** Quit round (Partial refund if early).
-        -   **Skills:** Use character skills (see below).
+    -   **Actions:** Hit (Buy d4-d20), Hold, Fold, **Skills**.
+    -   **Skills (V4):**
+        -   **Bump:** STR contest. Immune if target Held.
+        -   **Goad:** CHA contest. Backfire = "Dared" (Must hit d20 or Fold).
+        -   **Hunch:** Predict next roll. Failure = Blind Hit.
+        -   **Cheat:** Sleight/Magic to mod die. GM alerted on success.
+        -   **Profile:** Investigation vs Deception. Reveals IF target cheated (Yes/No).
+    -   **Side Bets:** Back a player to win for 2:1 payout.
 4.  **Reveal:** All dice shown.
-5.  **Inspection / Staredown:**
-    -   Opportunity to **Accuse** cheaters (Cost: 2x Ante).
-    -   Success: Refund + Bounty (5x Ante).
-    -   Fail: Lose fee.
-6.  **Payout:** Winner(s) split pot.
-    -   **Duel:** If tied, entering a "Duel" sub-game (Roll d20 + Stat vs Opponent).
+5.  **Inspection / Staredown:** Accuse cheaters (Specific Die targeting).
+6.  **Duel (Tie-Breaker):** 1d20 + 1d4 per Hit. Highest total wins. Ties trigger re-duel.
+7.  **Payout:** Winner takes pot.
 
 ### Economy
--   Directly integrates with `actor.system.currency.gp`.
--   **Liquid Mode (Iron Liver):** Players can pay for actions by "Drinking" (Con Save) instead of Gold.
--   **NPC Support:** Supports GM playing as NPC (uses NPC actor currency/skills).
-
-### Cheating & Skills
-**Cheating:**
--   **Mechanic:** Modify a just-rolled die by ±1 to ±3.
--   **Types:** Physical (Sleight of Hand/Deception) or Magical (Int/Wis/Cha).
--   **Detection:** Checks vs **Heat DC** (Starts 10, +2 per cheat).
-    -   **Nat 20:** Invisible Cheat (No Heat increase).
-    -   **Nat 1:** Auto-Caught (Fumble).
-    -   **Failure:** Not immediately caught, but whispers "Gut Feeling" to high-perception players.
-
-**Active Skills (Limit 1 per turn):**
-1.  **Bump (Athletics):** Bonus Action. Contest STR vs STR.
-    -   Win: Force reroll of target's die.
-    -   Lose: Target chooses one of *your* dice to reroll.
-2.  **Profile (Investigation):** Contest vs Passive Deception.
-    -   Win: Learn value of target's Hole die.
-    -   Lose: Target learns *your* Hole die.
-3.  **Goad (Intimidation/Persuasion):** Contest vs Insight.
-    -   Win: Force target to Hit (Roll).
-    -   Lose: You must Hit.
-4.  **Hunch:** Predict next roll for bonuses.
+-   **PC:** Uses `actor.system.currency.gp`.
+-   **NPC/GM:** **V4 NPC Bank**
+    -   Funds stored in `state.npcWallets`.
+    -   GM Join Dialog allows setting "Buy-In".
+    -   App Header displays NPC Wallet balance.
+    -   "Cash Out" summary posted to GM on leave.
+-   **Liquid Mode:** Pay with CON saves (Liver) instead of Gold.
 
 ## Codebase Structure
--   **Entry:** `scripts/main.js`
--   **UI:** `scripts/app/tavern-app.js` (Handlebars Application)
+-   **Entry:** `scripts/main.js` (Includes Handlebars helper registration)
+-   **UI:** `scripts/app/tavern-app.js`
 -   **State:** `scripts/state.js`
 -   **Logic:** `scripts/twenty-one/`
-    -   `phases/core.js`: Round lifecycle (Start/Reveal/End).
-    -   `phases/turn.js`: Player actions (Roll, Hold, Fold).
-    -   `phases/special.js`: Cut, Duel, Accuse.
-    -   `skills/`: Individual skill files (`cheat.js`, `bump.js`, `profile.js`, etc).
--   **Constants:** `scripts/twenty-one/constants.js` (DCs, Die Costs).
+    -   `phases/`: `core.js`, `turn.js`, `special.js`, `side-bets.js`.
+    -   `skills/`: Individual skill logic.
 
-## Known Issues / Vestigial Code
--   **Scan:** The "Scan" mechanic (V2) is present in `scripts/app/tavern-app.js` (methods `onScan`, `_prepareContext` logic) and `styles/tavern.css` but is functionally deprecated/replaced by **Profile** (V3). It is not registered in the UI actions map, effectively making it dead code.
--   **Backup File:** `scripts/twenty-one.js.bak` exists as a legacy artifact.
+## Current Status (V4 Refactor Complete)
+- [x] State Migration to World Settings.
+- [x] NPC Bank System (Wallet, UI, Cash-Out).
+- [x] Skill Reworks (Profile, Bump, Goad, Hunch).
+- [x] Accuse Rework (Specific die targeting).
+- [x] Duel Rework (Hits-based only).
+- [x] Side Bets Implementation.
+- [x] Cleanup of Scan & Legacy files.

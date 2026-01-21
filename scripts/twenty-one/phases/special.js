@@ -1,11 +1,10 @@
 import { MODULE_ID, getState, updateState, addHistoryEntry } from "../../state.js";
 import { deductFromActor, payOutWinners } from "../../wallet.js";
 import { createChatCard } from "../../ui/chat.js";
-import { playSound } from "../../sounds.js";
 import { tavernSocket } from "../../socket.js";
 import { getActorForUser } from "../utils/actors.js";
 import { getDieCost, notifyUser } from "../utils/game-logic.js";
-import { emptyTableData, DUEL_CHALLENGES, OPENING_ROLLS_REQUIRED } from "../constants.js";
+import { emptyTableData, OPENING_ROLLS_REQUIRED } from "../constants.js";
 import { finishRound } from "./core.js";
 
 export async function useCut(userId, reroll = false) {
@@ -190,31 +189,22 @@ async function resolveDuel() {
   const winners = results.filter(r => r.total === highestTotal);
 
   if (winners.length > 1) {
-    const contestRoll = await new Roll("1d6").evaluate();
-    const contestTypes = ["str", "dex", "con", "int", "wis", "cha"];
-    const contestStats = ["Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma"];
-    const contestIndex = contestRoll.total - 1;
-    const newContestType = contestTypes[contestIndex];
-    const newContestStat = contestStats[contestIndex];
-
     const tiedNames = winners.map(w => w.playerName).join(" vs ");
-    const challenge = DUEL_CHALLENGES[newContestType] ?? { name: newContestStat, desc: "May the best player win!", icon: "fa-solid fa-repeat" };
-
+    
     await createChatCard({
-      title: "Still Tied!",
-      subtitle: `Re-duel: ${challenge.name}`,
-      message: `<strong>${tiedNames}</strong> are still tied at ${highestTotal}!<br>
-        <em>${challenge.desc}</em>`,
-      icon: challenge.icon,
+      title: "Sudden Death!",
+      subtitle: "The duel continues...",
+      message: `<strong>${tiedNames}</strong> are still tied at <strong>${highestTotal}</strong>!<br>
+        <em>Neither side yields! They clash again with renewed intensity!</em><br>
+        <strong>Next Roll: d20 + d4s (Same Hits)</strong>`,
+      icon: "fa-solid fa-swords",
     });
 
-    await playSound("reveal");
+
 
     const updatedDuel = {
       ...duel,
-      contestType: newContestType,
-      stat: newContestStat,
-      rolls: {},
+      rolls: {}, // Reset rolls for the next round
       pendingRolls: winners.map(w => w.playerId),
       round: duel.round + 1,
     };
@@ -223,8 +213,7 @@ async function resolveDuel() {
       type: "duel_tie",
       round: duel.round,
       tiedPlayers: tiedNames,
-      newContest: newContestStat,
-      message: `Duel tie! Re-duel in ${newContestStat}!`,
+      message: `Duel stalemate at ${highestTotal}! Round ${duel.round + 1} begins...`,
     });
 
     return updateState({
@@ -236,7 +225,7 @@ async function resolveDuel() {
   const potAmount = duel.pot;
 
   await payOutWinners({ [winner.playerId]: potAmount });
-  await playSound("win");
+
 
   const resultsMsg = results
     .sort((a, b) => b.total - a.total)
@@ -331,7 +320,7 @@ export async function accuse(payload, userId) {
     await notifyUser(userId, `You need ${accusationCost}gp (2x ante) to make an accusation.`);
     return state;
   }
-  await playSound("coins");
+
 
   const accuserActor = getActorForUser(userId);
   const accuserName = accuserActor?.name ?? game.users.get(userId)?.name ?? "Unknown";
@@ -381,7 +370,7 @@ export async function accuse(payload, userId) {
         <em>${accuserName} receives ${accusationCost}gp refund + ${bountyMsg} = <strong>${totalReward}gp</strong>!</em>`,
       icon: "fa-solid fa-gavel",
     });
-    await playSound("reveal");
+
 
     await addHistoryEntry({
       type: "cheat_caught",
@@ -404,7 +393,7 @@ export async function accuse(payload, userId) {
         ${accuserName} loses their ${accusationCost}gp accusation fee.`,
       icon: "fa-solid fa-face-frown",
     });
-    await playSound("lose");
+
 
     await addHistoryEntry({
       type: "accusation_failed",

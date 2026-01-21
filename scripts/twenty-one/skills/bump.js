@@ -14,7 +14,7 @@
 
 import { MODULE_ID, getState, updateState, addHistoryEntry } from "../../state.js";
 import { deductFromActor, getActorForUser, notifyUser } from "../utils/actors.js";
-import { createChatCard, playSound } from "../../ui/chat.js";
+import { createChatCard } from "../../ui/chat.js";
 import { emptyTableData } from "../constants.js";
 
 /**
@@ -288,7 +288,7 @@ export async function bumpTable(payload, userId) {
             icon: "fa-solid fa-hand-fist",
         });
 
-        await playSound("dice");
+    
 
         return updateState({ tableData: { ...updatedTableData, skillUsedThisTurn: true } });
 
@@ -470,7 +470,7 @@ export async function bumpRetaliation(payload, userId) {
         icon: "fa-solid fa-hand-back-fist",
     });
 
-    await playSound("dice");
+
 
     return updateState({ tableData: updatedTableData });
 }

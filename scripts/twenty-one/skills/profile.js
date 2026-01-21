@@ -12,7 +12,7 @@
 import { MODULE_ID } from "../constants.js";
 import { getState, updateState, emptyTableData } from "../../state.js";
 import { getActorForUser, getGMUserIds, notifyUser } from "../utils/actors.js";
-import { createChatCard, addHistoryEntry, playSound } from "../../ui/chat.js";
+import { createChatCard, addHistoryEntry } from "../../ui/chat.js";
 
 export async function profile(payload, userId) {
     const state = getState();
@@ -111,28 +111,24 @@ export async function profile(payload, userId) {
 
     const success = !isNat1 && attackTotal >= defenseTotal;
 
-    // Get hole dice info
-    const targetRolls = tableData.rolls[targetId] ?? [];
-    const targetHoleDie = targetRolls.find(r => !r.public);
-    const targetHoleValue = targetHoleDie?.result ?? "?";
-
-    const myRolls = tableData.rolls[userId] ?? [];
-    const myHoleDie = myRolls.find(r => !r.public);
-    const myHoleValue = myHoleDie?.result ?? "?";
-
     // Cheat info
     const targetCheated = !!tableData.cheaters?.[targetId];
     const targetCheatDice = tableData.cheaters?.[targetId]?.cheats?.map(c => c.dieIndex + 1) ?? [];
     const myCheated = !!tableData.cheaters?.[userId];
+    
+    // Counter-intelligence info (for failure)
+    const myRolls = tableData.rolls[userId] ?? [];
+    const myHoleDie = myRolls.find(r => !r.public);
+    const myHoleValue = myHoleDie?.result ?? "?";
 
     const gmIds = getGMUserIds();
 
     if (isNat20) {
-        let message = `${targetName}'s hole die: <strong>${targetHoleValue}</strong>`;
+        let message = `<span style="font-size: 1.2em;">Cheated: <strong>${targetCheated ? "YES" : "NO"}</strong></span>`;
         if (targetCheated) {
-            message += `<br><span style="color: #ff6666;">They've CHEATED! (Die ${targetCheatDice.join(", ")})</span>`;
+            message += `<br><span style="color: #ff6666;">Specifically: Die ${targetCheatDice.join(", ")}</span>`;
         } else {
-            message += `<br><span style="color: #88ff88;">They appear clean.</span>`;
+            message += `<br><span style="color: #88ff88;">They are playing clean.</span>`;
         }
 
         await ChatMessage.create({
@@ -184,12 +180,18 @@ export async function profile(payload, userId) {
             message: `The tables turned! ${targetName} read ${userName} instead!`,
             icon: "fa-solid fa-face-flushed",
         });
-        await playSound("lose");
+
     } else if (success) {
+        // Standard Success: Boolean Yes/No only
+        const resultText = targetCheated 
+            ? `<span style="color: #ff6666; font-weight: bold;">YES</span>` 
+            : `<span style="color: #88ff88; font-weight: bold;">NO</span>`;
+            
         await ChatMessage.create({
             content: `<div class="tavern-skill-result success">
         <strong>Profile Success</strong><br>
-        ${targetName}'s hole die: <strong>${targetHoleValue}</strong>
+        Has ${targetName} cheated?<br>
+        Answer: ${resultText}
       </div>`,
             flavor: `${userName} rolled ${d20} + ${invMod} = ${attackTotal} vs passive ${defenseTotal} — Success!`,
             whisper: [userId, ...gmIds],
@@ -204,21 +206,11 @@ export async function profile(payload, userId) {
             icon: "fa-solid fa-user-secret",
         });
     } else {
-        await ChatMessage.create({
-            content: `<div class="tavern-skill-result success">
-        <strong>Counter-Read!</strong><br>
-        ${userName}'s hole die: <strong>${myHoleValue}</strong>
-      </div>`,
-            flavor: `Investigation vs Deception — ${userName} got read!`,
-            whisper: [targetId, ...gmIds],
-            blind: true, // V3.5.2: Hide from GM-as-NPC
-            rolls: [roll],
-        });
-
+        // Failure: No info
         await ChatMessage.create({
             content: `<div class="tavern-skill-result failure">
         <strong>Failed Read</strong><br>
-        Your attempt to read them revealed yourself instead!
+        You can't get a read on them.
       </div>`,
             flavor: `${userName} rolled ${d20} + ${invMod} = ${attackTotal} vs passive ${defenseTotal} — Failed!`,
             whisper: [userId, ...gmIds],
@@ -229,7 +221,7 @@ export async function profile(payload, userId) {
         await createChatCard({
             title: "Profile",
             subtitle: `${userName} overreaches`,
-            message: `${targetName} saw right through the attempt!`,
+            message: `${targetName} kept their composure.`,
             icon: "fa-solid fa-eye",
         });
     }

@@ -1,8 +1,8 @@
 import { MODULE_ID, getState, updateState } from "./state.js";
 import { startRound, submitRoll, hold, revealDice, finishRound, returnToLobby, cheat, accuse, skipInspection, goad, resistGoad, bumpTable, bumpRetaliation, hunch, profile, useCut, fold, submitDuelRoll, finishTurn } from "./twenty-one/index.js";
 import { placeSideBet } from "./twenty-one/phases/side-bets.js";
-import { setNpcWallet } from "./wallet.js";
-import { playSound } from "./sounds.js";
+import { setNpcWallet, getNpcCashOutSummary } from "./wallet.js";
+import { createChatCard } from "./ui/chat.js";
 
 function ensureGM() {
   if (!game.user.isGM) {
@@ -60,8 +60,6 @@ export async function handleJoinTable(userId, options = {}) {
 
   const turnOrder = [...state.turnOrder, userId];
 
-  await playSound("join");
-
   return updateState({ players, turnOrder });
 }
 
@@ -72,7 +70,39 @@ export async function handleLeaveTable(userId) {
     ui.notifications.warn("Cannot leave while a round is in progress.");
     return state;
   }
-  if (!state.players[userId]) return state;
+  
+  const player = state.players[userId];
+  if (!player) return state;
+
+  // V4: Generate cash out summary for NPCs
+  if (player.playingAsNpc) {
+    const summary = getNpcCashOutSummary(userId);
+    if (summary) {
+      await ChatMessage.create({
+        content: `
+          <div class="tavern-npc-cashout">
+            <h3><i class="fa-solid fa-cash-register"></i> NPC Cash Out</h3>
+            <p><strong>${summary.name}</strong> is leaving the table.</p>
+            <hr>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+              <span>Initial Stake:</span> <span>${summary.initial} gp</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+              <span>Final Wallet:</span> <span>${summary.current} gp</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-weight: bold; color: ${summary.netChange >= 0 ? '#88ff88' : '#ff8888'};">
+              <span>Net Change:</span> <span>${summary.netChangeDisplay} gp</span>
+            </div>
+            <p style="font-size: 0.85em; color: #888; margin-top: 8px; font-style: italic;">
+              GM: Manually update the actor sheet if desired.
+            </p>
+          </div>
+        `,
+        whisper: ChatMessage.getWhisperRecipients("GM"),
+        speaker: { alias: "Tavern Twenty-One" }
+      });
+    }
+  }
 
   const players = { ...state.players };
   delete players[userId];

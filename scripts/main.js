@@ -31,6 +31,16 @@ Hooks.once("init", async () => {
   console.log("Tavern Twenty-One | Initializing module");
   registerSettings();
   await preloadTemplates();
+
+  // Register Handlebars helpers
+  Handlebars.registerHelper("or", function (...args) {
+    args.pop(); // Remove Handlebars options
+    return args.some(v => !!v);
+  });
+  Handlebars.registerHelper("and", function (...args) {
+    args.pop(); // Remove Handlebars options
+    return args.every(v => !!v);
+  });
 });
 
 Hooks.once("socketlib.ready", () => {

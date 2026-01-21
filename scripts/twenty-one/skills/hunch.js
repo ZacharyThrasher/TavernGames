@@ -12,7 +12,7 @@
 import { MODULE_ID, getState, updateState } from "../../state.js";
 import { HUNCH_DC, HUNCH_THRESHOLDS, VALID_DICE, emptyTableData } from "../constants.js";
 import { createChatCard, addHistoryEntry } from "../../ui/chat.js";
-import { playSound } from "../../sounds.js";
+
 import { getActorForUser, getGMUserIds, notifyUser } from "../utils/actors.js";
 
 

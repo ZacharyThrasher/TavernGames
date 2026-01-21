@@ -1,6 +1,6 @@
 import { MODULE_ID, getState, updateState } from "../../state.js";
 import { getActorForUser } from "./actors.js";
-import { createChatCard, playSound } from "../../ui/chat.js";
+import { createChatCard } from "../../ui/chat.js";
 import { tavernSocket } from "../../socket.js";
 
 // V2.0: d12 removed, variable costs
@@ -91,7 +91,7 @@ export async function drinkForPayment(userId, drinksNeeded, tableData) {
         <strong style="color: #ff4444;">NAT 1! They pass out cold!</strong>`,
             icon: "fa-solid fa-skull",
         });
-        await playSound("lose");
+
     } else if (!success) {
         // Failed save - gain Sloppy condition
         sloppy = true;
@@ -104,7 +104,7 @@ export async function drinkForPayment(userId, drinksNeeded, tableData) {
         <em style="color: #ffaa66;">SLOPPY: Disadvantage on INT/WIS/CHA/DEX checks!</em>`,
             icon: "fa-solid fa-wine-glass",
         });
-        await playSound("coins");
+    
     } else {
         // Success - handled it like a champ
         await createChatCard({
@@ -115,7 +115,7 @@ export async function drinkForPayment(userId, drinksNeeded, tableData) {
         <em>"Put it on my tab!"</em>`,
             icon: "fa-solid fa-beer-mug-empty",
         });
-        await playSound("coins");
+    
     }
 
     return {

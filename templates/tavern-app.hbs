@@ -11,6 +11,12 @@
       </div>
     </div>
     <div class="tavern-info">
+      {{#if isPlayingAsNpc}}
+        <div class="npc-wallet-display" title="NPC Table Wallet">
+          <i class="fa-solid fa-sack-dollar" style="color: #ffd700;"></i>
+          <span class="wallet-amount">{{npcWallet}} gp</span>
+        </div>
+      {{/if}}
       {{#if isPlaying}}
         <div class="pot-display">
           <i class="fa-solid fa-coins"></i>

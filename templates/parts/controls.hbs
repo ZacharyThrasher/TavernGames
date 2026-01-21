@@ -43,12 +43,13 @@
   {{/if}}
 
   <div class="control-section rules">
-    <h3><i class="fa-solid fa-scroll"></i> Rules</h3>
-    <ul>
-      <li>Opening: everyone rolls <strong>2 dice</strong></li>
-      <li>Then take turns: roll (costs {{ante}}gp) or hold</li>
-      <li>Try to reach <strong>21</strong> without busting</li>
-      <li>Highest total ≤21 wins the pot!</li>
+    <h3><i class="fa-solid fa-scroll"></i> Rules Summary</h3>
+    <ul class="rules-list">
+      <li><strong>Deal:</strong> Everyone gets 2d10 (1 visible, 1 hole).</li>
+      <li><strong>Betting:</strong> Buy dice (d4-d20) or <strong>Hold</strong>.</li>
+      <li><strong>Skills:</strong> Use <strong>Cheat</strong>, <strong>Bump</strong>, <strong>Goad</strong>, <strong>Hunch</strong>, or <strong>Profile</strong>.</li>
+      <li><strong>Duels:</strong> Ties are settled by rolling 1d20 + 1d4 per Hit.</li>
+      <li><strong>Side Bets:</strong> Back a player to win for 2:1 payout!</li>
     </ul>
   </div>
   {{/if}}
@@ -274,6 +275,17 @@
   </div>
   {{/if}}
 
+  {{!-- Side Bets Section (V4) --}}
+  {{#if (or isPlaying isInspection)}}
+  <div class="control-section side-bets-section">
+    <h3><i class="fa-solid fa-sack-dollar"></i> Side Bets</h3>
+    <p class="hint">Bet on a player to win the round.</p>
+    <button type="button" class="btn btn-secondary btn-large" data-action="sideBet">
+      <i class="fa-solid fa-coins"></i> Place Side Bet
+    </button>
+  </div>
+  {{/if}}
+
   {{!-- Staredown / Accusation state --}}
   {{#if isInspection}}
   <div class="control-section staredown">
@@ -312,8 +324,8 @@
   {{!-- V2.0: Duel state --}}
   {{#if isDuel}}
   <div class="control-section duel">
-    <h3><i class="fa-solid fa-crossed-swords"></i> The Duel!</h3>
-    <p class="duel-announcement">Contest: <strong>{{duel.stat}}</strong></p>
+    <h3><i class="fa-solid fa-swords"></i> The Duel!</h3>
+    <p class="duel-announcement"><strong>Highest total wins the pot!</strong></p>
     <p class="duel-round">Round {{duel.round}}</p>
 
     <div class="duel-participants">
@@ -331,7 +343,7 @@
 
     {{#if isMyDuel}}
     <button type="button" class="btn btn-primary btn-large" data-action="duelRoll">
-      <i class="fa-solid fa-dice-d20"></i> Roll {{duel.stat}}!
+      <i class="fa-solid fa-dice-d20"></i> Roll for the Duel!
     </button>
     {{else}}
     <p class="duel-waiting"><i class="fa-solid fa-hourglass-half"></i> Waiting for duelists...</p>

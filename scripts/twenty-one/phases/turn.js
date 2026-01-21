@@ -1,6 +1,6 @@
 import { MODULE_ID, getState, updateState, addHistoryEntry } from "../../state.js";
 import { deductFromActor } from "../../wallet.js";
-import { playSound } from "../../sounds.js";
+
 import { tavernSocket } from "../../socket.js";
 import { getActorForUser } from "../utils/actors.js";
 import { getNextActivePlayer, getNextOpeningPlayer, allPlayersCompletedOpening, allPlayersFinished, calculateBettingOrder, getDieCost, drinkForPayment, notifyUser } from "../utils/game-logic.js";
@@ -34,6 +34,12 @@ export async function submitRoll(payload, userId) {
     return state;
   }
 
+  // V4: Dared check - can ONLY buy d20 if dared
+  if (tableData.dared?.[userId] && die !== 20) {
+      ui.notifications.warn("You are Dared! You can only buy a d20.");
+      return state;
+  }
+
   // V2.0: Variable dice costs in betting phase
   let newPot = state.pot;
   let rollCost = 0;
@@ -61,7 +67,7 @@ export async function submitRoll(payload, userId) {
             return state;
           }
           newPot = state.pot + rollCost;
-          await playSound("coins");
+
         }
       }
     }
@@ -103,7 +109,7 @@ export async function submitRoll(payload, userId) {
     console.warn("Tavern Twenty-One | Could not show dice to player:", e);
   }
 
-  await playSound("dice");
+
 
   const rolls = { ...tableData.rolls };
   const totals = { ...tableData.totals };

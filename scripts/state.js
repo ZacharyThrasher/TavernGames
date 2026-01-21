@@ -13,14 +13,7 @@ export function registerSettings() {
     range: { min: 1, max: 100, step: 1 },
   });
 
-  game.settings.register(MODULE_ID, "enableSounds", {
-    name: "Enable Sound Effects",
-    hint: "Play sound effects for dice rolls, coins, and game events.",
-    scope: "client",
-    config: true,
-    type: Boolean,
-    default: true,
-  });
+
 
   // V2.0.2: Liquid Mode Toggle (Client setting, UI controlled)
   game.settings.register(MODULE_ID, "liquidMode", {

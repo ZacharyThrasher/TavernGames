@@ -15,7 +15,7 @@
 
 import { MODULE_ID, getState, updateState, addHistoryEntry } from "../../state.js";
 import { deductFromActor, getActorForUser, notifyUser } from "../utils/actors.js";
-import { createChatCard, playSound } from "../../ui/chat.js";
+import { createChatCard } from "../../ui/chat.js";
 import { emptyTableData } from "../constants.js";
 
 /**
@@ -225,7 +225,7 @@ export async function goad(payload, userId) {
             canPayToResist: !isNat20,
             resistCost: ante,
         };
-        await playSound("reveal");
+
 
         const updatedTableData = {
             ...tableData,
@@ -263,7 +263,7 @@ export async function goad(payload, userId) {
         if (isNat1) {
             updatedGoadBackfire[userId] = { mustRoll: true, goadedBy: targetId };
         }
-        await playSound("lose");
+
 
         const updatedTableData = {
             ...tableData,

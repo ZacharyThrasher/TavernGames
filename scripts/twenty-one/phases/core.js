@@ -2,11 +2,11 @@ import { MODULE_ID, getState, updateState, addHistoryEntry } from "../../state.j
 import { canAffordAnte, deductAnteFromActors, deductFromActor, payOutWinners } from "../../wallet.js";
 import { createChatCard } from "../../ui/chat.js";
 import { showPublicRoll } from "../../dice.js";
-import { playSound } from "../../sounds.js";
+
 import { tavernSocket } from "../../socket.js";
 import { getActorForUser } from "../utils/actors.js";
 import { calculateBettingOrder, getGMUserIds } from "../utils/game-logic.js";
-import { emptyTableData, DUEL_CHALLENGES } from "../constants.js";
+import { emptyTableData } from "../constants.js";
 import { processSideBetPayouts } from "./side-bets.js";
 
 export async function startRound() {
@@ -25,7 +25,7 @@ export async function startRound() {
   }
 
   await deductAnteFromActors(state, ante);
-  await playSound("coins");
+
 
   const tableData = emptyTableData();
 
@@ -145,7 +145,7 @@ export async function revealDice() {
 
   // Mark as revealing
   await updateState({ status: "REVEALING" });
-  await playSound("reveal");
+  
 
   // Show all rolls publicly - launch all dice animations in parallel for speed
   const rollPromises = [];
@@ -222,7 +222,7 @@ export async function finishRound() {
     await new Promise(r => setTimeout(r, 1000));
 
     if (success) {
-      await playSound("reveal");
+      
 
       const refund = cost ?? 0;
       const bountyAmount = bounty ?? 0;
@@ -256,7 +256,7 @@ export async function finishRound() {
         message: `${accuserName} caught ${targetName} cheating and earned ${totalReward}gp!`,
       });
     } else {
-      await playSound("lose");
+  
 
       await createChatCard({
         title: "False Accusation!",
@@ -291,35 +291,24 @@ export async function finishRound() {
   });
 
   if (winners.length > 1) {
-    const contestRoll = await new Roll("1d6").evaluate();
-    const contestTypes = ["str", "dex", "con", "int", "wis", "cha"];
-    const contestStats = ["Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma"];
-    const contestIndex = contestRoll.total - 1;
-    const contestType = contestTypes[contestIndex];
-    const contestStat = contestStats[contestIndex];
-
     const duelParticipantNames = winners.map(id =>
       getActorForUser(id)?.name ?? game.users.get(id)?.name ?? "Unknown"
     ).join(" vs ");
 
-    const challenge = DUEL_CHALLENGES[contestType] ?? { name: contestStat, desc: "May the best player win!", icon: "fa-solid fa-crossed-swords" };
-
     await createChatCard({
-      title: challenge.name,
-      subtitle: "The Duel!",
-      message: `<strong>${duelParticipantNames}</strong> are tied!<br>
-        <em>${challenge.desc}</em><br>
-        <span style="font-size: 0.9em; color: #888;">Roll 1d20 + ${contestStat} modifier</span>`,
-      icon: challenge.icon,
+      title: "The Duel!",
+      subtitle: "Highest total wins!",
+      message: `<strong>${duelParticipantNames}</strong> are tied for the win!<br>
+        <em>The stakes are high. One final clash to settle the pot!</em><br>
+        <span style="font-size: 0.9em; color: #888;">Roll 1d20 + 1d4 per Hit taken this round.</span>`,
+      icon: "fa-solid fa-swords",
     });
 
-    await playSound("reveal");
+    
 
     const duel = {
       active: true,
       participants: [...winners],
-      contestType,
-      stat: contestStat,
       rolls: {},
       pendingRolls: [...winners],
       round: 1,
@@ -329,8 +318,7 @@ export async function finishRound() {
     await addHistoryEntry({
       type: "duel_start",
       participants: duelParticipantNames,
-      contestType: contestStat,
-      message: `Duel! ${duelParticipantNames} compete in ${contestStat}!`,
+      message: `Duel! ${duelParticipantNames} clash for the pot!`,
     });
 
     return updateState({
@@ -367,11 +355,11 @@ export async function finishRound() {
   if (winners.length === 1) {
     const payouts = { [winners[0]]: finalPot };
     await payOutWinners(payouts);
-    await playSound("win");
+
     // V4: Process side bet payouts
     await processSideBetPayouts(winners[0]);
   } else if (winners.length === 0) {
-    await playSound("lose");
+
     // V4: No winner - side bets lost
     await processSideBetPayouts(null);
   }

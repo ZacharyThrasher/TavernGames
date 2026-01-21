@@ -1,5 +1,27 @@
 # Changelog
 
+## [4.0.2] - 2026-01-21
+### Architecture (V4 Refactor)
+- **State Migration**: Moved game state from Macro to World Settings for better persistence and stability.
+- **NPC Bank System**: Added session-based NPC wallets, GM Join Dialog with "Buy-In", and real-time wallet display.
+- **Sound System**: Removed legacy sound system (`scripts/sounds.js`) in preparation for a future audio overhaul.
+
+### Core Mechanics
+- **Duel Rework**: Removed stat-based tiebreakers. Now uses a pure "Hit" system (1d20 + 1d4 per hit) with support for re-duels on ties.
+- **Cheat Rework**: Removed passive perception. Cheats now trigger a GM whisper.
+- **Profile Rework**: Now reveals "Has Cheated: Yes/No" instead of specific die values (Nat 20 reveals exact die).
+- **Bump Rework**: Added immunity for players who have Held or Folded.
+- **Goad Rework**: "Backfire" now enforces a "Dared" condition (must hit d20 or Fold).
+- **Hunch Rework**: Failure now results in a "Blind Hit" (value hidden until reveal).
+
+### UI & Interaction
+- **Accuse Rework**: Implemented specific die targeting (Click-to-Accuse) available anytime during the round.
+- **Side Bets**: Spectators and folded players can now bet on a champion (2:1 payout).
+- **Rules Display**: Updated lobby rules summary.
+
+### Cleanup
+- Removed V2 "Scan" code and legacy files.
+
 ## [3.0.4] - 2026-01-20
 ### Fixed
 - **App Crash**: Fixed `ReferenceError: accusationMade` by removing obsolete logic for delayed accusations.

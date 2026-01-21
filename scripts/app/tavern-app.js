@@ -1,6 +1,7 @@
 import { MODULE_ID, getState } from "../state.js";
 import { tavernSocket } from "../socket.js";
 import { getDieCost } from "../twenty-one/constants.js";
+import { getNpcWallet } from "../wallet.js"; // V4: Import NPC wallet helper
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -361,6 +362,8 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     return {
       moduleId: MODULE_ID,
       state,
+      isPlayingAsNpc, // V4: For UI display
+      npcWallet: isPlayingAsNpc ? getNpcWallet(userId) : 0, // V4: NPC Wallet Balance
       players: playerSeats,
       isGM,
       userId,

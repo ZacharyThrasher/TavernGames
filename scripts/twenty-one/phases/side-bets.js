@@ -1,7 +1,7 @@
 import { MODULE_ID, getState, updateState, addHistoryEntry } from "../../state.js";
 import { deductFromActor, getPlayerGold } from "../../wallet.js";
 import { createChatCard } from "../../ui/chat.js";
-import { playSound } from "../../sounds.js";
+
 import { getActorForUser } from "../utils/actors.js";
 import { notifyUser } from "../utils/game-logic.js";
 
@@ -61,7 +61,7 @@ export async function placeSideBet(payload, userId) {
         return state;
     }
 
-    await playSound("coins");
+
 
     // Record the side bet
     const sideBets = { ...tableData.sideBets };
