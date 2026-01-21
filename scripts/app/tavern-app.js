@@ -135,10 +135,25 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       // V2.0: Show dice based on visibility (public vs hole)
       // During play: Show public dice to everyone, hole dice only to owner/house
       // V3.5: GM-as-NPC does NOT see other players' hole dice
+      // V4: Blind dice show "?" to everyone (including owner) until reveal
       const isRevealPhase = state.status === "REVEALING" || state.status === "PAYOUT" || state.status === "INSPECTION";
       const diceDisplay = rolls.map((r, idx) => {
         const isPublicDie = r.public ?? false;
+        const isBlindDie = r.blind ?? false; // V4: Blind dice from failed Hunch
         const canSeeThisDie = isMe || isHouse || isRevealPhase || isPublicDie;
+
+        // V4: Blind dice show "?" to everyone until reveal phase
+        if (isBlindDie && !isRevealPhase) {
+          return {
+            die: r.die,
+            result: "?",
+            icon: TavernApp.DICE_ICONS[r.die] || "d6",
+            index: idx,
+            isPublic: isPublicDie,
+            isHole: !isPublicDie,
+            isBlind: true, // V4: Flag for UI styling
+          };
+        }
 
         if (canSeeThisDie) {
           return {
@@ -257,24 +272,6 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     // V3.5: GM-as-NPC CAN accuse like regular players
     const canAccuse = isInGame && !accusedThisRound && !isBusted && accuseTargets.length > 0 && !isHouse;
 
-    // V2.0: Scan context - can scan during staredown if you're in the game and not busted
-    // V3.5: GM-as-NPC CAN scan like regular players
-    // Cost: 1x ante per target, cannot scan same target twice
-    const scannedBy = tableData.scannedBy ?? {};
-    const canScan = isInspection && state.players?.[userId] && !isBusted && !isHouse;
-    const scanCost = ante;
-
-    // Build scan targets - players you haven't already scanned
-    // V3.5: GM-as-NPC IS a valid target (uses isPlayerHouse from above)
-    const scanTargets = canScan ? players
-      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !isPlayerHouse(p.id))
-      .filter(p => !scannedBy[p.id]?.includes(userId)) // Not already scanned by this player
-      .map(p => {
-        const user = game.users.get(p.id);
-        const actor = user?.character;
-        const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
-        return { id: p.id, name: p.name, img };
-      }) : [];
 
     // V3: Goad context - can goad during betting phase if it's your turn, not busted, and haven't used it this round
     // V3.4: Block during cut phase
@@ -320,16 +317,18 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const canBump = isBettingPhase && !isCutPhase && myTurn && isInGame && !isBusted && !isHolding && !isHouse && !hasBumpedThisRound && !tableData.skillUsedThisTurn;
     console.log(`Tavern | canBump=${canBump} (betting=${isBettingPhase}, cut=${isCutPhase}, myTurn=${myTurn}, inGame=${isInGame}, busted=${isBusted}, holding=${isHolding}, isHouse=${isHouse}, bumped=${hasBumpedThisRound}, skillUsed=${tableData.skillUsedThisTurn})`);
 
-    // Valid bump targets: other players with dice, not self, not busted, not house (holders ARE valid targets!)
-    // V3.5: GM-as-NPC IS a valid target
+    // Valid bump targets: other players with dice, not self, not busted, not house, not held, not folded
+    // V4: Updated to exclude held/folded players per TODO.md spec
     const bumpTargets = canBump ? players
       .filter(p => {
         const isNotSelf = p.id !== userId;
         const isNotBusted = !tableData.busts?.[p.id];
         const isNotHouse = !isPlayerHouse(p.id);
+        const isNotHeld = !tableData.holds?.[p.id];
+        const isNotFolded = !tableData.folded?.[p.id];
         const hasRolls = (tableData.rolls?.[p.id]?.length ?? 0) > 0;
-        console.log(`Tavern | Bump filter for ${p.name}(${p.id}): notSelf=${isNotSelf}, notBusted=${isNotBusted}, notHouse=${isNotHouse}, hasRolls=${hasRolls}`);
-        return isNotSelf && isNotBusted && isNotHouse && hasRolls;
+        console.log(`Tavern | Bump filter for ${p.name}(${p.id}): notSelf=${isNotSelf}, notBusted=${isNotBusted}, notHouse=${isNotHouse}, notHeld=${isNotHeld}, notFolded=${isNotFolded}, hasRolls=${hasRolls}`);
+        return isNotSelf && isNotBusted && isNotHouse && isNotHeld && isNotFolded && hasRolls;
       })
       .map(p => {
         const user = game.users.get(p.id);
@@ -384,9 +383,6 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       myDiceForCheat,
       canAccuse,
       accuseTargets,
-      canScan,
-      scanCost,
-      scanTargets,
       canGoad,
       goadTargets,
       canBump,
@@ -429,6 +425,8 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       canResistGoad,
       goadResistCost,
       goadedByName,
+      // V4: Dared condition (can only buy d20 or Fold)
+      isDared: tableData.dared?.[userId] ?? false,
     };
   }
 
@@ -1142,138 +1140,6 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }
   }
 
-  /**
-   * V2.0: Scan - Investigate a player for cheating during Staredown.
-   * - Cost: 1x ante per target
-   * - Skill: Insight (vs Tell DC) for Physical cheats, Arcana (vs Residue DC) for Magical
-   * - Success: Whisper reveals cheat type + location (Public/Hole), NOT the actual number
-   */
-  static async onScan(event, target) {
-    const state = getState();
-    const tableData = state.tableData ?? {};
-    const userId = game.user.id;
-    const players = Object.values(state.players ?? {});
-    const ante = game.settings.get(MODULE_ID, "fixedAnte");
-    const scannedBy = tableData.scannedBy ?? {};
-
-    // Build list of valid targets (not self, not busted, not house, not already scanned by this user)
-    // V3.5: GM-as-NPC IS a valid target
-    const isPlayerHouse = (pid) => {
-      const u = game.users.get(pid);
-      if (!u?.isGM) return false;
-      return !state.players?.[pid]?.playingAsNpc;
-    };
-    const validTargets = players
-      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !isPlayerHouse(p.id))
-      .filter(p => !scannedBy[p.id]?.includes(userId))
-      .map(p => {
-        const user = game.users.get(p.id);
-        const actor = user?.character;
-        const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
-        return { id: p.id, name: p.name, img };
-      });
-
-    if (validTargets.length === 0) {
-      return ui.notifications.warn("No valid targets to scan.");
-    }
-
-    // Get skill modifiers
-    const actor = game.user.character;
-    const insMod = actor?.system?.skills?.ins?.total ?? 0;
-    const arcMod = actor?.system?.skills?.arc?.total ?? 0;
-    const hasActor = !!actor;
-
-    // Build target selection with portraits
-    const targetOptions = validTargets.map(t =>
-      `<div class="scan-portrait" data-target-id="${t.id}" data-target-name="${t.name}" tabindex="0" style="display: inline-block; text-align: center; padding: 8px; margin: 4px; border: 2px solid transparent; border-radius: 8px; cursor: pointer;">
-        <img src="${t.img}" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;" />
-        <div style="font-size: 0.85em; margin-top: 4px;">${t.name}</div>
-      </div>`
-    ).join("");
-
-    const content = `
-      <form>
-        <p style="font-weight: bold; margin-bottom: 8px;">Select a player to scan:</p>
-        <p><strong>Cost:</strong> ${ante}gp (1x ante)</p>
-        <div class="scan-targets" style="display: flex; flex-wrap: wrap; justify-content: center; margin-bottom: 12px;">
-          ${targetOptions}
-        </div>
-        <hr>
-        <div class="form-group">
-          <label style="font-weight: bold;">What are you looking for?</label>
-          <div style="display: flex; gap: 16px; margin-top: 8px;">
-            <label style="cursor: pointer; flex: 1; padding: 8px; border: 2px solid #555; border-radius: 8px; text-align: center;" class="scan-type-option" data-type="insight">
-              <input type="radio" name="scanType" value="insight" checked style="display: none;" />
-              <i class="fa-solid fa-eye" style="font-size: 1.5em; color: #a0a0ff;"></i>
-              <div><strong>Physical Tells</strong></div>
-              <div style="font-size: 0.85em; color: #888;">Insight ${hasActor ? `(+${insMod})` : ""}</div>
-              <div style="font-size: 0.75em; color: #666; margin-top: 4px;">Sleight of Hand / Deception</div>
-            </label>
-            <label style="cursor: pointer; flex: 1; padding: 8px; border: 2px solid #555; border-radius: 8px; text-align: center;" class="scan-type-option" data-type="arcana">
-              <input type="radio" name="scanType" value="arcana" style="display: none;" />
-              <i class="fa-solid fa-wand-magic-sparkles" style="font-size: 1.5em; color: #a080ff;"></i>
-              <div><strong>Magical Residue</strong></div>
-              <div style="font-size: 0.85em; color: #888;">Arcana ${hasActor ? `(+${arcMod})` : ""}</div>
-              <div style="font-size: 0.75em; color: #666; margin-top: 4px;">INT / WIS / CHA magic</div>
-            </label>
-          </div>
-        </div>
-        <hr>
-        <p style="color: #aaf; font-size: 0.9em;">
-          <i class="fa-solid fa-info-circle"></i> Success reveals cheat <strong>type</strong> and <strong>location</strong> (visible/hole), but NOT the actual number.
-        </p>
-      </form>
-      <style>
-        .scan-portrait:hover { border-color: #666; background: rgba(255,255,255,0.1); }
-        .scan-portrait.selected { border-color: #4a6b8b; background: rgba(74,107,139,0.2); }
-        .scan-type-option:hover { border-color: #777; }
-        .scan-type-option.selected { border-color: #4a6b8b; background: rgba(74,107,139,0.2); }
-      </style>
-    `;
-
-    let selectedTargetId = null;
-
-    const result = await Dialog.prompt({
-      title: "Scan for Cheating",
-      content,
-      label: "Scan",
-      render: (html) => {
-        // Portrait selection
-        const portraits = html.find('.scan-portrait');
-        portraits.on('click', function () {
-          portraits.removeClass('selected');
-          $(this).addClass('selected');
-          selectedTargetId = $(this).data('target-id');
-        });
-        portraits.on('keydown', function (e) {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            $(this).click();
-          }
-        });
-
-        // Scan type selection
-        const typeOptions = html.find('.scan-type-option');
-        typeOptions.on('click', function () {
-          typeOptions.removeClass('selected');
-          $(this).addClass('selected');
-          $(this).find('input[type="radio"]').prop('checked', true);
-        });
-        // Set initial selection
-        html.find('.scan-type-option[data-type="insight"]').addClass('selected');
-      },
-      callback: (html) => {
-        if (!selectedTargetId) return null;
-        const scanType = html.find('[name="scanType"]:checked').val();
-        return { targetId: selectedTargetId, scanType };
-      },
-      rejectClose: false,
-    });
-
-    if (result) {
-      await tavernSocket.executeAsGM("playerAction", "scan", result, game.user.id);
-    }
-  }
 
   /**
    * V2.0: Goad - Force someone to ROLL (even if they held!)

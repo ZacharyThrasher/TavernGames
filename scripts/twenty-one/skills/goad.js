@@ -255,7 +255,11 @@ export async function goad(payload, userId) {
         const newPot = state.pot + ante;
         await deductFromActor(userId, ante);
 
-        // V3: Nat 1 = also forced to roll
+        // V4: "Dared" condition - attacker can ONLY buy d20 or Fold
+        // This applies immediately and overrides mustRoll
+        const updatedDared = { ...tableData.dared, [userId]: true };
+
+        // V3: Nat 1 = also forced to roll (d20 only due to Dared)
         if (isNat1) {
             updatedGoadBackfire[userId] = { mustRoll: true, goadedBy: targetId };
         }
@@ -265,6 +269,7 @@ export async function goad(payload, userId) {
             ...tableData,
             goadedThisRound: updatedGoadedThisRound,
             goadBackfire: updatedGoadBackfire,
+            dared: updatedDared, // V4: Add dared state
             skillUsedThisTurn: true,
         };
 

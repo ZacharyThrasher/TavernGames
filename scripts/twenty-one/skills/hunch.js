@@ -166,26 +166,74 @@ export async function hunch(userId) {
             icon: "fa-solid fa-eye",
         });
     } else {
-        // Failure = Locked into a Hit (any die)
-        tableData.hunchLocked = { ...tableData.hunchLocked, [userId]: true };
+        // V4: Failure = Forced "Blind Hit" - roll a random die but hide the result
+        // Pick a random die type for the blind roll
+        const blindDieType = VALID_DICE[Math.floor(Math.random() * VALID_DICE.length)];
+        const blindRoll = await new Roll(`1d${blindDieType}`).evaluate();
+        const blindValue = blindRoll.total;
+
+        // Add the die to rolls but mark as blind (hidden until reveal)
+        const currentRolls = tableData.rolls?.[userId] ?? [];
+        const newDie = {
+            die: blindDieType,
+            result: blindValue,
+            public: true, // It's visible, but the VALUE is hidden
+            blind: true,  // V4: Indicates value is hidden until reveal
+        };
+        const updatedRolls = { ...tableData.rolls, [userId]: [...currentRolls, newDie] };
+
+        // Update totals (internally tracked, but not shown to player)
+        const currentTotal = tableData.totals?.[userId] ?? 0;
+        const newTotal = currentTotal + blindValue;
+        const updatedTotals = { ...tableData.totals, [userId]: newTotal };
+
+        // Track blind dice for reveal phase
+        const currentBlindDice = tableData.blindDice?.[userId] ?? [];
+        const updatedBlindDice = { ...tableData.blindDice, [userId]: [...currentBlindDice, currentRolls.length] };
+
+        // Check for bust (hidden from player until reveal)
+        const updatedBusts = { ...tableData.busts };
+        if (newTotal > 21) {
+            updatedBusts[userId] = true;
+        }
+
+        tableData = {
+            ...tableData,
+            rolls: updatedRolls,
+            totals: updatedTotals,
+            blindDice: updatedBlindDice,
+            busts: updatedBusts,
+        };
+
+        // Whisper the actual value to GM only
+        await ChatMessage.create({
+            content: `<div class="tavern-gm-alert">
+        <strong>BLIND DIE</strong><br>
+        ${userName}'s failed Hunch forced a blind d${blindDieType}.<br>
+        <em>Hidden value: <strong>${blindValue}</strong></em>
+        ${newTotal > 21 ? '<br><span style="color: red;">HIDDEN BUST!</span>' : ''}
+      </div>`,
+            whisper: gmIds,
+            speaker: { alias: "Tavern Twenty-One" },
+        });
 
         await ChatMessage.create({
             content: `<div class="tavern-skill-result failure">
         <strong>Bad Read</strong><br>
-        You reach for intuition but grasp only doubt.
-        <br><em>You MUST take a Hit before your turn ends.</em>
+        Your instincts betray you - you commit to a blind gamble!
+        <br><em>A d${blindDieType} has been rolled... but you can't see the result!</em>
       </div>`,
             flavor: `${userName} rolled ${d20} + ${wisMod} = ${rollTotal} vs DC ${HUNCH_DC} — Failed!`,
-            whisper: [userId, ...gmIds],
-            blind: true, // V3.5.2: Hide from GMs not in whisper list
+            whisper: [userId],
+            blind: true,
             rolls: [roll],
         });
 
         await createChatCard({
             title: "The Hunch",
             subtitle: `${userName}'s intuition fails`,
-            message: `Committed to the gamble! Must Hit this turn.`,
-            icon: "fa-solid fa-lock",
+            message: `Committed to a <strong>Blind Die</strong>! A d${blindDieType} was rolled but the result is hidden...`,
+            icon: "fa-solid fa-question",
         });
         await playSound("lose");
     }

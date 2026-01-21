@@ -118,6 +118,10 @@ export function emptyTableData() {
         // V3: The Cut
         theCutPlayer: null,
         theCutUsed: false,
+        // V4: Dared condition (from Goad backfire)
+        dared: {},
+        // V4: Blind dice (from Hunch failure)
+        blindDice: {},
     };
 }
 

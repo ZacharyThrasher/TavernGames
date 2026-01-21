@@ -17,42 +17,6 @@ import { createChatCard, playSound } from "../../ui/chat.js";
 import { emptyTableData } from "../constants.js";
 
 /**
- * Check if any other players' Passive Perception beats the cheat roll.
- * If so, whisper them a subtle "gut feeling" hint about the cheater.
- */
-async function checkPassivePerception(state, cheaterId, cheaterName, cheatRoll) {
-    const tableData = state.tableData ?? emptyTableData();
-
-    for (const playerId of state.turnOrder) {
-        if (playerId === cheaterId) continue;
-
-        // V3.5: GM-as-NPC is a player who can notice cheating
-        const playerUser = game.users.get(playerId);
-        const isPlayerHouse = playerUser?.isGM && !state.players?.[playerId]?.playingAsNpc;
-        if (isPlayerHouse) continue;
-
-        const actor = getActorForUser(playerId);
-        if (!actor) continue;
-
-        // Passive Perception = 10 + Perception modifier
-        const percMod = actor.system?.skills?.prc?.total ?? 0;
-        const passivePerception = 10 + percMod;
-
-        if (passivePerception >= cheatRoll) {
-            // This player notices something suspicious
-            await ChatMessage.create({
-                content: `<div class="tavern-gut-feeling">
-          <i class="fa-solid fa-eye"></i>
-          <span>Something about <strong>${cheaterName}</strong>'s last move felt... off.</span>
-        </div>`,
-                whisper: [playerId],
-                speaker: { alias: "Gut Feeling" },
-            });
-        }
-    }
-}
-
-/**
  * Cheat to modify one of your dice.
  * @param {object} payload - { dieIndex, adjustment, cheatType, skill }
  * @param {string} userId - The cheating player
@@ -299,17 +263,18 @@ export async function cheat(payload, userId) {
     const userName = game.users.get(userId)?.name ?? "Unknown";
     const characterName = actor?.name ?? userName;
 
-    // V3: Notify the GM with cheat details
+    // V4: Notify the GM with cheat details (now the ONLY detection method for non-fumbles)
     if (gmIds.length > 0) {
         const fumbleStatus = fumbled ? " <span style='color: red;'>(NAT 1 - AUTO-CAUGHT!)</span>" : "";
         const invisibleStatus = isNat20 ? " <span style='color: gold;'>(NAT 20 - INVISIBLE!)</span>" : "";
         const dieLocation = isHoleDie ? " (Hole Die)" : " (Visible)";
+        const successStatus = (!fumbled && success) ? " <span style='color: #88ff88;'>✓ Successful Cheat</span>" : "";
         await ChatMessage.create({
             content: `<div class="tavern-gm-alert tavern-gm-cheat">
-        <strong>${cheatTypeLabel.toUpperCase()} CHEAT DETECTED</strong><br>
+        <strong>${cheatTypeLabel.toUpperCase()} CHEAT${fumbled ? " - FUMBLED!" : (success ? " - SUCCESS" : " - FAILED")}</strong><br>
         <em>${characterName}</em> changed their d${targetDie.die}${dieLocation} from <strong>${oldValue}</strong> to <strong>${newValue}</strong><br>
-        ${skillName}: <strong>${rollTotal}</strong> (${dcType})${fumbleStatus}${invisibleStatus}<br>
-        <small>${fumbled ? "They fumbled and were caught!" : `Scan DC: ${rollTotal} (${isPhysical ? "Insight vs Tell" : "Arcana vs Residue"})`}</small>
+        ${skillName}: <strong>${rollTotal}</strong> vs Heat DC ${heatDC}${fumbleStatus}${invisibleStatus}${successStatus}<br>
+        <small>${fumbled ? "They fumbled and were caught!" : (success ? "Cheat undetected. Only Accuse or Profile can catch them." : "Failed the Heat check, but not auto-caught.")}</small>
       </div>`,
             whisper: gmIds,
             speaker: { alias: "Tavern Twenty-One" },
@@ -327,10 +292,6 @@ export async function cheat(payload, userId) {
         await playSound("lose");
     }
 
-    // Check passive perception for non-Nat20 cheats
-    if (!fumbled && !isNat20) {
-        await checkPassivePerception(state, userId, characterName, rollTotal);
-    }
 
     await addHistoryEntry({
         type: fumbled ? "cheat_caught" : "cheat",

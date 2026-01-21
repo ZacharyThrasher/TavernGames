@@ -114,6 +114,12 @@ export async function bumpTable(payload, userId) {
         return state;
     }
 
+    // V4: Can't bump Held players (locked in their position)
+    if (tableData.holds?.[targetId]) {
+        await notifyUser(userId, "That player has held - they're locked in!");
+        return state;
+    }
+
     // V3: Mark as acted (affects Fold refund)
     tableData.hasActed = { ...tableData.hasActed, [userId]: true };
 
