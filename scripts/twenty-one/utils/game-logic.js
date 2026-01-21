@@ -9,6 +9,22 @@ export const OPENING_ROLLS_REQUIRED = 2;
 export const OPENING_DIE = 10;
 
 /**
+ * V3.5: Check if a user is acting as "the house" (GM not playing as NPC)
+ * Returns true if the user is the GM AND they are NOT playing as an NPC.
+ * Use this instead of raw `isGM` checks to support GM-as-NPC mode.
+ */
+export function isActingAsHouse(userId, state) {
+    const user = game.users.get(userId);
+    if (!user?.isGM) return false;
+
+    // Check if GM is playing as an NPC
+    const playerData = state?.players?.[userId];
+    if (playerData?.playingAsNpc) return false;
+
+    return true; // GM is acting as the house
+}
+
+/**
  * V3.0 Economy: Get the cost for rolling a specific die
  * d20 = ½ ante, d10 = ½ ante, d6/d8 = 1x ante, d4 = 2x ante
  */

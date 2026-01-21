@@ -68,6 +68,10 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const userId = game.user.id;
     const isInGame = Boolean(state.players?.[userId]);
     const isGM = game.user.isGM;
+    // V3.5: Check if GM is playing as NPC (should be treated as regular player)
+    const playerData = state.players?.[userId];
+    const isPlayingAsNpc = isGM && playerData?.playingAsNpc;
+    const isHouse = isGM && !isPlayingAsNpc; // True if GM acting as house
     const players = Object.values(state.players ?? {});
     const tableData = state.tableData ?? {};
     const ante = game.settings.get(MODULE_ID, "fixedAnte");
@@ -128,12 +132,12 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       }
 
       // V2.0: Show dice based on visibility (public vs hole)
-      // During play: Show public dice to everyone, hole dice only to owner/GM
-      // During reveal/inspection/payout: Show all dice
+      // During play: Show public dice to everyone, hole dice only to owner/house
+      // V3.5: GM-as-NPC does NOT see other players' hole dice
       const isRevealPhase = state.status === "REVEALING" || state.status === "PAYOUT" || state.status === "INSPECTION";
       const diceDisplay = rolls.map((r, idx) => {
         const isPublicDie = r.public ?? false;
-        const canSeeThisDie = isMe || isGM || isRevealPhase || isPublicDie;
+        const canSeeThisDie = isMe || isHouse || isRevealPhase || isPublicDie;
 
         if (canSeeThisDie) {
           return {
@@ -150,8 +154,9 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       });
 
       // V2.0: Calculate visible total for display to other players
+      // V3.5: GM-as-NPC sees same view as regular players
       const visibleTotal = tableData.visibleTotals?.[player.id] ?? 0;
-      const showFullTotal = isMe || isGM || isRevealPhase;
+      const showFullTotal = isMe || isHouse || isRevealPhase;
 
       return {
         ...player,
@@ -209,8 +214,9 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       ? (game.users.get(goadBackfireState.goadedBy)?.character?.name ?? game.users.get(goadBackfireState.goadedBy)?.name ?? "Someone")
       : null;
 
-    // Cheating context - player can cheat their own dice during play (GM cannot cheat)
-    const canCheat = state.status === "PLAYING" && state.players?.[userId] && myRolls.length > 0 && !tableData.busts?.[userId] && !isGM;
+    // Cheating context - player can cheat their own dice during play (House cannot cheat)
+    // V3.5: GM-as-NPC CAN cheat like regular players
+    const canCheat = state.status === "PLAYING" && state.players?.[userId] && myRolls.length > 0 && !tableData.busts?.[userId] && !isHouse;
     const myDiceForCheat = canCheat ? myRolls.map((r, idx) => ({
       index: idx,
       die: r.die,
@@ -226,9 +232,15 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const isBusted = tableData.busts?.[userId] ?? false;
     const isHolding = tableData.holds?.[userId] ?? false;
 
-    // Build list of players that can be accused (not self, not busted, not GM)
+    // Build list of players that can be accused (not self, not busted, not house)
+    // V3.5: GM-as-NPC IS a valid target
+    const isPlayerHouse = (pid) => {
+      const u = game.users.get(pid);
+      if (!u?.isGM) return false;
+      return !state.players?.[pid]?.playingAsNpc;
+    };
     const accuseTargets = !accusedThisRound ? players
-      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !game.users.get(p.id)?.isGM)
+      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !isPlayerHouse(p.id))
       .map(p => {
         // Get the user's assigned character for artwork
         const user = game.users.get(p.id);
@@ -238,17 +250,20 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       }) : [];
 
     // V3: Accuse available at all times during round
-    const canAccuse = isInGame && !accusedThisRound && !isBusted && accuseTargets.length > 0 && !isGM;
+    // V3.5: GM-as-NPC CAN accuse like regular players
+    const canAccuse = isInGame && !accusedThisRound && !isBusted && accuseTargets.length > 0 && !isHouse;
 
     // V2.0: Scan context - can scan during staredown if you're in the game and not busted
+    // V3.5: GM-as-NPC CAN scan like regular players
     // Cost: 1x ante per target, cannot scan same target twice
     const scannedBy = tableData.scannedBy ?? {};
-    const canScan = isInspection && state.players?.[userId] && !isBusted && !isGM;
+    const canScan = isInspection && state.players?.[userId] && !isBusted && !isHouse;
     const scanCost = ante;
 
     // Build scan targets - players you haven't already scanned
+    // V3.5: GM-as-NPC IS a valid target (uses isPlayerHouse from above)
     const scanTargets = canScan ? players
-      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !game.users.get(p.id)?.isGM)
+      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !isPlayerHouse(p.id))
       .filter(p => !scannedBy[p.id]?.includes(userId)) // Not already scanned by this player
       .map(p => {
         const user = game.users.get(p.id);
@@ -259,12 +274,14 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
     // V3: Goad context - can goad during betting phase if it's your turn, not busted, and haven't used it this round
     // V3.4: Block during cut phase
+    // V3.5: GM-as-NPC CAN use skills
     const hasGoadedThisRound = tableData.goadedThisRound?.[userId] ?? false;
-    const canGoad = isBettingPhase && !isCutPhase && myTurn && isInGame && !isBusted && !isFolded && !isGM && !hasGoadedThisRound && !tableData.skillUsedThisTurn;
+    const canGoad = isBettingPhase && !isCutPhase && myTurn && isInGame && !isBusted && !isFolded && !isHouse && !hasGoadedThisRound && !tableData.skillUsedThisTurn;
 
-    // V3: Valid goad targets: other players not busted, not GM, not Sloppy, not Folded
+    // V3: Valid goad targets: other players not busted, not house, not Sloppy, not Folded
+    // V3.5: GM-as-NPC IS a valid target
     const goadTargets = canGoad ? players
-      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !game.users.get(p.id)?.isGM)
+      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !isPlayerHouse(p.id))
       .filter(p => !tableData.sloppy?.[p.id] && !tableData.folded?.[p.id]) // V3: Can't goad Sloppy or Folded
       .map(p => {
         const user = game.users.get(p.id);
@@ -276,12 +293,14 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
     // V3: Hunch context - can use during betting phase if it's your turn and not locked
     // V3.4: Block during cut phase
-    const canHunch = isBettingPhase && !isCutPhase && myTurn && isInGame && !isBusted && !isFolded && !isHolding && !isGM && !hunchLocked && !tableData.skillUsedThisTurn;
+    // V3.5: GM-as-NPC CAN use skills
+    const canHunch = isBettingPhase && !isCutPhase && myTurn && isInGame && !isBusted && !isFolded && !isHolding && !isHouse && !hunchLocked && !tableData.skillUsedThisTurn;
 
     // V3: Profile context - can use during betting phase if it's your turn
     // V3.4: Block during cut phase
-    const profileTargets = (isBettingPhase && !isCutPhase && myTurn && !isBusted && !isFolded && !isGM && !tableData.skillUsedThisTurn) ? players
-      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !game.users.get(p.id)?.isGM && !tableData.folded?.[p.id])
+    // V3.5: GM-as-NPC IS a valid target
+    const profileTargets = (isBettingPhase && !isCutPhase && myTurn && !isBusted && !isFolded && !isHouse && !tableData.skillUsedThisTurn) ? players
+      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !isPlayerHouse(p.id) && !tableData.folded?.[p.id])
       .map(p => {
         const user = game.users.get(p.id);
         const actor = user?.character;
@@ -292,12 +311,14 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
     // Bump table context - can bump during betting phase if not busted/held, and haven't used it this round
     // V3.4: Block during cut phase
+    // V3.5: GM-as-NPC CAN use skills
     const hasBumpedThisRound = tableData.bumpedThisRound?.[userId] ?? false;
-    const canBump = isBettingPhase && !isCutPhase && myTurn && isInGame && !isBusted && !isHolding && !isGM && !hasBumpedThisRound && !tableData.skillUsedThisTurn;
+    const canBump = isBettingPhase && !isCutPhase && myTurn && isInGame && !isBusted && !isHolding && !isHouse && !hasBumpedThisRound && !tableData.skillUsedThisTurn;
 
-    // Valid bump targets: other players with dice, not self, not busted, not GM (holders ARE valid targets!)
+    // Valid bump targets: other players with dice, not self, not busted, not house (holders ARE valid targets!)
+    // V3.5: GM-as-NPC IS a valid target
     const bumpTargets = canBump ? players
-      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !game.users.get(p.id)?.isGM)
+      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !isPlayerHouse(p.id))
       .filter(p => (tableData.rolls?.[p.id]?.length ?? 0) > 0)
       .map(p => {
         const user = game.users.get(p.id);
@@ -502,7 +523,114 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!game.users.activeGM) {
       return ui.notifications.warn("A GM must be connected to play.");
     }
-    await tavernSocket.executeAsGM("joinTable", game.user.id);
+
+    // V3.5: If GM is joining, offer choice between House and NPC
+    if (game.user.isGM) {
+      const choice = await TavernApp._showGMJoinDialog();
+      if (!choice) return; // Cancelled
+
+      if (choice.playAsNpc) {
+        // Join as selected NPC
+        await tavernSocket.executeAsGM("joinTable", game.user.id, {
+          playingAsNpc: true,
+          npcActorId: choice.actorId,
+          npcName: choice.actorName,
+          npcImg: choice.actorImg,
+        });
+      } else {
+        // Join as House (default behavior)
+        await tavernSocket.executeAsGM("joinTable", game.user.id, {
+          playingAsNpc: false,
+        });
+      }
+    } else {
+      await tavernSocket.executeAsGM("joinTable", game.user.id);
+    }
+  }
+
+  /**
+   * V3.5: Show dialog for GM to choose between House and NPC mode
+   */
+  static async _showGMJoinDialog() {
+    // Get list of NPC actors the GM can use
+    const npcActors = game.actors.filter(a =>
+      a.type === "npc" && a.isOwner
+    ).map(a => ({
+      id: a.id,
+      name: a.name,
+      img: a.img || "icons/svg/mystery-man.svg",
+    }));
+
+    return new Promise((resolve) => {
+      const dialog = new Dialog({
+        title: "Join as...",
+        content: `
+          <div class="tavern-gm-join-dialog">
+            <p>How would you like to join the game?</p>
+            <div class="join-options">
+              <button type="button" class="join-option" data-choice="house">
+                <i class="fa-solid fa-building-columns"></i>
+                <span>Play as The House</span>
+                <small>Traditional dealer role</small>
+              </button>
+              <button type="button" class="join-option" data-choice="npc">
+                <i class="fa-solid fa-user-secret"></i>
+                <span>Play as an NPC</span>
+                <small>Full player abilities</small>
+              </button>
+            </div>
+            ${npcActors.length > 0 ? `
+              <div class="npc-selector" style="display: none;">
+                <h4>Select an NPC:</h4>
+                <div class="npc-grid">
+                  ${npcActors.map(a => `
+                    <div class="npc-option" data-actor-id="${a.id}" data-actor-name="${a.name}" data-actor-img="${a.img}">
+                      <img src="${a.img}" alt="${a.name}">
+                      <span>${a.name}</span>
+                    </div>
+                  `).join("")}
+                </div>
+              </div>
+            ` : `
+              <div class="npc-selector" style="display: none;">
+                <p class="no-npcs">No NPC actors available. Create an NPC first.</p>
+              </div>
+            `}
+          </div>
+        `,
+        buttons: {},
+        render: (html) => {
+          // Handle House choice
+          html.find('[data-choice="house"]').on("click", () => {
+            resolve({ playAsNpc: false });
+            dialog.close();
+          });
+
+          // Handle NPC choice - show selector
+          html.find('[data-choice="npc"]').on("click", () => {
+            html.find('.join-options').hide();
+            html.find('.npc-selector').show();
+          });
+
+          // Handle NPC selection
+          html.find('.npc-option').on("click", (e) => {
+            const $target = $(e.currentTarget);
+            resolve({
+              playAsNpc: true,
+              actorId: $target.data("actor-id"),
+              actorName: $target.data("actor-name"),
+              actorImg: $target.data("actor-img"),
+            });
+            dialog.close();
+          });
+        },
+        close: () => resolve(null),
+      }, {
+        width: 400,
+        classes: ["tavern-gm-join"],
+      });
+      dialog.render(true);
+    });
   }
 
   static async onLeave() {

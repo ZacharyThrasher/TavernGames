@@ -8,7 +8,7 @@ function ensureGM() {
   }
 }
 
-export async function handleJoinTable(userId) {
+export async function handleJoinTable(userId, options = {}) {
   ensureGM();
   const user = game.users.get(userId);
   if (!user) return getState();
@@ -20,10 +20,24 @@ export async function handleJoinTable(userId) {
   }
   if (state.players[userId]) return state;
 
-  // Get character info for avatar
-  const actor = user.character;
-  const avatar = actor?.img || user.avatar || "icons/svg/mystery-man.svg";
-  const characterName = actor?.name || user.name;
+  // V3.5: Handle GM playing as NPC
+  const isGMUser = user.isGM;
+  const playingAsNpc = isGMUser && options.playingAsNpc;
+
+  let avatar, characterName, npcActorId;
+
+  if (playingAsNpc) {
+    // GM is playing as selected NPC
+    npcActorId = options.npcActorId;
+    const npcActor = game.actors.get(npcActorId);
+    avatar = npcActor?.img || options.npcImg || "icons/svg/mystery-man.svg";
+    characterName = npcActor?.name || options.npcName || "NPC";
+  } else {
+    // Regular player or GM as house
+    const actor = user.character;
+    avatar = actor?.img || user.avatar || "icons/svg/mystery-man.svg";
+    characterName = actor?.name || user.name;
+  }
 
   const players = { ...state.players };
   players[userId] = {
@@ -31,6 +45,9 @@ export async function handleJoinTable(userId) {
     name: characterName,
     userName: user.name,
     avatar,
+    // V3.5: Track GM-as-NPC mode
+    playingAsNpc: playingAsNpc || false,
+    npcActorId: npcActorId || null,
   };
 
   const turnOrder = [...state.turnOrder, userId];

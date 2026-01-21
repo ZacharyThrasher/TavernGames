@@ -45,9 +45,11 @@ export async function goad(payload, userId) {
         return state;
     }
 
-    // GM cannot goad - they're the house
+    // V3.5: House cannot goad (but GM-as-NPC can)
     const user = game.users.get(userId);
-    if (user?.isGM) {
+    const playerData = state.players?.[userId];
+    const isHouse = user?.isGM && !playerData?.playingAsNpc;
+    if (isHouse) {
         ui.notifications.warn("The house does not goad.");
         return state;
     }

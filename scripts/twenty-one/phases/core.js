@@ -28,11 +28,24 @@ export async function startRound() {
 
   const tableData = emptyTableData();
 
-  // Calculate pot: each non-GM player antes, house matches non-GM players only
-  const nonGMPlayers = state.turnOrder.filter(id => !game.users.get(id)?.isGM);
-  const playerAntes = nonGMPlayers.length * ante;
-  const houseMatch = playerAntes;
-  const pot = playerAntes + houseMatch;
+  // Calculate pot: each player antes
+  // V3.5: If GM is playing as NPC, no house match (everyone antes equally)
+  // If GM is house, house matches non-GM players
+  const gmId = state.turnOrder.find(id => game.users.get(id)?.isGM);
+  const gmPlayerData = gmId ? state.players?.[gmId] : null;
+  const gmIsPlayingAsNpc = gmPlayerData?.playingAsNpc;
+
+  let pot;
+  if (gmIsPlayingAsNpc) {
+    // GM is a player, no house match - everyone antes equally
+    pot = state.turnOrder.length * ante;
+  } else {
+    // Traditional: non-GM players ante, house matches
+    const nonGMPlayers = state.turnOrder.filter(id => !game.users.get(id)?.isGM);
+    const playerAntes = nonGMPlayers.length * ante;
+    const houseMatch = playerAntes;
+    pot = playerAntes + houseMatch;
+  }
 
   // V3: Auto-roll 2d10 for everyone (1 visible, 1 hole)
   let lowestVisible = Infinity;

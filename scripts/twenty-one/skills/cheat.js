@@ -62,9 +62,11 @@ export async function cheat(payload, userId) {
         return state;
     }
 
-    // GM cannot cheat - they're the house
+    // V3.5: House cannot cheat (but GM-as-NPC can)
     const user = game.users.get(userId);
-    if (user?.isGM) {
+    const playerData = state.players?.[userId];
+    const isHouse = user?.isGM && !playerData?.playingAsNpc;
+    if (isHouse) {
         ui.notifications.warn("The house doesn't cheat... or do they?");
         return state;
     }

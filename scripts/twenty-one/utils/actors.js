@@ -3,14 +3,24 @@
  * V3.0
  */
 
-import { MODULE_ID } from "../constants.js";
+import { MODULE_ID, getState } from "../../state.js";
 
 /**
  * Get actor for a user (for skill checks)
+ * V3.5: If GM is playing as NPC, return the NPC actor instead
  */
 export function getActorForUser(userId) {
     const user = game.users.get(userId);
     if (!user) return null;
+
+    // V3.5: Check if this is a GM playing as NPC
+    const state = getState();
+    const playerData = state?.players?.[userId];
+    if (playerData?.playingAsNpc && playerData?.npcActorId) {
+        return game.actors.get(playerData.npcActorId) ?? null;
+    }
+
+    // Regular behavior - use assigned character
     const actorId = user.character?.id;
     if (!actorId) return null;
     return game.actors.get(actorId) ?? null;
@@ -18,9 +28,17 @@ export function getActorForUser(userId) {
 
 /**
  * Get all GM user IDs for whispered messages
+ * V3.5: Exclude GMs who are playing as NPC (they shouldn't see house-only info)
  */
 export function getGMUserIds() {
-    return game.users.filter(u => u.isGM).map(u => u.id);
+    const state = getState();
+    return game.users.filter(u => {
+        if (!u.isGM) return false;
+        // V3.5: Exclude GMs playing as NPC from house-only whispers
+        const playerData = state?.players?.[u.id];
+        if (playerData?.playingAsNpc) return false;
+        return true;
+    }).map(u => u.id);
 }
 
 /**
