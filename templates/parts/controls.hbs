@@ -165,11 +165,30 @@
         <i class="fa-solid fa-eye"></i> Hunch
       </button>
       {{/if}}
+
       {{#if canProfile}}
       <button type="button" class="btn btn-skill btn-profile" data-action="profile"
         title="INT - Learn target's hole die">
         <i class="fa-solid fa-user-secret"></i> Profile
       </button>
+      {{/if}}
+
+      {{#if canGoad}}
+      {{#if goadTargets.length}}
+      <button type="button" class="btn btn-skill btn-goad" data-action="goad"
+        title="CHA - Force someone to roll again. Once per round.">
+        <i class="fa-solid fa-comments"></i> Goad
+      </button>
+      {{/if}}
+      {{/if}}
+
+      {{#if canBump}}
+      {{#if bumpTargets.length}}
+      <button type="button" class="btn btn-skill btn-bump" data-action="bumpTable"
+        title="STR - Force a re-roll. Once per round.">
+        <i class="fa-solid fa-hand-fist"></i> Bump
+      </button>
+      {{/if}}
       {{/if}}
     </div>
   </div>
@@ -197,29 +216,9 @@
   {{!-- Cheat button - available when you have dice --}}
 
 
-  {{!-- Goad button - V2.0: available during betting phase (can target holders!) --}}
-  {{#if canGoad}}
-  {{#if goadTargets.length}}
-  <div class="control-section goad-section">
-    <button type="button" class="btn btn-goad" data-action="goad">
-      <i class="fa-solid fa-comments"></i> Goad
-    </button>
-    <p class="hint goad-hint">Force someone to roll again. Once per round.</p>
-  </div>
-  {{/if}}
-  {{/if}}
+  {{!-- Goad button moved to Skills section --}}
 
-  {{!-- Bump Table button - available during betting phase --}}
-  {{#if canBump}}
-  {{#if bumpTargets.length}}
-  <div class="control-section bump-section">
-    <button type="button" class="btn btn-bump" data-action="bumpTable">
-      <i class="fa-solid fa-hand-fist"></i> Bump Table
-    </button>
-    <p class="hint bump-hint">Force a re-roll. Once per round.</p>
-  </div>
-  {{/if}}
-  {{/if}}
+  {{!-- Bump Table button moved to Skills section --}}
 
   {{!-- Pending Bump Retaliation --}}
   {{#if canRetaliate}}

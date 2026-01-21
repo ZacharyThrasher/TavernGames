@@ -2472,3 +2472,63 @@
     text-shadow: 0 0 8px red;
   }
 }
+
+/* ============================================
+   Skill Buttons (Bonus Actions)
+   ============================================ */
+.skill-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.btn-skill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 8px;
+  background: linear-gradient(135deg, var(--tavern-wood-medium) 0%, var(--tavern-wood-dark) 100%);
+  border: 1px solid var(--tavern-wood-highlight);
+  border-radius: var(--tavern-radius-sm);
+  color: var(--tavern-parchment);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 40px;
+}
+
+.btn-skill:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--tavern-wood-light) 0%, var(--tavern-wood-medium) 100%);
+  border-color: var(--tavern-gold);
+  color: var(--tavern-gold);
+  box-shadow: 0 0 10px rgba(212, 160, 74, 0.2);
+  transform: translateY(-1px);
+}
+
+.btn-skill:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn-skill:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(0.8);
+  border-color: transparent;
+}
+
+.btn-skill i {
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+/* Specific skill accents (optional/subtle) */
+.btn-goad:hover {
+  border-color: #aaffaa;
+}
+
+.btn-bump:hover {
+  border-color: #ffdca0;
+}
