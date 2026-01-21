@@ -62,8 +62,10 @@ export async function profile(payload, userId) {
         await notifyUser(userId, "Invalid Profile target.");
         return state;
     }
+    // V3.5: Can't profile the house, but GM-as-NPC is a valid target
     const targetUser = game.users.get(targetId);
-    if (targetUser?.isGM) {
+    const isTargetHouse = targetUser?.isGM && !state.players?.[targetId]?.playingAsNpc;
+    if (isTargetHouse) {
         await notifyUser(userId, "You can't read the house!");
         return state;
     }

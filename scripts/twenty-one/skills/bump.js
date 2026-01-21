@@ -78,7 +78,9 @@ export async function bumpTable(payload, userId) {
     }
 
     const targetUser = game.users.get(targetId);
-    if (targetUser?.isGM) {
+    // V3.5: Allow targeting GM-as-NPC, only block house
+    const isTargetHouse = targetUser?.isGM && !state.players?.[targetId]?.playingAsNpc;
+    if (isTargetHouse) {
         ui.notifications.warn("You can't bump the house's dice!");
         return state;
     }

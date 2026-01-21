@@ -49,9 +49,11 @@ export async function hunch(userId) {
         return state;
     }
 
-    // GM cannot use skills
+    // V3.5: House cannot use skills (but GM-as-NPC can)
     const user = game.users.get(userId);
-    if (user?.isGM) {
+    const playerData = state.players?.[userId];
+    const isHouse = user?.isGM && !playerData?.playingAsNpc;
+    if (isHouse) {
         ui.notifications.warn("The house does not guess.");
         return state;
     }
