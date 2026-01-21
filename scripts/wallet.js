@@ -28,6 +28,7 @@ export function canAffordAnte(state, ante) {
     if (isHouse) continue;
 
     const actor = getActorForUser(userId);
+    console.log(`Tavern | canAffordAnte: userId=${userId}, actor=${actor?.name}, type=${actor?.type}, currency=`, actor?.system?.currency);
     if (!actor) {
       return { ok: false, name: user?.name ?? "Unknown", reason: "no character" };
     }
