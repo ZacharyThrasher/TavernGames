@@ -548,13 +548,13 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       }
     }
 
-    await tavernSocket.executeAsGM("playerAction", "roll", { die, payWithDrink }, game.user.id);
+    const updatedState = await tavernSocket.executeAsGM("playerAction", "roll", { die, payWithDrink }, game.user.id);
 
     // V3: Auto-pop cheat UI after roll (DEX/Sleight of Hand only)
-    // Give a moment for the state to update
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Wait for dice animation to complete
+    await new Promise(resolve => setTimeout(resolve, 1500));
 
-    const updatedState = getState();
+    // Removed redundant getState call - use returned state from socket
     const myRolls = updatedState.tableData?.rolls?.[game.user.id] ?? [];
     const lastDieIndex = myRolls.length - 1;
 
