@@ -570,15 +570,31 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
     // If an NPC is selected, offer to use that one directly
     if (selectedActor && selectedActor.type === "npc") {
+      const ante = game.settings.get(MODULE_ID, "fixedAnte");
+      const defaultWallet = ante * 20; // Default to 20x ante
+
       return new Promise((resolve) => {
         const dialog = new Dialog({
           title: "Join the Game",
           content: `
             <div class="tavern-gm-join-dialog">
               <p>How would you like to join?</p>
-              <div class="selected-npc">
-                <img src="${selectedActor.img || 'icons/svg/mystery-man.svg'}" alt="${selectedActor.name}" style="width: 64px; height: 64px; border-radius: 8px;">
-                <strong>${selectedActor.name}</strong>
+              <div class="selected-npc" style="display: flex; align-items: center; gap: 12px; margin: 12px 0; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                <img src="${selectedActor.img || 'icons/svg/mystery-man.svg'}" alt="${selectedActor.name}" style="width: 64px; height: 64px; border-radius: 8px; object-fit: cover;">
+                <div>
+                  <strong style="font-size: 1.1em;">${selectedActor.name}</strong>
+                  <div style="font-size: 0.9em; color: #888; margin-top: 4px;">NPC Gambler</div>
+                </div>
+              </div>
+              <div class="npc-wallet-section" style="margin: 12px 0; padding: 12px; background: rgba(255, 215, 0, 0.1); border: 1px solid rgba(255, 215, 0, 0.3); border-radius: 8px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: bold;">
+                  <i class="fa-solid fa-coins" style="color: gold;"></i> Starting Wallet
+                </label>
+                <input type="number" name="npcWallet" value="${defaultWallet}" min="1" step="${ante}" 
+                  style="width: 100%; padding: 8px; font-size: 1.1em; text-align: center;">
+                <div style="font-size: 0.85em; color: #888; margin-top: 4px; text-align: center;">
+                  This is tracked by the module (not the actor sheet)
+                </div>
               </div>
             </div>
           `,
@@ -591,12 +607,16 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
             npc: {
               icon: '<i class="fa-solid fa-user-secret"></i>',
               label: `Play as ${selectedActor.name}`,
-              callback: () => resolve({
-                playAsNpc: true,
-                actorId: selectedActor.id,
-                actorName: selectedActor.name,
-                actorImg: selectedActor.img || "icons/svg/mystery-man.svg",
-              }),
+              callback: (html) => {
+                const walletAmount = parseInt(html.find('[name="npcWallet"]').val()) || defaultWallet;
+                resolve({
+                  playAsNpc: true,
+                  actorId: selectedActor.id,
+                  actorName: selectedActor.name,
+                  actorImg: selectedActor.img || "icons/svg/mystery-man.svg",
+                  initialWallet: walletAmount,
+                });
+              },
             },
           },
           default: "npc",

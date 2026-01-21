@@ -1,6 +1,7 @@
 import { MODULE_ID, getState, updateState } from "./state.js";
 import { startRound, submitRoll, hold, revealDice, finishRound, returnToLobby, cheat, accuse, skipInspection, goad, resistGoad, bumpTable, bumpRetaliation, hunch, profile, useCut, fold, submitDuelRoll, finishTurn } from "./twenty-one/index.js";
 import { placeSideBet } from "./twenty-one/phases/side-bets.js";
+import { setNpcWallet } from "./wallet.js";
 import { playSound } from "./sounds.js";
 
 function ensureGM() {
@@ -25,7 +26,7 @@ export async function handleJoinTable(userId, options = {}) {
   const isGMUser = user.isGM;
   const playingAsNpc = isGMUser && options.playingAsNpc;
 
-  let avatar, characterName, npcActorId;
+  let avatar, characterName, npcActorId, initialWallet;
 
   if (playingAsNpc) {
     // GM is playing as selected NPC
@@ -33,6 +34,10 @@ export async function handleJoinTable(userId, options = {}) {
     const npcActor = game.actors.get(npcActorId);
     avatar = npcActor?.img || options.npcImg || "icons/svg/mystery-man.svg";
     characterName = npcActor?.name || options.npcName || "NPC";
+
+    // V4: Set initial NPC wallet
+    initialWallet = options.initialWallet ?? (game.settings.get(MODULE_ID, "fixedAnte") * 20);
+    await setNpcWallet(userId, initialWallet);
   } else {
     // Regular player or GM as house
     const actor = user.character;
@@ -49,6 +54,8 @@ export async function handleJoinTable(userId, options = {}) {
     // V3.5: Track GM-as-NPC mode
     playingAsNpc: playingAsNpc || false,
     npcActorId: npcActorId || null,
+    // V4: Track initial wallet for cash-out summary
+    initialWallet: playingAsNpc ? initialWallet : null,
   };
 
   const turnOrder = [...state.turnOrder, userId];
