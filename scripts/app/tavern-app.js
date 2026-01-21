@@ -72,6 +72,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const playerData = state.players?.[userId];
     const isPlayingAsNpc = isGM && playerData?.playingAsNpc;
     const isHouse = isGM && !isPlayingAsNpc; // True if GM acting as house
+    if (isGM) console.log(`Tavern | GM skill check: isGM=${isGM}, playerData=`, playerData, `, isPlayingAsNpc=${isPlayingAsNpc}, isHouse=${isHouse}`);
     const players = Object.values(state.players ?? {});
     const tableData = state.tableData ?? {};
     const ante = game.settings.get(MODULE_ID, "fixedAnte");
