@@ -11,9 +11,8 @@ export const VALID_DICE = [4, 6, 8, 10, 20];
 // Opening phase requirements
 export const OPENING_ROLLS_REQUIRED = 2;
 
-// Hunch skill DCs: DC 10 = 1 die, DC 15 = half dice
-export const HUNCH_DC_LOW = 10;
-export const HUNCH_DC_HIGH = 15;
+// Hunch skill DC and thresholds
+export const HUNCH_DC = 12;
 export const HUNCH_THRESHOLDS = {
     4: 2,
     6: 3,
@@ -39,6 +38,40 @@ export function getDieCost(die, ante) {
     const multiplier = DIE_COST_MULTIPLIERS[die] ?? 1;
     return Math.floor(ante * multiplier);
 }
+
+// Duel challenge types with flavor
+export const DUEL_CHALLENGES = {
+    str: {
+        name: "Arm Wrestling",
+        desc: "Lock arms and test your might!",
+        icon: "fa-solid fa-hand-fist",
+    },
+    dex: {
+        name: "Quick Draw",
+        desc: "Fastest hands at the table!",
+        icon: "fa-solid fa-hand",
+    },
+    con: {
+        name: "Drinking Contest",
+        desc: "Last one standing wins!",
+        icon: "fa-solid fa-beer-mug-empty",
+    },
+    int: {
+        name: "Riddle Challenge",
+        desc: "Outwit your opponent!",
+        icon: "fa-solid fa-brain",
+    },
+    wis: {
+        name: "Staring Contest",
+        desc: "First to blink loses!",
+        icon: "fa-solid fa-eye",
+    },
+    cha: {
+        name: "Crowd Appeal",
+        desc: "Let the crowd decide!",
+        icon: "fa-solid fa-users",
+    },
+};
 
 /**
  * Create empty table data for a new round
