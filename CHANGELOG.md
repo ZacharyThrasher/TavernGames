@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.8.46] - 2026-01-22
+### Hotfix 46
+- **CSS Restoration**: Fixed a regression where standard Cinematic Cut-Ins (Bust, Victory, Critical) had their text misaligned (stuck in top-left). Restored the missing text container styles that were accidentally overwritten during the Versus Mode refactor. Now text should correctly slam into the center of the stripe.
+
 ## [4.8.45] - 2026-01-22
 ### Hotfix 45
 - **Showdown Visibility Fix**: Modified the "Versus Mode" CSS to force the portraits to be visible by default (`opacity: 1`), rather than resolving to visible via animation. This ensures that even if the entrance animation fails to trigger (causing the strict "invisible" appearance seen in reports), the portraits will still appear on screen.

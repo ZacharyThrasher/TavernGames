@@ -3082,6 +3082,73 @@
       opacity: 1;
     }
   }
+
+  /* Text Container (Single Mode) */
+  .text-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-15deg);
+    /* Match stripe angle and center */
+    z-index: 10;
+    text-align: center;
+    /* Ensure centering */
+    width: 100%;
+  }
+
+  .cinematic-title {
+    font-family: var(--tavern-font-primary);
+    font-size: 15vh;
+    /* Massive */
+    font-weight: 900;
+    color: white;
+    text-transform: uppercase;
+    text-shadow:
+      0 0 20px var(--stripe-color),
+      4px 4px 0 black;
+    margin: 0;
+    line-height: 0.9;
+    transform: scale(3);
+    opacity: 0;
+    font-style: italic;
+    animation: text-slam 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s forwards;
+  }
+
+  @keyframes text-slam {
+    0% {
+      transform: scale(3);
+      opacity: 0;
+    }
+
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  .cinematic-subtitle {
+    font-family: var(--tavern-font-body);
+    font-size: 5vh;
+    font-weight: 700;
+    color: var(--tavern-parchment);
+    margin: 0;
+    opacity: 0;
+    transform: translateY(20px);
+    animation: subtitle-fade 0.5s ease-out 0.5s forwards;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+  }
+
+  @keyframes subtitle-fade {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Type Specifics */
+  .type-BUST .cinematic-title {
+    color: #ffaaaa;
+  }
 }
 
 /* ==========================================================================
