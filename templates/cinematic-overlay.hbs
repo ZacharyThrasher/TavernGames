@@ -38,7 +38,13 @@
         {{/if}}
 
         <div class="text-container">
+            {{#if resultData}}
+            {{!-- Reuse Versus Outcome Style for impactful result text --}}
+            <div class="versus-outcome {{resultData.outcomeClass}}">{{resultData.outcome}}</div>
+            {{else}}
             <h1 class="cinematic-title">{{text}}</h1>
+            {{/if}}
+
             {{#if img}}
             <h2 class="cinematic-subtitle">{{name}}</h2>
             {{/if}}

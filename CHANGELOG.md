@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.8.52] - 2026-01-22
+### Hotfix 52
+- **Result Display Fix**: Fixed a regression where skill outcomes (SUCCESS/FAIL) were hidden because the Standard/Single layout didn't know how to display them. I updated the template to check for result data and display the outcome text correctly even when not in Versus mode. Now, Goad/Bump/Profile results will properly show "SUCCESS" or "FAIL" instead of just the skill name.
+
 ## [4.8.51] - 2026-01-22
 ### Hotfix 51
 - **Simplified Visuals**: Per request, the "Versus Mode" (split-screen) layout has been scrapped for all skills (Bump, Goad, Profile) due to reliability issues. All skills now use the reliable "Standard" cut-in layout (Single Portrait + Stripe). The split-screen effect is now exclusive to "The Duel".
