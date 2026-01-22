@@ -173,30 +173,42 @@ export async function cheat(payload, userId) {
         speaker: { alias: "Tavern Twenty-One" },
     });
 
-    // Update the die value
+    // V4.7.1: Only apply changes if success (or Nat 20)
+    // If failed (and not fumbled), nothing happens to the die
     const updatedRolls = { ...tableData.rolls };
-    updatedRolls[userId] = [...rolls];
-    updatedRolls[userId][dieIndex] = { ...targetDie, result: newValue };
-
-    // Update total
     const updatedTotals = { ...tableData.totals };
-    updatedTotals[userId] = (updatedTotals[userId] ?? 0) - oldValue + newValue;
-
-    // Update visible total if it was a public die
     const updatedVisibleTotals = { ...tableData.visibleTotals };
-    if (targetDie.public) {
-        updatedVisibleTotals[userId] = (updatedVisibleTotals[userId] ?? 0) - oldValue + newValue;
+    const updatedBusts = { ...tableData.busts };
+
+    if (success) {
+        // Update the die value
+        updatedRolls[userId] = [...rolls];
+        updatedRolls[userId][dieIndex] = { ...targetDie, result: newValue };
+
+        // Update total
+        updatedTotals[userId] = (updatedTotals[userId] ?? 0) - oldValue + newValue;
+
+        // Update visible total if it was a public die
+        if (targetDie.public) {
+            updatedVisibleTotals[userId] = (updatedVisibleTotals[userId] ?? 0) - oldValue + newValue;
+        }
+
+        // Check for bust/unbust
+        if (updatedTotals[userId] > 21) {
+            updatedBusts[userId] = true;
+        } else if (updatedTotals[userId] <= 21 && tableData.busts[userId]) {
+            updatedBusts[userId] = false;
+        }
     }
 
     // V3: Update Heat DC (increases by 2 per cheat, unless Nat 20)
+    // Even if cheat failed (but not fumbled), heat increases!
     let newHeatDC = heatDC;
     if (!isNat20) {
         newHeatDC = heatDC + 2;
     }
     const newCheatsThisRound = (tableData.cheatsThisRound ?? 0) + 1;
 
-    // Check for bust after cheating
-    const updatedBusts = { ...tableData.busts };
     const updatedCaught = { ...tableData.caught };
     let newPot = state.pot;
 
@@ -206,13 +218,6 @@ export async function cheat(payload, userId) {
         updatedBusts[userId] = true;
         await deductFromActor(userId, ante);
         newPot = state.pot + ante;
-    }
-
-    if (updatedTotals[userId] > 21) {
-        updatedBusts[userId] = true;
-    } else if (updatedTotals[userId] <= 21 && tableData.busts[userId]) {
-        // Un-bust if they cheated down from a bust
-        updatedBusts[userId] = false;
     }
 
     // V3: Track cheat with new structure (Nat 20 = no DC recorded, invisible)

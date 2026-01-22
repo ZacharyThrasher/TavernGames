@@ -10,6 +10,7 @@
  */
 
 import { MODULE_ID, getState, updateState } from "../../state.js";
+import { tavernSocket } from "../../socket.js";
 import { HUNCH_DC, HUNCH_THRESHOLDS, VALID_DICE, emptyTableData } from "../constants.js";
 import { createChatCard, addHistoryEntry } from "../../ui/chat.js";
 
@@ -60,6 +61,9 @@ export async function hunch(userId) {
 
     // Mark as acted
     tableData.hasActed = { ...tableData.hasActed, [userId]: true };
+
+    // V4.7.1: Visual Cut-In
+    tavernSocket.executeForEveryone("showSkillCutIn", "FORESIGHT", userId);
 
     const actor = getActorForUser(userId);
     const userName = actor?.name ?? game.users.get(userId)?.name ?? "Unknown";
@@ -235,7 +239,7 @@ export async function hunch(userId) {
 
             // Trigger bust fanfare for everyone
             try {
-                const { tavernSocket } = await import("../../socket.js");
+                // tavernSocket is now imported statically
                 await tavernSocket.executeForEveryone("showBustFanfare", userId);
             } catch (e) { console.warn("Could not show bust fanfare:", e); }
         } else {

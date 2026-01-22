@@ -13,6 +13,7 @@ import { MODULE_ID } from "../constants.js";
 import { getState, updateState, emptyTableData } from "../../state.js";
 import { getActorForUser, notifyUser } from "../utils/actors.js";
 import { createChatCard, addHistoryEntry } from "../../ui/chat.js";
+import { tavernSocket } from "../../socket.js";
 
 export async function profile(payload, userId) {
     const state = getState();
@@ -88,6 +89,9 @@ export async function profile(payload, userId) {
 
     // Mark as acted
     tableData.hasActed = { ...tableData.hasActed, [userId]: true };
+
+    // V4.7.1: Visual Cut-In
+    tavernSocket.executeForEveryone("showSkillCutIn", "PROFILE", userId);
 
     const actor = getActorForUser(userId);
     const targetActor = getActorForUser(targetId);

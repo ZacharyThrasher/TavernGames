@@ -309,7 +309,35 @@ export function showFloatingText(userId, amount) {
     requestAnimationFrame(() => floatEl.classList.add("animate"));
     setTimeout(() => fadeOutAndRemove(floatEl, 500), 1500);
 
+    setTimeout(() => fadeOutAndRemove(floatEl, 500), 1500);
+
   } catch (error) {
     console.error("Tavern Twenty-One | Floating text error:", error);
+  }
+}
+
+/**
+ * V4.7.1: Cinematic Skill Cut-In
+ * Triggers a skill-specific cinematic overlay
+ * @param {string} type - FORESIGHT, GOAD, PROFILE
+ * @param {string} userId - User ID performing the skill
+ */
+export function showSkillCutIn(type, userId) {
+  try {
+    if (isPerformanceMode()) return;
+
+    // Map type to display text
+    let text = type;
+    if (type === "FORESIGHT") text = "FORESIGHT!";
+    else if (type === "GOAD") text = "GOADED!";
+    else if (type === "PROFILE") text = "ANALYSIS!";
+
+    CinematicOverlay.show({
+      type,
+      userId,
+      text
+    });
+  } catch (error) {
+    console.error("Tavern Twenty-One | Skill CutIn error:", error);
   }
 }

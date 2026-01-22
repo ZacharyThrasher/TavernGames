@@ -107,6 +107,9 @@ export class CinematicOverlay extends HandlebarsApplicationMixin(ApplicationV2) 
             case "BUST": return "var(--tavern-danger)";
             case "VICTORY": return "var(--tavern-gold-bright)";
             case "DUEL": return "var(--tavern-info)";
+            case "FORESIGHT": return "#9b59b6"; // Mystical Purple
+            case "GOAD": return "#e67e22";      // Aggressive Orange
+            case "PROFILE": return "#1abc9c";   // Detective Cyan
             default: return "var(--tavern-parchment)";
         }
     }

@@ -17,6 +17,7 @@ import { MODULE_ID, getState, updateState, addHistoryEntry } from "../../state.j
 import { deductFromActor, getActorForUser, notifyUser } from "../utils/actors.js";
 import { createChatCard } from "../../ui/chat.js";
 import { emptyTableData } from "../constants.js";
+import { tavernSocket } from "../../socket.js";
 
 /**
  * Goad another player during the betting phase.
@@ -118,6 +119,9 @@ export async function goad(payload, userId) {
 
     // V3: Mark as acted (affects Fold refund)
     tableData.hasActed = { ...tableData.hasActed, [userId]: true };
+
+    // V4.7.1: Visual Cut-In
+    tavernSocket.executeForEveryone("showSkillCutIn", "GOAD", userId);
 
     // Get actors
     const attackerActor = getActorForUser(userId);

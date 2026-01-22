@@ -1,5 +1,13 @@
 # Changelog
 
+## [4.7.3] - 2026-01-22
+### High Drama Update
+- **Cinematic Skills**: Added dramatic cinematic cut-ins for **Foresight**, **Goad**, and **Profile** skills to heighten tension. Each has unique colors and text.
+- **Cheat Logic Overhaul**: Failing a cheat check (rolling below the Heat DC) now **prevents** the die manipulation from happening. You must beat the heat to change fate!
+  - You still accrue Heat for the attempt.
+  - Fumbling (Nat 1) still results in getting caught immediately.
+- **Visuals**: Further tuned visual effect triggers.
+
 ## [4.7.2] - 2026-01-22
 ### Fixed
 - **Bust Cut-In Triggers**: Fixed an issue where the new Bust Cut-In/Fanfare wasn't triggering for normal gameplay busts (only triggered on Hunch fails). Now it consistently plays for any bust event.
