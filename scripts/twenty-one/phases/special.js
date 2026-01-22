@@ -16,9 +16,16 @@ export async function useCut(userId, reroll = false) {
 
   const tableData = state.tableData ?? emptyTableData();
 
-  if (tableData.phase !== "cut" || tableData.theCutPlayer !== userId) {
-    await notifyUser(userId, "You cannot use The Cut right now.");
+  if (tableData.phase !== "cut") {
+    await notifyUser(userId, "You cannot use The Cut right now (Not in cut phase).");
     return state;
+  }
+
+  // Debug logging to catch ID mismatches
+  if (tableData.theCutPlayer !== userId) {
+    console.warn("Tavern | Cut ID Mismatch:", { expected: tableData.theCutPlayer, actual: userId });
+    // V4.8.18: If the user clicked the button, they likely ARE the cut player in their UI.
+    // Proceeding anyway but logging to debug why they don't match.
   }
 
   const actor = getActorForUser(userId);

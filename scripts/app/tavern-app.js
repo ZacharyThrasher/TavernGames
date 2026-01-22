@@ -252,7 +252,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
     // Goad context updated (remove resist)
     const hasGoadedThisRound = tableData.goadedThisRound?.[userId] ?? false;
-    const canGoad = isBettingPhase && !isCutPhase && myTurn && isInGame && !isBusted && !isFolded && !isHouse && !hasGoadedThisRound && !tableData.skillUsedThisTurn;
+    const canGoad = isBettingPhase && !isCutPhase && myTurn && isInGame && !(tableData.busts?.[userId]) && !isFolded && !isHouse && !hasGoadedThisRound && !tableData.skillUsedThisTurn;
     const goadTargets = canGoad ? getValidGoadTargets(state, userId) : [];
 
     // Cheating Context
