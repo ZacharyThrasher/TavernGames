@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.8.32] - 2026-01-22
+### Hotfix 32
+- **UI Overhaul**: Refactored the Cinematic Overlay CSS to completely decouple "Single" and "Versus" modes. This removes all inheritance conflicts that were causing invisible avatars in Versus mode.
+- **Visual Fix**: Fixed the "VS" text disappearing by defaulting it to visible.
+
 ## [4.8.31] - 2026-01-22
 ### Hotfix 31
 - **UI Fix**: Explicitly disabled the inherited `portrait-slide` animation for Versus Mode cut-ins. This animation was conflicting with the static positioning, likely keeping the avatars at `opacity: 0` or transformed off-screen despite other visibility settings.

@@ -3023,7 +3023,8 @@
   }
 
   /* Portrait */
-  .portrait-container {
+  /* Portrait - Base (Single Mode) */
+  .portrait-container.single {
     position: absolute;
     bottom: -50px;
     right: 5vw;
@@ -3044,7 +3045,8 @@
     filter: drop-shadow(10px 10px 20px rgba(0, 0, 0, 0.5));
   }
 
-  .portrait-flash {
+  /* Flash effect only for single mode */
+  .portrait-container.single .portrait-flash {
     position: absolute;
     top: 0;
     left: 0;
@@ -3070,57 +3072,30 @@
 }
 
 /* ==========================================================================
-     VERSUS MODE (FIXED)
+     VERSUS MODE (REFACTORED V13)
      ========================================================================== */
-.cinematic-cut-in.versus-mode .portrait-container {
+.portrait-container.versus {
   width: 40vh;
   height: 60vh;
   bottom: 0;
-  opacity: 1 !important;
-  /* Force visibility */
+  position: absolute;
+  opacity: 1;
+  /* Ensure visibility */
   mask-image: none;
   -webkit-mask-image: none;
-  position: absolute !important;
-  animation: none !important;
-  /* V4.8.31: Killing the inherited animation is crucial */
+  z-index: 5;
 }
 
-.cinematic-cut-in.versus-mode .portrait-container.left {
+.portrait-container.versus.left {
   left: 5vw;
   right: auto;
   transform: none;
-  /* Removed animation transform */
 }
 
-.cinematic-cut-in.versus-mode .portrait-container.right {
+.portrait-container.versus.right {
   right: 5vw;
   left: auto;
   transform: none;
-  /* Removed animation transform */
-}
-
-@keyframes slide-in-left {
-  from {
-    transform: translateX(-100%);
-    opacity: 0;
-  }
-
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-@keyframes slide-in-right {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
 }
 
 .versus-center {
@@ -3139,12 +3114,18 @@
   color: var(--tavern-gold);
   text-shadow: 0 0 20px black;
   font-weight: 900;
-  opacity: 0;
-  transform: scale(3);
-  animation: stamp-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.5s forwards;
+  opacity: 1;
+  /* V4: Default to visible to prevent disappearing */
+  transform: scale(1);
+  animation: stamp-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.5s backwards;
 }
 
 @keyframes stamp-in {
+  from {
+    opacity: 0;
+    transform: scale(3);
+  }
+
   to {
     opacity: 1;
     transform: scale(1);
