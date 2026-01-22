@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.8.48] - 2026-01-22
+### Hotfix 48
+- **Staredown Crash Fix**: Resolved a `TypeError` that occurred when triggering the "The Staredown" cinematic. The system was crashing because it tried to fetch a player portrait for a global event (which has no specific player). It now correctly handles these "system events" by falling back to a safe default instead of crashing.
+
 ## [4.8.47] - 2026-01-22
 ### Hotfix 47
 - **Bump Privacy**: Fixed an issue where Bumping a blind die (game logic) would accidentally reveal its value in the chat/history log. It now correctly masks the value as "?" or "Hidden".
