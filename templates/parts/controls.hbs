@@ -141,7 +141,8 @@
 
     {{#if isBettingPhase}}
     <div class="main-actions">
-      <button type="button" class="btn btn-hold" data-action="hold">
+      <button type="button" class="btn btn-hold" data-action="hold" {{#unless canHold}}disabled
+        title="You cannot hold right now (Dared?)" {{/unless}}>
         <i class="fa-solid fa-hand"></i> Hold
       </button>
       <button type="button" class="btn btn-fold" data-action="fold">

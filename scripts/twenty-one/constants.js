@@ -122,6 +122,10 @@ export function emptyTableData() {
         dared: {},
         // V4: Blind dice (from Hunch failure)
         blindDice: {},
+        // V4: Blind dice (from Hunch failure)
+        blindDice: {},
+        // V4.7.1: Track who has accused this round (one accusation per round)
+        accusedThisRound: {},
     };
 }
 

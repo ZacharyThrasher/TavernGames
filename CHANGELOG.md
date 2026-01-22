@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.8.25] - 2026-01-22
+### Hotfix 25
+- **Bug Fix**: Fixed `accusedThisRound` not clearing between rounds, which permanently hid the Accuse button after the first time.
+- **Rules Enforcement**: The "Hold" button is now visually disabled in the UI when a player is "Dared", preventing accidental (or intentional) rule-breaking.
+
 ## [4.8.24] - 2026-01-22
 ### Hotfix 24
 - **Bug Fix**: Fixed a crash when clicking the "Fold" button caused by a missing import (`createChatCard`).
