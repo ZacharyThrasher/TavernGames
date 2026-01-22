@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.8.14] - 2026-01-22
+### Hotfix 14
+- **Critical Crash Fix**: Fixed the "Application Reload" bug when Cheating. The `CheatDialog` was creating nested HTML forms (Application container as `<form>` containing a template `<form>`), which caused the browser to reload the page on submission. The container is now a `<div>`.
+
 ## [4.8.13] - 2026-01-22
 ### Hotfix 13
 - **Stability**: Hardened `CheatDialog` form submission logic to use native DOM APIs instead of Foundry helpers, reducing the risk of errors causing client crashes/reloads. Added explicit error trapping to the submit handler.

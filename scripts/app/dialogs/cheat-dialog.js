@@ -4,7 +4,7 @@ const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 export class CheatDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   static DEFAULT_OPTIONS = {
-    tag: "form",
+    tag: "div",
     id: "tavern-cheat-dialog",
     window: {
       title: "Attempt Cheat",
@@ -77,9 +77,10 @@ export class CheatDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   _onRender(context, options) {
     super._onRender(context, options);
     const html = $(this.element);
+    const form = this.element.querySelector("form");
 
     // Bind Form Submission manually
-    this.element.addEventListener("submit", this._onSubmit.bind(this));
+    if (form) form.addEventListener("submit", this._onSubmit.bind(this));
 
     // Preview Updater
     const updatePreview = () => {
