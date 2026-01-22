@@ -16,6 +16,7 @@ import { HUNCH_DC, HUNCH_THRESHOLDS, VALID_DICE, emptyTableData } from "../const
 import { createChatCard, addHistoryEntry } from "../../ui/chat.js";
 
 import { getActorForUser, notifyUser } from "../utils/actors.js";
+import { finishTurn } from "../phases/turn.js";
 
 
 export async function hunch(userId) {
@@ -287,8 +288,13 @@ export async function hunch(userId) {
     });
 
     tableData.skillUsedThisTurn = true;
+    await updateState({ tableData });
 
     // V4.7.9: Auto-end turn on Failure (Blind Hit)
-    await tavernSocket.executeAsGM("passTurn", userId);
-    return updateState({ tableData });
+    // Note: Success/Nat20/Nat1 (Lock) keeps turn active
+    if (!success && !isNat20 && !isNat1) {
+        return finishTurn(userId);
+    }
+
+    return getState();
 }

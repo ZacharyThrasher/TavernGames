@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.8.7] - 2026-01-22
+### Hotfix 7
+- **Critical Fix**: Fixed logic error in `Foresight` (Hunch) skill that caused a crash when failing, and allowed skill spamming (bypassing "one skill per turn" lock) due to state update failure.
+- **Cleanup**: Removed invalid socket call (`passTurn`) that didn't exist.
+
 ## [4.8.6] - 2026-01-22
 ### Hotfix 6
 - **Localization**: Restored missing English localization keys for all dialogs (Cheat, Bump, Goad, Profile, Accuse, SideBet). This fixes the "broken menu" text strings.
