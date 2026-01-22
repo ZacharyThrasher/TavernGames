@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.8.30] - 2026-01-22
+### Hotfix 30
+- **Bug Fix**: Folded players are now correctly disqualified from the winner's pool, ensuring they cannot win the pot even if they had a high total before folding.
+- **UI Fix**: Hardened the Versus Mode cut-in CSS with inline styles to forcefully ensure avatars are visible, overriding any potential layout or masking issues on high-resolution displays.
+
 ## [4.8.29] - 2026-01-22
 ### Hotfix 29
 - **Bug Fix (Revert)**: Reverted the restriction preventing Dared players from using Cheat/Sleight of Hand. Dared players *can* now cheat on their forced roll, as intended.

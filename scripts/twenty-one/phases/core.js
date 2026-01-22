@@ -287,6 +287,7 @@ export async function finishRound() {
 
   const winners = state.turnOrder.filter((id) => {
     if (caught[id]) return false;
+    if (tableData.folded?.[id]) return false; // V3: Folded players cannot win
     return (totals[id] ?? 0) === best && best > 0;
   });
 

@@ -5,7 +5,8 @@
         {{#if isVersus}}
         {{!-- Versus Mode: Split Screen --}}
         <div class="portrait-container left">
-            <img src="{{img}}" alt="{{name}}" class="portrait-img" />
+            <img src="{{img}}" alt="{{name}}" class="portrait-img"
+                style="display: block; opacity: 1; position: relative; z-index: 10;" />
             <div class="portrait-name">{{name}}</div>
             {{#if resultData}}
             <div class="portrait-result">{{resultData.attackerRoll}}</div>
@@ -22,7 +23,8 @@
         </div>
 
         <div class="portrait-container right">
-            <img src="{{targetImg}}" alt="{{targetName}}" class="portrait-img" />
+            <img src="{{targetImg}}" alt="{{targetName}}" class="portrait-img"
+                style="display: block; opacity: 1; position: relative; z-index: 10;" />
             <div class="portrait-name">{{targetName}}</div>
             {{#if resultData}}
             <div class="portrait-result">{{resultData.defenderRoll}}</div>
