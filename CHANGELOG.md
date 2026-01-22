@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.8.21] - 2026-01-22
+### Hotfix 21
+- **UI Fix**: Corrected CSS for "Versus Mode" cinematic cut-ins (e.g., Goad, Duel) to ensure player avatars are visible and correctly animated.
+- **Debug**: Added logging to trace why the Accuse button might remain hidden for some users despite valid targets.
+
 ## [4.8.20] - 2026-01-22
 ### Hotfix 20
 - **Bug Fix**: Fixed missing Accuse section in the sidebar. It now correctly appears during all active round phases (Playing, Inspection, Revealing, Duel) for eligible players.
