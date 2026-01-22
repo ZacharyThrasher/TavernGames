@@ -600,6 +600,8 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const die = target?.dataset?.die;
     if (!die) return;
 
+    const state = getState();
+
     // V4: Bump Retaliation Lock (Client Side)
     if (state.tableData?.pendingBumpRetaliation?.attackerId === game.user.id) {
       ui.notifications.warn("You were caught bumping! Wait for retaliation.");
@@ -607,7 +609,6 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }
 
     // V4: Dared Client-Side Validation
-    const state = getState();
     if (state.tableData?.dared?.[game.user.id] && die !== "20") {
       ui.notifications.warn("You are Dared! You can only buy a d20.");
       return;

@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.8.39] - 2026-01-22
+### Hotfix 39
+- **Critial Regresson Fix**: Fixed a "ReferenceError" in the rolling logic that prevented players from rolling dice. This was caused by the new Bump Lock check accessing the game state before it was fully initialized in the function. Rolling is now fully restored.
+
 ## [4.8.38] - 2026-01-22
 ### Hotfix 38
 - **Lock Fix**: Fixed an issue where the Bump Retaliation Lock would persist even after the target retaliated, preventing the attacker from finishing their turn. This was due to the state update not fully clearing the pending flag.
