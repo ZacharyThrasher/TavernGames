@@ -1,5 +1,14 @@
 # Changelog
 
+## [4.8.50] - 2026-01-22
+### Hotfix 50
+- **Duel FX Fix**: The "DUEL" cinematic trigger was missing from the core game loop, which effectively made it "not work" despite the code existing in the effects module. It has been re-inserted so the Duel splash screen now plays correctly when a duel is triggered.
+- **Heavy Stylization**: Implemented distinct, dramatic visual identities for all skill cut-ins. Each skill now has a unique animation and text effect:
+    - **Foresight**: Floats with a mystical blur.
+    - **Goad**: Aggressively pulses/shakes with a chunky font.
+    - **Profile**: Glitches digitally with a monospace font.
+    - **Bump**: Slams in with a rotated impact shockwave.
+
 ## [4.8.49] - 2026-01-22
 ### Hotfix 49
 - **System Event Polish**: Updated the Cinematic Overlay to hide the default "Mystery Man" portrait for system-level events (like The Staredown). Now, events without a connected player will purely show the stylized text and color stripe, making for a cleaner, more dramatic presentation.

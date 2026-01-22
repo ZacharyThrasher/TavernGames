@@ -309,7 +309,10 @@ export async function finishRound() {
       icon: "fa-solid fa-swords",
     });
 
-
+    // V4.8.50: Duel Cinematic (Fixed)
+    const [p1, p2] = winners; // Guaranteed to have at least 2
+    tavernSocket.executeForEveryone("showSkillCutIn", "DUEL", p1, p2);
+    await new Promise(r => setTimeout(r, 3000));
 
     const duel = {
       active: true,
