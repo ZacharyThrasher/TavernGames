@@ -167,45 +167,26 @@ export async function bumpTable(payload, userId) {
         nat1Effect = "<br><strong style='color: #ff4444;'>NAT 1! Backfire + pay 1× ante!</strong>";
     }
 
+    // V4.7.6: Result Overlay
+    const resultData = {
+        attackerRoll: attackerTotal,
+        defenderRoll: defenderTotal,
+        outcome: success ? "SUCCESS" : "FAIL",
+        outcomeClass: success ? "success" : "failure"
+    };
+    tavernSocket.executeForEveryone("showSkillResult", "BUMP", userId, targetId, resultData);
+
     // Post the bump card
+    // V4.7.6: Suppressed in favor of Result Overlay
+    /*
     await ChatMessage.create({
         content: `<div class="tavern-bump-card">
-      <div class="bump-banner">
-        <i class="fa-solid fa-hand-fist"></i>
-        <span>${attackerName} bumps the table!</span>
-      </div>
-      <div class="bump-duel">
-        <div class="bump-combatant ${success ? 'winner' : 'loser'}">
-          <div class="combatant-name">${attackerName}</div>
-          <div class="combatant-skill">Strength</div>
-          <div class="combatant-roll">
-            <span class="roll-total">${attackerTotal}</span>
-            <span class="roll-breakdown">${attackerD20} + ${attackerStrMod}</span>
-          </div>
-        </div>
-        <div class="bump-versus">
-          <span>VS</span>
-        </div>
-        <div class="bump-combatant ${!success ? 'winner' : 'loser'}">
-          <div class="combatant-name">${targetName}</div>
-          <div class="combatant-skill">Strength</div>
-          <div class="combatant-roll">
-            <span class="roll-total">${defenderTotal}</span>
-            <span class="roll-breakdown">${defenderD20} + ${defenderStrMod}</span>
-          </div>
-        </div>
-      </div>
-      <div class="bump-outcome ${success ? 'success' : 'failure'}">
-        <i class="fa-solid ${success ? 'fa-dice' : 'fa-shield'}"></i>
-        <span>${success
-                ? `${targetName}'s die goes flying!`
-                : `${targetName} catches their dice!`
-            }</span>${nat20Effect}${nat1Effect}
-      </div>
+         ... (omitted for brevity) ...
     </div>`,
         speaker: { alias: "Tavern Twenty-One" },
         rolls: [attackerRoll, defenderRoll],
     });
+    */
 
     // Mark that attacker has bumped this round
     const updatedBumpedThisRound = { ...tableData.bumpedThisRound, [userId]: true };

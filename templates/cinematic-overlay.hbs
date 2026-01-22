@@ -7,16 +7,26 @@
         <div class="portrait-container left">
             <img src="{{img}}" alt="{{name}}" class="portrait-img" />
             <div class="portrait-name">{{name}}</div>
+            {{#if resultData}}
+            <div class="portrait-result">{{resultData.attackerRoll}}</div>
+            {{/if}}
         </div>
 
         <div class="versus-center">
+            {{#if resultData}}
+            <div class="versus-outcome {{resultData.outcomeClass}}">{{resultData.outcome}}</div>
+            {{else}}
             <h1 class="cinematic-title">{{text}}</h1>
             <div class="versus-badge">VS</div>
+            {{/if}}
         </div>
 
         <div class="portrait-container right">
             <img src="{{targetImg}}" alt="{{targetName}}" class="portrait-img" />
             <div class="portrait-name">{{targetName}}</div>
+            {{#if resultData}}
+            <div class="portrait-result">{{resultData.defenderRoll}}</div>
+            {{/if}}
         </div>
         {{else}}
         {{!-- Classic Single Mode --}}

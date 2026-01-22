@@ -127,6 +127,22 @@ export async function profile(payload, userId) {
 
 
 
+
+    // V4.7.6: Result Overlay Logic
+    let outcomeText = "FAILED";
+    let outcomeClass = "failure";
+    if (isNat20) { outcomeText = "CRITICAL!"; outcomeClass = "success"; }
+    else if (isNat1) { outcomeText = "BACKFIRE!"; outcomeClass = "failure"; }
+    else if (success) { outcomeText = "SUCCESS"; outcomeClass = "success"; }
+
+    tavernSocket.executeForEveryone("showSkillResult", "PROFILE", userId, targetId, {
+        attackerRoll: attackTotal,
+        defenderRoll: defenseTotal,
+        outcome: outcomeText,
+        outcomeClass: outcomeClass
+    });
+
+
     if (isNat20) {
         let message = `<span style="font-size: 1.2em;">Cheated: <strong>${targetCheated ? "YES" : "NO"}</strong></span>`;
         if (targetCheated) {
@@ -145,12 +161,14 @@ export async function profile(payload, userId) {
             rolls: [roll],
         });
 
+        /* Suppressed Public Card
         await createChatCard({
             title: "Profile",
             subtitle: `${userName} stares down ${targetName}`,
             message: `An intense read! ${userName} sees everything.`,
             icon: "fa-solid fa-user-secret",
         });
+        */
     } else if (isNat1) {
         let message = `${userName}'s hole die: <strong>${myHoleValue}</strong>`;
         if (myCheated) {
@@ -178,12 +196,14 @@ export async function profile(payload, userId) {
             rolls: [roll],
         });
 
+        /* Suppressed Public Card
         await createChatCard({
             title: "Profile",
             subtitle: `${userName} overreaches`,
             message: `The tables turned! ${targetName} read ${userName} instead!`,
             icon: "fa-solid fa-face-flushed",
         });
+        */
 
     } else if (success) {
         // Standard Success: Boolean Yes/No only
@@ -203,12 +223,14 @@ export async function profile(payload, userId) {
             rolls: [roll],
         });
 
+        /* Suppressed Public Card
         await createChatCard({
             title: "Profile",
             subtitle: `${userName} studies ${targetName}`,
             message: `A solid read. Information gathered.`,
             icon: "fa-solid fa-user-secret",
         });
+        */
     } else {
         // Failure: No info
         await ChatMessage.create({
@@ -222,12 +244,14 @@ export async function profile(payload, userId) {
             rolls: [roll],
         });
 
+        /* Suppressed Public Card
         await createChatCard({
             title: "Profile",
             subtitle: `${userName} overreaches`,
             message: `${targetName} kept their composure.`,
             icon: "fa-solid fa-eye",
         });
+        */
     }
 
     // Track profile

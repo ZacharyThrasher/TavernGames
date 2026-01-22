@@ -169,47 +169,26 @@ export async function goad(payload, userId) {
         nat1Effect = "<br><strong style='color: #ff4444;'>NAT 1! Backfire + forced roll!</strong>";
     }
 
+    // V4.7.6: Result Overlay
+    const resultData = {
+        attackerRoll: attackTotal,
+        defenderRoll: defendTotal,
+        outcome: attackerWins ? "SUCCESS" : "RESISTED",
+        outcomeClass: attackerWins ? "success" : "failure"
+    };
+    tavernSocket.executeForEveryone("showSkillResult", "GOAD", userId, targetId, resultData);
+
     // Post the premium goad card
+    // V4.7.6: Suppressed in favor of Result Overlay
+    /*
     await ChatMessage.create({
         content: `<div class="tavern-goad-card">
-      <div class="goad-banner">
-        <i class="fa-solid fa-comments"></i>
-        <span>${attackerName} goads ${defenderName}...</span>
-      </div>
-      <div class="goad-duel">
-        <div class="goad-combatant ${attackerWins ? 'winner' : 'loser'}">
-          <div class="combatant-name">${attackerName}</div>
-          <div class="combatant-skill">${attackerSkillName}</div>
-          <div class="combatant-roll">
-            <span class="roll-total">${attackTotal}</span>
-            <span class="roll-breakdown">${attackD20} + ${attackMod}</span>
-          </div>
-        </div>
-        <div class="goad-versus">
-          <span>VS</span>
-        </div>
-        <div class="goad-combatant ${!attackerWins ? 'winner' : 'loser'}">
-          <div class="combatant-name">${defenderName}</div>
-          <div class="combatant-skill">Insight</div>
-          <div class="combatant-roll">
-            <span class="roll-total">${defendTotal}</span>
-            <span class="roll-breakdown">${defendD20} + ${defendMod}</span>
-          </div>
-        </div>
-      </div>
-      <div class="goad-outcome ${attackerWins ? 'success' : 'failure'}">
-        <i class="fa-solid ${attackerWins ? 'fa-dice' : 'fa-face-smile-wink'}"></i>
-        <span>${attackerWins
-                ? (isNat20
-                    ? `${defenderName} MUST roll! No escape!`
-                    : `${defenderName} must roll or pay ${ante}gp to resist!`)
-                : `${defenderName} sees through it! ${attackerName} pays ${ante}gp!`
-            }</span>${nat20Effect}${nat1Effect}
-      </div>
+        ... (omitted for brevity) ...
     </div>`,
         speaker: { alias: "Tavern Twenty-One" },
         rolls: [attackRoll, defendRoll],
     });
+    */
 
     // Track that this player has goaded this round
     const updatedGoadedThisRound = { ...tableData.goadedThisRound, [userId]: true };

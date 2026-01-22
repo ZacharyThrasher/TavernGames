@@ -345,3 +345,27 @@ export function showSkillCutIn(type, userId, targetId) {
     console.error("Tavern Twenty-One | Skill CutIn error:", error);
   }
 }
+
+/**
+ * V4.7.6: Skill Result Overlay
+     * Shows the result of a skill showdown
+     * @param {string} type - GOAD, BUMP, PROFILE
+     * @param {string} userId - Attacker ID
+     * @param {string} targetId - Defender ID
+     * @param {object} resultData - { attackerRoll, defenderRoll, outcome, outcomeClass }
+ */
+export function showSkillResult(type, userId, targetId, resultData) {
+  try {
+    if (isPerformanceMode()) return;
+
+    // Reuse Show logic but with result data
+    CinematicOverlay.show({
+      type,
+      userId,
+      targetId,
+      resultData
+    });
+  } catch (error) {
+    console.error("Tavern | Skill Result Error:", error);
+  }
+}

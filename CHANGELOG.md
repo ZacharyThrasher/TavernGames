@@ -1,5 +1,13 @@
 # Changelog
 
+## [4.7.6] - 2026-01-22
+### Premium Visuals Update
+- **Result Overlays**: Replaced standard chat cards for Goad, Bump, and Profile with dramatic **Result Cinematic Cut-Ins**. These show the roll outcome directly on screen in the Showdown layout.
+  - Success/Failure states are clearly marked.
+  - Rolls are displayed under the portraits (for Bump/Goad).
+- **Cinematic Timing**: Slowed down cut-in entrance animations (from 0.5s to 1.5s) and extended duration (to 5s) for maximum dramatic effect.
+- **Showdown Layout Fix**: Fine-tuned avatar positioning (padding 28%) to ensure they are fully visible on screen.
+
 ## [4.7.5] - 2026-01-22
 ### Hotfix
 - **Showdown UI Layout**: Fixed broken layout in Versus Cut-Ins. Portraits now correctly appear at the diagonal edges (Top-Left/Bottom-Right) inside the stripe, and text is properly centered and visible.

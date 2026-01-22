@@ -87,7 +87,9 @@ export class CinematicOverlay extends HandlebarsApplicationMixin(ApplicationV2) 
             targetName: targetInfo?.name,
             isVersus: !!targetInfo,
             text: options.text || options.type,
-            color: CinematicOverlay.getColorForType(options.type)
+            color: CinematicOverlay.getColorForType(options.type),
+            // V4.7.6: Result Data
+            resultData: options.resultData
         };
 
         try {
@@ -97,7 +99,7 @@ export class CinematicOverlay extends HandlebarsApplicationMixin(ApplicationV2) 
             // Animation is usually ~2-3s
             setTimeout(() => {
                 overlay.close();
-            }, 3500);
+            }, 5000);
 
         } catch (err) {
             console.error("Tavern Games | Cinematic Render Error:", err);

@@ -3146,6 +3146,7 @@
     color: #ffaaaa;
   }
 }
+
 /* ============================================
    V4.7.4: Showdown (Versus) Cinematic Styles
    ============================================ */
@@ -3198,18 +3199,39 @@
 }
 
 @keyframes slideInLeft {
-  from { transform: translateX(-100%) scale(0.8); opacity: 0; }
-  to { transform: translateX(0) scale(0.8); opacity: 1; }
+  from {
+    transform: translateX(-100%) scale(0.8);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0) scale(0.8);
+    opacity: 1;
+  }
 }
 
 @keyframes slideInRight {
-  from { transform: translateX(100%) scale(0.8); opacity: 0; }
-  to { transform: translateX(0) scale(0.8); opacity: 1; }
+  from {
+    transform: translateX(100%) scale(0.8);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0) scale(0.8);
+    opacity: 1;
+  }
 }
 
 @keyframes zoomIn {
-  from { transform: scale(0); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 /* ============================================
@@ -3222,14 +3244,21 @@
   top: 50%;
   left: -50%;
   width: 200%;
-  height: 300px; /* Match stripe height */
-  transform: translateY(-50%) rotate(-15deg); /* Match rotation */
-  display: flex !important; /* Force flex */
+  height: 300px;
+  /* Match stripe height */
+  transform: translateY(-50%) rotate(-15deg);
+  /* Match rotation */
+  display: flex !important;
+  /* Force flex */
   flex-direction: row;
-  justify-content: space-between; /* Avatars at edges */
-  align-items: center; /* Center Vertically on stripe */
+  justify-content: space-between;
+  /* Avatars at edges */
+  align-items: center;
+  /* Center Vertically on stripe */
   z-index: 100;
-  padding: 0 15%; /* Keep avatars from extreme edges */
+  padding: 0 28%;
+  /* V4.7.6: Adjusted to bring avatars on screen (200% width container) */
+  /* Keep avatars from extreme edges */
   box-sizing: border-box;
 }
 
@@ -3240,21 +3269,26 @@
   right: auto;
   width: 180px;
   height: 180px;
-  transform: none; /* Reset base transform */
-  flex: 0 0 auto; /* Don't shrink */
-  opacity: 0; /* Still fade in */
+  transform: none;
+  /* Reset base transform */
+  flex: 0 0 auto;
+  /* Don't shrink */
+  opacity: 0;
+  /* Still fade in */
   margin: 0;
-  border-radius: 50%; /* Ensure circular */
-  overflow: visible; /* Allow flash outside? */
+  border-radius: 50%;
+  /* Ensure circular */
+  overflow: visible;
+  /* Allow flash outside? */
 }
 
 /* 3. Animations adjusted for Flex layout */
 .cinematic-cut-in.versus-mode .portrait-container.left {
-  animation: versus-slide-left 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards !important;
+  animation: versus-slide-left 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards !important;
 }
 
 .cinematic-cut-in.versus-mode .portrait-container.right {
-  animation: versus-slide-right 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards !important;
+  animation: versus-slide-right 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards !important;
 }
 
 .cinematic-cut-in.versus-mode .portrait-img {
@@ -3281,7 +3315,8 @@
 }
 
 .cinematic-cut-in.versus-mode .cinematic-title {
-  font-size: 3.5em; /* Visible size */
+  font-size: 3.5em;
+  /* Visible size */
   color: #fff;
   text-shadow: 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
   margin: 0;
@@ -3294,11 +3329,75 @@
 }
 
 @keyframes versus-slide-left {
-  from { transform: translateX(-100%) scale(0.5); opacity: 0; }
-  to { transform: translateX(0) scale(1); opacity: 1; }
+  from {
+    transform: translateX(-100%) scale(0.5);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
 }
 
 @keyframes versus-slide-right {
-  from { transform: translateX(100%) scale(0.5); opacity: 0; }
-  to { transform: translateX(0) scale(1); opacity: 1; }
+  from {
+    transform: translateX(100%) scale(0.5);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* ============================================
+   V4.7.6 Premium Results
+   ============================================ */
+
+.portrait-result {
+  position: absolute;
+  bottom: -50px;
+  /* Below name */
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font-family: var(--tavern-font-primary);
+  font-size: 3em;
+  color: #fff;
+  text-shadow: 0 0 10px #000, 0 0 20px var(--tavern-gold);
+  font-weight: bold;
+  opacity: 0;
+  animation: fadeUp 0.5s ease 0.5s forwards;
+}
+
+.versus-outcome {
+  font-family: var(--tavern-font-primary);
+  font-size: 5em;
+  color: var(--tavern-gold-bright);
+  text-transform: uppercase;
+  text-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+  animation: zoomIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  line-height: 1;
+}
+
+.versus-outcome.success {
+  color: var(--tavern-success);
+}
+
+.versus-outcome.failure {
+  color: var(--tavern-danger);
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
