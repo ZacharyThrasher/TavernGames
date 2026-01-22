@@ -54,7 +54,17 @@ export async function cheat(payload, userId) {
     const ante = game.settings.get(MODULE_ID, "fixedAnte");
 
     // V3: dieIndex + adjustment (1-3, positive or negative)
-    const { dieIndex, adjustment = 1, cheatType = "physical", skill = "slt" } = payload;
+    let { dieIndex, adjustment = 1 } = payload;
+    
+    // Strict Mode: ALWAYS Physical / Sleight of Hand
+    const cheatType = "physical";
+    const skill = "slt";
+
+    // Auto-select last die if missing
+    const rolls = tableData.rolls[userId] ?? [];
+    if (dieIndex === undefined || dieIndex === null) {
+        dieIndex = rolls.length - 1;
+    }
 
     // V3: Validate adjustment is ±1 to ±3
     const absAdj = Math.abs(adjustment);

@@ -12,7 +12,7 @@ export class CheatDialog extends HandlebarsApplicationMixin(ApplicationV2) {
       resizable: false
     },
     position: {
-      width: 400,
+      width: 350,
       height: "auto"
     },
     classes: ["tavern-dialog-window"]
@@ -47,33 +47,21 @@ export class CheatDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   async _prepareContext(options) {
     const { myRolls, actor, heatDC } = this.params;
     
-    // Skill modifiers
+    // Skill modifier (Sleight of Hand only)
     const sltMod = actor?.system?.skills?.slt?.total ?? 0;
-    const decMod = actor?.system?.skills?.dec?.total ?? 0;
-    const intMod = actor?.system?.abilities?.int?.mod ?? 0;
-    const wisMod = actor?.system?.abilities?.wis?.mod ?? 0;
-    const chaMod = actor?.system?.abilities?.cha?.mod ?? 0;
 
-    // Prepare dice data
-    const dice = myRolls.map((r, idx) => ({
-      index: idx,
-      die: r.die,
-      result: r.result,
-      displayIndex: idx + 1,
-      visibility: r.public ? "Visible" : "Hole"
-    }));
-
-    // Initial state
-    const initialMax = myRolls[0]?.die ?? 20;
-    const initialCurrent = myRolls[0]?.result ?? 1;
+    // Default to last die for preview
+    const lastRoll = myRolls[myRolls.length - 1];
+    const initialCurrent = lastRoll?.result ?? 1;
+    const initialMax = lastRoll?.die ?? 20;
     const initialPreview = Math.min(initialMax, initialCurrent + 1);
 
     return {
-      dice,
-      sltMod, decMod, intMod, wisMod, chaMod,
+      sltMod,
       heatDC,
       initialCurrent,
       initialPreview,
+      maxVal: initialMax, // Store for JS access
       adjustments: [
         { value: -3, label: "-3", colorClass: "loss" },
         { value: -2, label: "-2", colorClass: "loss" },
@@ -90,29 +78,20 @@ export class CheatDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     super._onRender(context, options);
     const html = $(this.element);
 
-    // Bind Form Submission manually to ensure instance context
+    // Bind Form Submission manually
     this.element.addEventListener("submit", this._onSubmit.bind(this));
-
-    // Cheat Type Toggle
-    html.find('[name="cheatType"]').on('change', (e) => {
-      const isPhysical = e.target.value === 'physical';
-      html.find('#physical-skill-group').toggle(isPhysical);
-      html.find('#magical-skill-group').toggle(!isPhysical);
-    });
 
     // Preview Updater
     const updatePreview = () => {
-      const select = html.find('#cheat-die-select')[0];
-      const selectedOption = select.selectedOptions[0];
-      const current = parseInt(selectedOption?.dataset?.current ?? 1);
-      const max = parseInt(selectedOption?.dataset?.max ?? 20);
+      // Get current from HTML or context? HTML is safer if we had select, but here it's static
+      const current = context.initialCurrent;
+      const max = context.maxVal;
       const adj = parseInt(html.find('[name="adjustment"]:checked').val() ?? 0);
       
       let newVal = current + adj;
       if (newVal < 1) newVal = 1;
       if (newVal > max) newVal = max; 
 
-      html.find('#cheat-current-display').text(current);
       const previewEl = html.find('#cheat-preview-value');
       previewEl.text(newVal);
       
@@ -122,7 +101,7 @@ export class CheatDialog extends HandlebarsApplicationMixin(ApplicationV2) {
       else previewEl.addClass('neutral');
     };
 
-    html.find('#cheat-die-select, [name="adjustment"]').on('change', updatePreview);
+    html.find('[name="adjustment"]').on('change', updatePreview);
     
     // Style radio buttons
     html.find('.cheat-adj-btn').on('click', function() {
@@ -139,15 +118,14 @@ export class CheatDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     const formData = new FormDataExtended(event.target).object;
     
     const result = {
-      dieIndex: parseInt(formData.dieIndex),
+      // dieIndex undefined -> backend picks last
       adjustment: parseInt(formData.adjustment),
-      cheatType: formData.cheatType,
-      skill: formData.cheatType === "physical" ? formData.physicalSkill : formData.magicalSkill
+      // cheatType/skill removed -> backend hardcodes Physical/Slt
     };
     
     if (this.resolve) {
       this.resolve(result);
-      this.resolve = null; // Prevent double resolution
+      this.resolve = null;
     }
     this.close();
   }

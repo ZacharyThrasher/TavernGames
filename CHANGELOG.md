@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.8.10] - 2026-01-22
+### Hotfix 10
+- **Mechanics Simplification**: Simplified Cheating mechanics. Players can no longer choose the skill (forced to Sleight of Hand) or the target die (defaults to the last rolled die).
+- **UX Fix**: Simplified Cheat Dialog to only show Adjustment options, removing complex dropdowns that were causing confusion and crashes.
+
 ## [4.8.9] - 2026-01-22
 ### Hotfix 9
 - **Crash Fix**: Fixed `Missing helper: "selected"` error that prevented `CheatDialog` and `GoadDialog` from rendering. Replaced custom Handlebars helper with standard conditional logic.
