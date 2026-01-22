@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.7.5] - 2026-01-22
+### Hotfix
+- **Showdown UI Layout**: Fixed broken layout in Versus Cut-Ins. Portraits now correctly appear at the diagonal edges (Top-Left/Bottom-Right) inside the stripe, and text is properly centered and visible.
+
 ## [4.7.4] - 2026-01-22
 ### Showdown Mode & Privacy Fixes
 - **Versus Cinematic Mode**: Skills involving two players (Goad, Profile, Bump) now trigger a **Split-Screen Showdown** cut-in, showing both the user and the target face-off!

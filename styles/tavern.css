@@ -3211,3 +3211,94 @@
   from { transform: scale(0); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
 }
+
+/* ============================================
+   V4.7.4 Hotfix: Showdown Layout Correction
+   ============================================ */
+
+/* 1. Reset Content Container to match Stripe Geometry */
+.cinematic-cut-in.versus-mode .cinematic-content {
+  position: absolute;
+  top: 50%;
+  left: -50%;
+  width: 200%;
+  height: 300px; /* Match stripe height */
+  transform: translateY(-50%) rotate(-15deg); /* Match rotation */
+  display: flex !important; /* Force flex */
+  flex-direction: row;
+  justify-content: space-between; /* Avatars at edges */
+  align-items: center; /* Center Vertically on stripe */
+  z-index: 100;
+  padding: 0 15%; /* Keep avatars from extreme edges */
+  box-sizing: border-box;
+}
+
+/* 2. Fix Portrait Positioning (Reset Absolute) */
+.cinematic-cut-in.versus-mode .portrait-container {
+  position: relative !important;
+  bottom: auto;
+  right: auto;
+  width: 180px;
+  height: 180px;
+  transform: none; /* Reset base transform */
+  flex: 0 0 auto; /* Don't shrink */
+  opacity: 0; /* Still fade in */
+  margin: 0;
+  border-radius: 50%; /* Ensure circular */
+  overflow: visible; /* Allow flash outside? */
+}
+
+/* 3. Animations adjusted for Flex layout */
+.cinematic-cut-in.versus-mode .portrait-container.left {
+  animation: versus-slide-left 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards !important;
+}
+
+.cinematic-cut-in.versus-mode .portrait-container.right {
+  animation: versus-slide-right 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards !important;
+}
+
+.cinematic-cut-in.versus-mode .portrait-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 4px solid var(--tavern-gold);
+  background: #000;
+}
+
+/* 4. Center Badge Text */
+.cinematic-cut-in.versus-mode .versus-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  color: white;
+  z-index: 101;
+  /* Counter-rotate text if we want it straight? 
+     User said "diagonally across center in stripe". 
+     Since parent is rotated, text IS diagonal. Correct. */
+}
+
+.cinematic-cut-in.versus-mode .cinematic-title {
+  font-size: 3.5em; /* Visible size */
+  color: #fff;
+  text-shadow: 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+  margin: 0;
+  line-height: 1;
+}
+
+.cinematic-cut-in.versus-mode .versus-badge {
+  font-size: 2.5em;
+  color: var(--tavern-gold-bright);
+}
+
+@keyframes versus-slide-left {
+  from { transform: translateX(-100%) scale(0.5); opacity: 0; }
+  to { transform: translateX(0) scale(1); opacity: 1; }
+}
+
+@keyframes versus-slide-right {
+  from { transform: translateX(100%) scale(0.5); opacity: 0; }
+  to { transform: translateX(0) scale(1); opacity: 1; }
+}
