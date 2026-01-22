@@ -166,12 +166,16 @@ Hooks.once("ready", async () => {
    and respect performance mode.
    ============================================ */
 
-// Debounced shake to prevent stacking
-const debouncedShake = debounce((element, className, duration) => {
-  if (!element) return;
+// Direct shake with reflow force (Instant feedback)
+const shake = (element, className, duration) => {
+  if (!element) return console.warn("Tavern | Shake target missing");
+  // Reset animation if needed
+  element.classList.remove(className);
+  // Force reflow
+  void element.offsetWidth;
   element.classList.add(className);
   setTimeout(() => element.classList.remove(className), duration);
-}, 100);
+};
 
 /**
  * V4.1: Visual Victory Fanfare
@@ -189,8 +193,8 @@ export function showVictoryFanfare(winnerId) {
     const winnerName = game.users.get(winnerId)?.name ?? "Winner";
 
     // 1. Screen shake - using debounced version
-    const appWindow = document.querySelector(".tavern-dice-master.application");
-    debouncedShake(appWindow, "tavern-shake-victory", 600);
+    const appWindow = game.tavernDiceMaster?.app?.element;
+    shake(appWindow, "tavern-shake-victory", 600);
 
     // 2. Cinematic Cut-In (V13 Frameless Overlay)
     CinematicOverlay.show({
@@ -220,8 +224,8 @@ export function showBustFanfare(userId) {
     const userName = game.users.get(userId)?.name ?? "Player";
 
     // 1. Screen shake
-    const appWindow = document.querySelector(".tavern-dice-master.application");
-    debouncedShake(appWindow, "tavern-shake", 500);
+    const appWindow = game.tavernDiceMaster?.app?.element;
+    shake(appWindow, "tavern-shake", 500);
 
     // 2. Cinematic Cut-In
     CinematicOverlay.show({
@@ -245,7 +249,7 @@ export function playBumpEffect(targetId) {
     if (!game.tavernDiceMaster?.app?.rendered) return;
     if (isPerformanceMode()) return;
 
-    const appWindow = document.querySelector(".tavern-dice-master.application");
+    const appWindow = game.tavernDiceMaster?.app?.element;
     if (!appWindow) return;
 
     const seat = appWindow.querySelector(`.player-seat[data-user-id="${targetId}"]`);
@@ -261,7 +265,7 @@ export function playBumpEffect(targetId) {
     }
 
     // Shake main window for everyone
-    debouncedShake(appWindow, "tavern-shake", 300);
+    shake(appWindow, "tavern-shake", 300);
 
   } catch (error) {
     console.error("Tavern Twenty-One | Bump effect error:", error);

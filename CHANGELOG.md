@@ -1,5 +1,16 @@
 # Changelog
 
+## [4.7.1] - 2026-01-22
+### Improvements & Fixes
+- **Nat 20 Mechanic**: Rolling a Natural 20 on a d20 now instantly sets your total to 21 (instead of adding 21), allowing for clutch saves.
+- **Cinematic Cut-Ins**:
+  - Now correctly uses the active Token's image and name if available, ensuring consistency with the scene.
+  - Falls back to `state.players` avatar (which supports GM-playing-as-NPC) if no token is found.
+  - Improved consistency of Bust cut-ins.
+- **Visual Effects**:
+  - Fixed "Bump Shake Missing" issue by correcting the application window selector for V13 AppV2.
+  - Removed debounce lag from shake effects for snappier feedback.
+
 ## [4.7.0] - 2026-01-22
 ### V13 "Premium Sauce" Upgrade
 - **Architecture**: Full compliance with Foundry V13 Module Development Guide.

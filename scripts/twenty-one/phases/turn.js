@@ -96,8 +96,14 @@ export async function submitRoll(payload, userId) {
   let result = roll.total ?? 0;
   const naturalRoll = result;
 
-  if (die === 20 && result === 20) {
-    result = 21;
+  if (die === 20 && naturalRoll === 20) {
+    // V4.7.1: Instant 21 mechanic requested by user
+    // "A d20 landing on 20 shouldn't ADD 21... it should instantly set your TOTAL to 21"
+    const currentTotal = tableData.totals[userId] ?? 0;
+    // Calculate difference needed to reach exactly 21
+    // If they have 10, result = 11. 10+11=21.
+    // If they have 22 (bust), result = -1. 22-1=21. (Unbust!)
+    result = 21 - currentTotal;
   }
 
   try {

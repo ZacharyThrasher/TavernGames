@@ -1,6 +1,6 @@
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
-import { MODULE_ID } from "../state.js";
+import { MODULE_ID, getState } from "../state.js";
 
 /**
  * Cinematic Overlay for Tavern Games
@@ -42,16 +42,40 @@ export class CinematicOverlay extends HandlebarsApplicationMixin(ApplicationV2) 
         const performanceMode = game.settings.get(MODULE_ID, "performanceMode");
         if (performanceMode) return;
 
-        // 2. Prepare Data
+        // 2. Resolve Art & Name from State/Token (V4.7.1 Fix)
+        const state = getState();
+        const playerData = state.players?.[options.userId];
         const user = game.users.get(options.userId);
+
+        let img, name;
+
+        // Priority 1: Canvas Token (if active scene)
+        // Find a token claimed by this actor
         const actor = user?.character;
-        const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
-        const name = actor?.name || user?.name || "Player";
+        const token = actor ? canvas.tokens.placeables.find(t => t.actor?.id === actor.id) : null;
+
+        if (token) {
+            img = token.document.texture.src;
+            name = token.document.name;
+        }
+
+        // Priority 2: Game State (Official Seat Data - handles GM as NPC)
+        if (!img && playerData) {
+            img = playerData.avatar;
+            name = playerData.name;
+        }
+
+        // Priority 3: User/Actor Fallback
+        if (!img) {
+            img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
+            name = actor?.name || user?.name || "Player";
+        }
+
+        console.log(`Tavern | Cinematic Show: ${options.type} for ${name}`, { img, performanceMode });
 
         // 3. Instantiate & Render
-        // We create a fresh instance for each cut-in to ensure clean state
         const overlay = new CinematicOverlay({
-            window: { title: "Cinematic" } // Internal title, not shown due to frame:false
+            window: { title: "Cinematic" }
         });
 
         // Pass data via context
