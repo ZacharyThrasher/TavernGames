@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.8.1] - 2026-01-22
+### Hotfix
+- **Import Error**: Fixed `Uncaught SyntaxError` in `turn.js` caused by incorrect import path for `getDieCost`.
+
 ## [4.8.0] - 2026-01-22
 ### V13 AppV2 Refactor & Premium Polish
 - **Codebase Modernization**: Refactored major dialogs (`Cheat`, `Profile`, `Goad`, `Bump`, `Accuse`, `SideBet`) into dedicated `ApplicationV2` classes (`scripts/app/dialogs/*.js`) with Handlebars templates. This eliminates inline HTML spaghetti and ensures future V13 compatibility.
