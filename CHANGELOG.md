@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.8.11] - 2026-01-22
+### Hotfix 11
+- **Syntax Error**: Fixed `Identifier 'rolls' has already been declared` in `cheat.js` caused by the previous refactor to auto-select dice.
+
 ## [4.8.10] - 2026-01-22
 ### Hotfix 10
 - **Mechanics Simplification**: Simplified Cheating mechanics. Players can no longer choose the skill (forced to Sleight of Hand) or the target die (defaults to the last rolled die).

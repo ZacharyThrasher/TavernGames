@@ -87,7 +87,6 @@ export async function cheat(payload, userId) {
     const skillName = skillNames[skill] ?? (isPhysical ? "Sleight of Hand" : "Intelligence");
 
     // Validate die index
-    const rolls = tableData.rolls[userId] ?? [];
     if (dieIndex < 0 || dieIndex >= rolls.length) {
         ui.notifications.warn("Invalid die selection.");
         return state;
