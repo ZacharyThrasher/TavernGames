@@ -268,11 +268,11 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const isInspection = state.status === "INSPECTION";
     const accusedThisRound = tableData.accusedThisRound?.[userId] ?? false;
     const accusationCost = getAccusationCost(ante);
-    const isBustedActual = tableData.busts?.[userId] ?? false; // Avoid name collision
+    const isBusted = tableData.busts?.[userId] ?? false;
 
     // Centralized Targeting Logic
     const accuseTargets = !accusedThisRound ? getValidAccuseTargets(state, userId, accusedThisRound) : [];
-    const canAccuse = isInGame && !accusedThisRound && !isBustedActual && accuseTargets.length > 0 && !isHouse;
+    const canAccuse = isInGame && !accusedThisRound && !isBusted && accuseTargets.length > 0 && !isHouse;
 
     // Hunch Context
     const isHolding = tableData.holds?.[userId] ?? false;

@@ -1,5 +1,11 @@
 # Changelog
 
+## [4.8.19] - 2026-01-22
+### Hotfix 19
+- **Bug Fix**: Resolved a critical issue where "The Cut" phase could get stuck due to a strict ID check and UI state mismatch.
+- **Regression Fix**: Restored `isBusted` variable in the UI context to fix broken skill button states.
+- **Internal**: Added debug logging for "The Cut" player identification.
+
 ## [4.8.17] - 2026-01-22
 ### Hotfix 17
 - **Mechanics**: Removed "Pay to Resist" option from Goad skill. Success now forces the target to roll.
