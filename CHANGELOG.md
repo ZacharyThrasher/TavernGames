@@ -1,5 +1,11 @@
 # Changelog
 
+## [4.7.4] - 2026-01-22
+### Showdown Mode & Privacy Fixes
+- **Versus Cinematic Mode**: Skills involving two players (Goad, Profile, Bump) now trigger a **Split-Screen Showdown** cut-in, showing both the user and the target face-off!
+- **Bump Cut-In**: Replaced the flaky "screen shake" effect with a dedicated **Table Bump** cut-in (Amber colored).
+- **GM Privacy**: Cheat results are now correctly blinded/whispered to prevent GM-side spoilers (privileged info leak fixed).
+
 ## [4.7.3] - 2026-01-22
 ### High Drama Update
 - **Cinematic Skills**: Added dramatic cinematic cut-ins for **Foresight**, **Goad**, and **Profile** skills to heighten tension. Each has unique colors and text.

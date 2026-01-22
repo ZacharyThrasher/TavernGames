@@ -265,7 +265,8 @@ export function playBumpEffect(targetId) {
     }
 
     // Shake main window for everyone
-    shake(appWindow, "tavern-shake", 300);
+    // V4.7.4: Removed shake as requested (replaced by Bump Cut-In)
+    // shake(appWindow, "tavern-shake", 300);
 
   } catch (error) {
     console.error("Tavern Twenty-One | Bump effect error:", error);
@@ -318,11 +319,12 @@ export function showFloatingText(userId, amount) {
 
 /**
  * V4.7.1: Cinematic Skill Cut-In
- * Triggers a skill-specific cinematic overlay
- * @param {string} type - FORESIGHT, GOAD, PROFILE
+ * Triggers a skill-specific cinematic overlay (now supports Versus mode)
+ * @param {string} type - FORESIGHT, GOAD, PROFILE, BUMP
  * @param {string} userId - User ID performing the skill
+ * @param {string} [targetId] - Target User ID (for Versus/Showdown)
  */
-export function showSkillCutIn(type, userId) {
+export function showSkillCutIn(type, userId, targetId) {
   try {
     if (isPerformanceMode()) return;
 
@@ -331,10 +333,12 @@ export function showSkillCutIn(type, userId) {
     if (type === "FORESIGHT") text = "FORESIGHT!";
     else if (type === "GOAD") text = "GOADED!";
     else if (type === "PROFILE") text = "ANALYSIS!";
+    else if (type === "BUMP") text = "TABLE BUMP!";
 
     CinematicOverlay.show({
       type,
       userId,
+      targetId,
       text
     });
   } catch (error) {

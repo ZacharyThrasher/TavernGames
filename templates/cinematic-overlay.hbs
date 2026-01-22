@@ -1,7 +1,25 @@
-<div class="cinematic-cut-in type-{{type}}">
+<div class="cinematic-cut-in type-{{type}} {{#if isVersus}}versus-mode{{/if}}">
     <div class="cinematic-stripe" style="--stripe-color: {{color}}"></div>
 
     <div class="cinematic-content">
+        {{#if isVersus}}
+        {{!-- Versus Mode: Split Screen --}}
+        <div class="portrait-container left">
+            <img src="{{img}}" alt="{{name}}" class="portrait-img" />
+            <div class="portrait-name">{{name}}</div>
+        </div>
+
+        <div class="versus-center">
+            <h1 class="cinematic-title">{{text}}</h1>
+            <div class="versus-badge">VS</div>
+        </div>
+
+        <div class="portrait-container right">
+            <img src="{{targetImg}}" alt="{{targetName}}" class="portrait-img" />
+            <div class="portrait-name">{{targetName}}</div>
+        </div>
+        {{else}}
+        {{!-- Classic Single Mode --}}
         <div class="portrait-container">
             <img src="{{img}}" alt="{{name}}" class="portrait-img" />
             <div class="portrait-flash"></div>
@@ -11,6 +29,7 @@
             <h1 class="cinematic-title">{{text}}</h1>
             <h2 class="cinematic-subtitle">{{name}}</h2>
         </div>
+        {{/if}}
     </div>
 
     {{!-- V13 Juice: Sparkles for Victory/Critical --}}

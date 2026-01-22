@@ -16,6 +16,7 @@ import { MODULE_ID, getState, updateState, addHistoryEntry } from "../../state.j
 import { deductFromActor, getActorForUser, notifyUser } from "../utils/actors.js";
 import { createChatCard } from "../../ui/chat.js";
 import { emptyTableData } from "../constants.js";
+import { tavernSocket } from "../../socket.js";
 
 /**
  * Bump the table to force a die reroll.
@@ -122,6 +123,9 @@ export async function bumpTable(payload, userId) {
 
     // V3: Mark as acted (affects Fold refund)
     tableData.hasActed = { ...tableData.hasActed, [userId]: true };
+
+    // V4.7.4: Bump Showdown Cut-In
+    tavernSocket.executeForEveryone("showSkillCutIn", "BUMP", userId, targetId);
 
     const ante = game.settings.get(MODULE_ID, "fixedAnte");
 

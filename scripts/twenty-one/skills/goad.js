@@ -121,7 +121,7 @@ export async function goad(payload, userId) {
     tableData.hasActed = { ...tableData.hasActed, [userId]: true };
 
     // V4.7.1: Visual Cut-In
-    tavernSocket.executeForEveryone("showSkillCutIn", "GOAD", userId);
+    tavernSocket.executeForEveryone("showSkillCutIn", "GOAD", userId, targetId);
 
     // Get actors
     const attackerActor = getActorForUser(userId);

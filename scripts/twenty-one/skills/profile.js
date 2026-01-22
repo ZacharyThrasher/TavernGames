@@ -91,7 +91,7 @@ export async function profile(payload, userId) {
     tableData.hasActed = { ...tableData.hasActed, [userId]: true };
 
     // V4.7.1: Visual Cut-In
-    tavernSocket.executeForEveryone("showSkillCutIn", "PROFILE", userId);
+    tavernSocket.executeForEveryone("showSkillCutIn", "PROFILE", userId, targetId);
 
     const actor = getActorForUser(userId);
     const targetActor = getActorForUser(targetId);

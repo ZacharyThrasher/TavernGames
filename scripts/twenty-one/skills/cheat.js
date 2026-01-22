@@ -170,6 +170,7 @@ export async function cheat(payload, userId) {
     await ChatMessage.create({
         content: cheatResultCard,
         whisper: [userId],
+        blind: true, // V4.7.4: Hide from GM to prevent privileged info leak
         speaker: { alias: "Tavern Twenty-One" },
     });
 

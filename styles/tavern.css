@@ -3146,3 +3146,68 @@
     color: #ffaaaa;
   }
 }
+/* ============================================
+   V4.7.4: Showdown (Versus) Cinematic Styles
+   ============================================ */
+
+.cinematic-cut-in.versus-mode .cinematic-content {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 0 5%;
+  gap: 20px;
+}
+
+.cinematic-cut-in.versus-mode .portrait-container {
+  flex: 0 0 auto;
+  transform: scale(0.8);
+}
+
+.cinematic-cut-in.versus-mode .portrait-container.left {
+  animation: slideInLeft 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.cinematic-cut-in.versus-mode .portrait-container.right {
+  animation: slideInRight 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.cinematic-cut-in.versus-mode .versus-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+}
+
+.cinematic-cut-in.versus-mode .cinematic-title {
+  font-size: 4em;
+  margin: 0;
+  line-height: 1;
+}
+
+.versus-badge {
+  font-family: var(--tavern-font-primary);
+  font-size: 5em;
+  font-weight: 700;
+  color: var(--tavern-gold-bright);
+  text-shadow: 0 0 20px rgba(212, 160, 74, 0.8);
+  margin-top: -10px;
+  animation: zoomIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s backwards;
+}
+
+@keyframes slideInLeft {
+  from { transform: translateX(-100%) scale(0.8); opacity: 0; }
+  to { transform: translateX(0) scale(0.8); opacity: 1; }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%) scale(0.8); opacity: 0; }
+  to { transform: translateX(0) scale(0.8); opacity: 1; }
+}
+
+@keyframes zoomIn {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}

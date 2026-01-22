@@ -43,35 +43,35 @@ export class CinematicOverlay extends HandlebarsApplicationMixin(ApplicationV2) 
         if (performanceMode) return;
 
         // 2. Resolve Art & Name from State/Token (V4.7.1 Fix)
+        // 2. Resolve Art & Name from State/Token
         const state = getState();
-        const playerData = state.players?.[options.userId];
-        const user = game.users.get(options.userId);
 
-        let img, name;
+        const resolveActorInfo = (uid) => {
+            if (!uid) return null;
+            const pData = state.players?.[uid];
+            const u = game.users.get(uid);
+            let i, n;
 
-        // Priority 1: Canvas Token (if active scene)
-        // Find a token claimed by this actor
-        const actor = user?.character;
-        const token = actor ? canvas.tokens.placeables.find(t => t.actor?.id === actor.id) : null;
+            // Token priority
+            const act = u?.character;
+            const tok = act ? canvas.tokens.placeables.find(t => t.actor?.id === act.id) : null;
+            if (tok) { i = tok.document.texture.src; n = tok.document.name; }
 
-        if (token) {
-            img = token.document.texture.src;
-            name = token.document.name;
-        }
+            // State priority
+            if (!i && pData) { i = pData.avatar; n = pData.name; }
 
-        // Priority 2: Game State (Official Seat Data - handles GM as NPC)
-        if (!img && playerData) {
-            img = playerData.avatar;
-            name = playerData.name;
-        }
+            // Fallback
+            if (!i) {
+                i = act?.img || u?.avatar || "icons/svg/mystery-man.svg";
+                n = act?.name || u?.name || "Player";
+            }
+            return { img: i, name: n };
+        };
 
-        // Priority 3: User/Actor Fallback
-        if (!img) {
-            img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
-            name = actor?.name || user?.name || "Player";
-        }
+        const actorInfo = resolveActorInfo(options.userId);
+        const targetInfo = options.targetId ? resolveActorInfo(options.targetId) : null;
 
-        console.log(`Tavern | Cinematic Show: ${options.type} for ${name}`, { img, performanceMode });
+        console.log(`Tavern | Cinematic Show: ${options.type}`, { actorInfo, targetInfo });
 
         // 3. Instantiate & Render
         const overlay = new CinematicOverlay({
@@ -81,8 +81,11 @@ export class CinematicOverlay extends HandlebarsApplicationMixin(ApplicationV2) 
         // Pass data via context
         overlay.cutInData = {
             type: options.type,
-            img,
-            name,
+            img: actorInfo.img,
+            name: actorInfo.name,
+            targetImg: targetInfo?.img,
+            targetName: targetInfo?.name,
+            isVersus: !!targetInfo,
             text: options.text || options.type,
             color: CinematicOverlay.getColorForType(options.type)
         };
@@ -110,6 +113,7 @@ export class CinematicOverlay extends HandlebarsApplicationMixin(ApplicationV2) 
             case "FORESIGHT": return "#9b59b6"; // Mystical Purple
             case "GOAD": return "#e67e22";      // Aggressive Orange
             case "PROFILE": return "#1abc9c";   // Detective Cyan
+            case "BUMP": return "#d35400";      // Punchy Amber/Red
             default: return "var(--tavern-parchment)";
         }
     }
@@ -121,6 +125,9 @@ export class CinematicOverlay extends HandlebarsApplicationMixin(ApplicationV2) 
             isBust: this.cutInData.type === "BUST",
             isVictory: this.cutInData.type === "VICTORY",
             isDuel: this.cutInData.type === "DUEL",
+            isVersus: this.cutInData.isVersus,
+            targetImg: this.cutInData.targetImg,
+            targetName: this.cutInData.targetName,
         };
     }
 }
