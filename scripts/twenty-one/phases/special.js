@@ -3,7 +3,7 @@ import { deductFromActor, payOutWinners } from "../../wallet.js";
 import { createChatCard } from "../../ui/chat.js";
 import { tavernSocket } from "../../socket.js";
 import { getActorForUser } from "../utils/actors.js";
-import { getDieCost, notifyUser } from "../utils/game-logic.js";
+import { notifyUser } from "../utils/game-logic.js";
 import { emptyTableData, OPENING_ROLLS_REQUIRED } from "../constants.js";
 import { finishRound } from "./core.js";
 

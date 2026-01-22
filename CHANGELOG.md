@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.8.2] - 2026-01-22
+### Hotfix 2
+- **Import Error**: Fixed another `Uncaught SyntaxError` in `special.js` caused by incorrect import path for `getDieCost`.
+
 ## [4.8.1] - 2026-01-22
 ### Hotfix
 - **Import Error**: Fixed `Uncaught SyntaxError` in `turn.js` caused by incorrect import path for `getDieCost`.
