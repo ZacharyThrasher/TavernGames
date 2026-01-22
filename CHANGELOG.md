@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.8.33] - 2026-01-22
+### Hotfix 33
+- **Regression Fix**: Correctly applied the HTML template updates for the Cinematic Overlay refactor. The previous patch failed to update the template file, causing a mismatch between HTML (old structure) and CSS (new structure), which led to broken/huge single avatars and invisible versus avatars. This update synchronizes them, restoring proper sizing and visibility for all modes.
+
 ## [4.8.32] - 2026-01-22
 ### Hotfix 32
 - **UI Overhaul**: Refactored the Cinematic Overlay CSS to completely decouple "Single" and "Versus" modes. This removes all inheritance conflicts that were causing invisible avatars in Versus mode.
