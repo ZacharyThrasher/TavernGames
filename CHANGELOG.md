@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.8.5] - 2026-01-22
+### Hotfix 5
+- **Critical Fix**: Fixed `CheatDialog` crashing on submission due to incorrect static context handling in `ApplicationV2`. Now properly binds the submit handler to the instance.
+
 ## [4.8.4] - 2026-01-22
 ### Hotfix 4
 - **App Crash**: Fixed `ReferenceError: isTheCutPlayer is not defined` in `tavern-app.js` caused by missing variable definitions.

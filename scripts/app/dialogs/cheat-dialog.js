@@ -15,10 +15,6 @@ export class CheatDialog extends HandlebarsApplicationMixin(ApplicationV2) {
       width: 400,
       height: "auto"
     },
-    form: {
-      handler: CheatDialog.formHandler,
-      closeOnSubmit: true
-    },
     classes: ["tavern-dialog-window"]
   };
 
@@ -93,6 +89,9 @@ export class CheatDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     super._onRender(context, options);
     const html = $(this.element);
 
+    // Bind Form Submission manually to ensure instance context
+    this.element.addEventListener("submit", this._onSubmit.bind(this));
+
     // Cheat Type Toggle
     html.find('[name="cheatType"]').on('change', (e) => {
       const isPhysical = e.target.value === 'physical';
@@ -134,21 +133,29 @@ export class CheatDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     html.find('[data-action="close"]').on('click', () => this.close());
   }
 
-  static async formHandler(event, form, formData) {
-    const data = formData.object;
-    // Transform flat data to expected structure
+  async _onSubmit(event) {
+    event.preventDefault();
+    const formData = new FormDataExtended(event.target).object;
+    
     const result = {
-      dieIndex: parseInt(data.dieIndex),
-      adjustment: parseInt(data.adjustment),
-      cheatType: data.cheatType,
-      skill: data.cheatType === "physical" ? data.physicalSkill : data.magicalSkill
+      dieIndex: parseInt(formData.dieIndex),
+      adjustment: parseInt(formData.adjustment),
+      cheatType: formData.cheatType,
+      skill: formData.cheatType === "physical" ? formData.physicalSkill : formData.magicalSkill
     };
     
-    this.resolve(result);
+    if (this.resolve) {
+      this.resolve(result);
+      this.resolve = null; // Prevent double resolution
+    }
+    this.close();
   }
 
   async close(options) {
-    if (this.resolve) this.resolve(null);
+    if (this.resolve) {
+      this.resolve(null);
+      this.resolve = null;
+    }
     return super.close(options);
   }
 }
