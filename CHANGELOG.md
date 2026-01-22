@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.8.44] - 2026-01-22
+### Hotfix 44
+- **Critical Fix**: Resolved a `ReferenceError` in `turn.js` that caused rolling to crash under specific conditions.
+- **CSS Repair**: Restored missing "Result Overlay" styles (`.portrait-result`, `.versus-outcome`) that were accidentally dropped in the previous CSS consolidation update. This restores the premium look of the skill showdown results.
+
 ## [4.8.43] - 2026-01-22
 ### Hotfix 43
 - **CSS Repair**: Fixed broken "Showdown" (Versus mode) cinematic cut-ins. Consolidated multiple conflicting hotfixes in the CSS that were causing the portraits to be misaligned or hidden. The fetch logic for images remains unchanged (it works the same as the solo cut-ins), but the display logic is now unified and clean.

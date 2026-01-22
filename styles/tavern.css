@@ -3223,6 +3223,56 @@
    V4.7.6 Premium Results
    ============================================ */
 
+.portrait-result {
+  position: absolute;
+  bottom: -50px;
+  /* Below name */
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font-family: var(--tavern-font-primary);
+  font-size: 3em;
+  color: #fff;
+  text-shadow: 0 0 10px #000, 0 0 20px var(--tavern-gold);
+  font-weight: bold;
+  opacity: 0;
+  animation: fadeUp 0.5s ease 0.5s forwards;
+}
+
+.versus-outcome {
+  font-family: var(--tavern-font-primary);
+  font-size: 5em;
+  color: var(--tavern-gold-bright);
+  text-transform: uppercase;
+  text-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+  animation: zoomIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  line-height: 1;
+}
+
+.versus-outcome.success {
+  color: var(--tavern-success);
+}
+
+.versus-outcome.failure {
+  color: var(--tavern-danger);
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================
+   V4.8: Sub-Dialog Styling (Extracted from TavernApp)
+   ============================================ */
+
 .tavern-dialog-window .window-content {
   background: var(--tavern-wood-dark) !important;
   color: var(--tavern-parchment);

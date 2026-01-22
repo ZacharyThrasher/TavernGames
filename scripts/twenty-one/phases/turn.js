@@ -209,6 +209,7 @@ export async function submitRoll(payload, userId) {
     }
   }
 
+  const goadBackfire = { ...tableData.goadBackfire };
   if (goadBackfire[userId]?.mustRoll) {
     delete goadBackfire[userId];
   }
