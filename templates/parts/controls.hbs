@@ -96,6 +96,14 @@
   </div>
   {{/if}}
 
+  {{!-- V4: Dared Warning --}}
+  {{#if isDared}}
+  <div class="control-section dared-warning">
+    <h3><i class="fa-solid fa-fire"></i> YOU ARE DARED!</h3>
+    <p>Your Goad backfired! You <strong>MUST</strong> roll a d20 or Fold.</p>
+  </div>
+  {{/if}}
+
   {{#if myTurn}}
   {{!-- V3.4: During cut phase, ONLY show cut UI (handled above), not your-turn controls --}}
   {{#unless isCutPhase}}
@@ -163,6 +171,13 @@
   <div class="control-section skill-section">
     <h4><i class="fa-solid fa-star"></i> Bonus Action (Skills)</h4>
     <div class="skill-buttons">
+      {{#if canCheat}}
+      <button type="button" class="btn btn-skill btn-cheat" data-action="cheat"
+        title="Sleight of Hand - Modify a die">
+        <i class="fa-solid fa-hand-sparkles"></i> Cheat
+      </button>
+      {{/if}}
+
       {{#if canHunch}}
       <button type="button" class="btn btn-skill btn-hunch" data-action="hunch"
         title="WIS - Predict high/low before rolling">

@@ -3734,3 +3734,37 @@
 .hint.centered { text-align: center; }
 .hidden { display: none; }
 
+
+/* Blind Die Styling */
+.die-face.blind-die {
+  background: linear-gradient(135deg, #4a2a6a, #2a1a3a);
+  border: 2px dashed #9a6aaa;
+  color: #d4a0d4;
+  box-shadow: 0 0 10px rgba(154, 106, 170, 0.4);
+}
+
+.die-face.blind-die i {
+  animation: pulse 2s infinite;
+}
+
+/* Dared Warning Styling */
+.control-section.dared-warning {
+  background: rgba(139, 58, 58, 0.2);
+  border: 2px solid #ff4444;
+  border-radius: var(--tavern-radius-md);
+  padding: var(--tavern-gap-md);
+  text-align: center;
+  animation: pulse-red 1.5s infinite;
+}
+
+.control-section.dared-warning h3 {
+  color: #ff4444;
+  justify-content: center;
+}
+
+@keyframes pulse-red {
+  0% { box-shadow: 0 0 5px rgba(255, 68, 68, 0.2); }
+  50% { box-shadow: 0 0 15px rgba(255, 68, 68, 0.5); }
+  100% { box-shadow: 0 0 5px rgba(255, 68, 68, 0.2); }
+}
+

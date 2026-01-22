@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.8.15] - 2026-01-22
+### Hotfix 15
+- **UI Fixes**: Restored missing "Cheat" button to the skills panel. Added visual indicator for "Blind Dice" (failed Foresight). Added prominent "YOU ARE DARED" warning when Goad backfires.
+- **Styling**: Added distinct CSS for blind dice (purple/dashed) and daring warnings (red pulse).
+
 ## [4.8.14] - 2026-01-22
 ### Hotfix 14
 - **Critical Crash Fix**: Fixed the "Application Reload" bug when Cheating. The `CheatDialog` was creating nested HTML forms (Application container as `<form>` containing a template `<form>`), which caused the browser to reload the page on submission. The container is now a `<div>`.

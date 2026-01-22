@@ -24,7 +24,11 @@
       {{!-- Dice display --}}
       <div class="player-dice">
         {{#each this.diceDisplay}}
-        {{#if (or this.hidden this.isBlind)}}
+        {{#if this.isBlind}}
+        <div class="die-face blind-die" title="Blind Die (Hidden)">
+          <i class="fa-solid fa-eye-slash"></i>
+        </div>
+        {{else if this.hidden}}
         <div class="die-face hidden hole-die" title="Hole Die">
           <i class="fa-solid fa-question"></i>
         </div>
