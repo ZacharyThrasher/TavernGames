@@ -176,6 +176,8 @@
   flex: 1;
   padding: var(--tavern-gap-md);
   overflow: hidden;
+  min-height: 0;
+  /* V4.3: Allow flex shrinkage */
 }
 
 .tavern-table-area {
@@ -188,6 +190,8 @@
     inset 0 4px 20px rgba(0, 0, 0, 0.4),
     0 4px 12px rgba(0, 0, 0, 0.3);
   overflow: auto;
+  min-height: 0;
+  /* V4.3: Ensure scrolling triggers */
 }
 
 .tavern-sidebar {
@@ -195,6 +199,7 @@
   flex-direction: column;
   gap: var(--tavern-gap-md);
   overflow: hidden;
+  min-height: 0;
 }
 
 .tavern-controls-panel,
@@ -207,6 +212,10 @@
 
 .tavern-controls-panel {
   flex-shrink: 0;
+  max-height: 70%;
+  /* V4.3: Prevent taking full height */
+  overflow-y: auto;
+  /* V4.3: Allow scrolling if controls overflow */
 }
 
 .tavern-history-panel {
@@ -214,6 +223,7 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 /* ============================================

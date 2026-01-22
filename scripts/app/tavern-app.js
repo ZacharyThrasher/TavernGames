@@ -1627,7 +1627,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
     // Build list of valid champions (active players, not busted/caught)
     const validChampions = state.turnOrder
-      .filter(id => !tableData.busts?.[id] && !tableData.caught?.[id] && id !== userId)
+      .filter(id => !tableData.busts?.[id] && !tableData.caught?.[id])
       .map(id => {
         const actor = game.users.get(id)?.character;
         const img = actor?.img || game.users.get(id)?.avatar || "icons/svg/mystery-man.svg";

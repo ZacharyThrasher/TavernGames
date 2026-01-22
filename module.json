@@ -7,14 +7,14 @@
       "name": "Zachary Thrasher"
     }
   ],
-  "version": "4.2.0",
+  "version": "4.3.0",
   "compatibility": {
-    "minimum": "13",
-    "verified": "13"
+    "minimum": "11",
+    "verified": "12"
   },
   "url": "https://github.com/ZacharyThrasher/TavernGames",
   "manifest": "https://github.com/ZacharyThrasher/TavernGames/releases/latest/download/module.json",
-  "download": "https://github.com/ZacharyThrasher/TavernGames/releases/latest/download/tavern-dice-master.zip",
+  "download": "https://github.com/ZacharyThrasher/TavernGames/releases/download/v4.3.0/module.zip",
   "bugs": "https://github.com/ZacharyThrasher/TavernGames/issues",
   "socket": true,
   "esmodules": [
