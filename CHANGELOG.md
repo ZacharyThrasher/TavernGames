@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.8.34] - 2026-01-22
+### Hotfix 34
+- **UI Polish**: Aligned the "Cinematic Cut-in" text to match the diagonal stripe angle (-15 degrees). The text is now perfectly centered and rotated to sit "on top" of the stripe for a cleaner look.
+- **Versus Fix (Defensive)**: Further hardened the visibility rules for Versus Mode avatars by forcing `z-index: 100` and `display: block` on the images. This is aimed at resolving the persistent invisibility issue on certain displays.
+
 ## [4.8.33] - 2026-01-22
 ### Hotfix 33
 - **Regression Fix**: Correctly applied the HTML template updates for the Cinematic Overlay refactor. The previous patch failed to update the template file, causing a mismatch between HTML (old structure) and CSS (new structure), which led to broken/huge single avatars and invisible versus avatars. This update synchronizes them, restoring proper sizing and visibility for all modes.
