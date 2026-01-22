@@ -83,3 +83,81 @@ Hooks.once("ready", async () => {
   }
 });
 
+/* V4.1: Visual Victory Fanfare */
+export function showVictoryFanfare(winnerId) {
+  const winnerName = game.users.get(winnerId)?.name ?? "Winner";
+
+  // 1. Screenshake
+  const appElement = document.getElementById("tavern-dice-master-app");
+  if (appElement) {
+    appElement.classList.add("tavern-shake");
+    setTimeout(() => appElement.classList.remove("tavern-shake"), 500);
+  }
+
+  // 2. Victory Banner Overlay
+  const banner = $(`<div class="tavern-victory-banner">
+    <div class="banner-content">
+      <div class="banner-title">VICTORY!</div>
+      <div class="banner-subtitle">${winnerName} takes the pot!</div>
+    </div>
+  </div>`);
+
+  $("body").append(banner);
+  setTimeout(() => {
+    banner.fadeOut(1000, () => banner.remove());
+  }, 4000); // Show for 4s then fade
+}
+
+/* V4.2: Bump Impact Effect */
+export function playBumpEffect(targetId) {
+  if (!game.tavernDiceMaster?.app?.rendered) return;
+
+  // Find the seat using the data attribute we added
+  const appElement = document.getElementById("tavern-dice-master-app");
+  if (!appElement) return;
+
+  const seat = appElement.querySelector(`.player-seat[data-user-id="${targetId}"]`);
+  if (seat) {
+    seat.classList.add("tavern-shake-heavy");
+
+    // Add visual impact flash
+    const flash = $(`<div class="bump-impact"></div>`);
+    $(seat).append(flash);
+
+    setTimeout(() => flash.remove(), 500);
+    setTimeout(() => seat.classList.remove("tavern-shake-heavy"), 500);
+  }
+
+  // Also shake the main window slightly for everyone to feel it
+  appElement.classList.add("tavern-shake");
+  setTimeout(() => appElement.classList.remove("tavern-shake"), 300);
+}
+
+/* V4.2: Floating Gold Text */
+export function showFloatingText(userId, amount) {
+  if (!game.tavernDiceMaster?.app?.rendered) return;
+
+  const appElement = document.getElementById("tavern-dice-master-app");
+  if (!appElement) return;
+
+  const seat = appElement.querySelector(`.player-seat[data-user-id="${userId}"]`);
+  if (!seat) return;
+
+  // Format text: +10gp or -10gp
+  const isPositive = amount > 0;
+  const text = isPositive ? `+${amount}gp` : `${amount}gp`;
+  const colorClass = isPositive ? "gain" : "loss";
+
+  // Append to avatar container for positioning
+  const avatar = seat.querySelector(".player-avatar");
+  if (!avatar) return;
+
+  const float = $(`<div class="floating-text ${colorClass}">${text}</div>`);
+  $(avatar).append(float);
+
+  // Animate and remove
+  setTimeout(() => {
+    float.fadeOut(500, () => float.remove());
+  }, 1500);
+}
+

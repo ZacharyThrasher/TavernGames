@@ -1,6 +1,7 @@
 import { MODULE_ID } from "./state.js";
 import { handleJoinTable, handleLeaveTable, handleStartRound, handlePlayerAction, handleResetTable } from "./tavern-actions.js";
 import { showRollToUser } from "./dice.js";
+import { showVictoryFanfare, playBumpEffect, showFloatingText } from "./main.js";
 
 export let tavernSocket;
 
@@ -22,4 +23,7 @@ export function setupSockets() {
 
   // Register client-side function for showing notifications to specific users
   tavernSocket.register("showNotification", showNotification);
+  tavernSocket.register("showVictoryFanfare", showVictoryFanfare);
+  tavernSocket.register("playBumpEffect", playBumpEffect);
+  tavernSocket.register("showFloatingText", showFloatingText);
 }

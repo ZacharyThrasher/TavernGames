@@ -36,8 +36,8 @@ export async function submitRoll(payload, userId) {
 
   // V4: Dared check - can ONLY buy d20 if dared
   if (tableData.dared?.[userId] && die !== 20) {
-      ui.notifications.warn("You are Dared! You can only buy a d20.");
-      return state;
+    ui.notifications.warn("You are Dared! You can only buy a d20.");
+    return state;
   }
 
   // V2.0: Variable dice costs in betting phase
@@ -47,8 +47,9 @@ export async function submitRoll(payload, userId) {
     const user = game.users.get(userId);
     // V3.5: GM-as-NPC pays for dice like regular players
     const playerData = state.players?.[userId];
-    const isHouse = user?.isGM && !playerData?.playingAsNpc;
-    if (!isHouse) {
+    // V3.5: GM-as-NPC pays for dice like regular players (unified via deductFromActor)
+    // Removed !isHouse check to allow NPCs to pay
+    {
       rollCost = getDieCost(die, ante);
 
       if (rollCost > 0) {
@@ -117,7 +118,7 @@ export async function submitRoll(payload, userId) {
   const visibleTotals = { ...tableData.visibleTotals };
 
   const existingRolls = rolls[userId] ?? [];
-  const isPublic = isOpeningPhase ? existingRolls.length === 0 : true;
+  const isPublic = isOpeningPhase ? existingRolls.length === 0 : false;
 
   rolls[userId] = [...existingRolls, { die, result, public: isPublic }];
   totals[userId] = (totals[userId] ?? 0) + result;
@@ -166,28 +167,30 @@ export async function submitRoll(payload, userId) {
   }
 
   // V3.4: Only post bust message if opening phase (no cheat opportunity)
-  // In betting phase, the bust message will be posted after cheat decision
-  if (!pendingBust) {
-    await addHistoryEntry({
-      type: isBust ? "bust" : "roll",
-      player: userName,
-      die: `d${die}`,
-      result,
-      total: totals[userId],
-      message: isBust
-        ? `${userName} rolled d${die} and BUSTED with ${totals[userId]}!${specialMsg}`
-        : `${userName} rolled a d${die}${rollCostMsg}...${specialMsg}`,
-    });
-  } else {
-    // Still log the roll, but not the bust yet
-    await addHistoryEntry({
-      type: "roll",
-      player: userName,
-      die: `d${die}`,
-      result,
-      total: totals[userId],
-      message: `${userName} rolled a d${die}${rollCostMsg}...${specialMsg}`,
-    });
+  // V4.1: Defer betting phase history log until finishTurn (to hide pre-cheat results)
+  if (isOpeningPhase) {
+    if (!pendingBust) {
+      await addHistoryEntry({
+        type: isBust ? "bust" : "roll",
+        player: userName,
+        die: `d${die}`,
+        result,
+        total: totals[userId],
+        message: isBust
+          ? `${userName} rolled d${die} and BUSTED with ${totals[userId]}!${specialMsg}`
+          : `${userName} rolled a d${die}${rollCostMsg}...${specialMsg}`,
+      });
+    } else {
+      // Still log the roll, but not the bust yet (though opening phase shouldn't have pendingBust usually)
+      await addHistoryEntry({
+        type: "roll",
+        player: userName,
+        die: `d${die}`,
+        result,
+        total: totals[userId],
+        message: `${userName} rolled a d${die}${rollCostMsg}...${specialMsg}`,
+      });
+    }
   }
 
   const goadBackfire = { ...tableData.goadBackfire };
@@ -294,6 +297,51 @@ export async function finishTurn(userId) {
     // maybe admin override
   }
 
+  // V4.1: Reveal hidden betting rolls and log them (moved from submitRoll)
+  const ante = game.settings.get(MODULE_ID, "fixedAnte");
+  const rolls = tableData.rolls[userId] ?? [];
+  const lastRollIndex = rolls.length - 1;
+  const lastRoll = rolls[lastRollIndex];
+
+  if (lastRoll && tableData.phase === "betting" && !lastRoll.public && !lastRoll.blind) {
+    // It was hidden for cheat opportunity - time to reveal
+    const updatedRolls = [...rolls];
+    updatedRolls[lastRollIndex] = { ...lastRoll, public: true };
+
+    const updatedVisibleTotals = { ...tableData.visibleTotals };
+    updatedVisibleTotals[userId] = (updatedVisibleTotals[userId] ?? 0) + lastRoll.result;
+
+    tableData.rolls = { ...tableData.rolls, [userId]: updatedRolls };
+    tableData.visibleTotals = updatedVisibleTotals;
+
+    // Reconstruct the history log message
+    const user = game.users.get(userId);
+    const playerData = state.players?.[userId];
+    // V3.5: GM-as-NPC check should match submitRoll logic
+    // Note: We use simpler logic here since we just need the message
+    const isHouse = user?.isGM && !playerData?.playingAsNpc;
+    let rollCostMsg = "";
+    if (!isHouse) {
+      const cost = getDieCost(lastRoll.die, ante);
+      if (cost === 0) rollCostMsg = " (FREE)";
+      else rollCostMsg = ` (${cost}gp)`;
+    }
+
+    let specialMsg = "";
+    if (lastRoll.die === 20 && lastRoll.result === 21) specialMsg = " **NATURAL 20 = INSTANT 21!**";
+    else if (lastRoll.die !== 20 && lastRoll.result === 1) specialMsg = " *Spilled drink! 1gp cleaning fee.*";
+
+    const userName = user?.name ?? "Unknown";
+    await addHistoryEntry({
+      type: "roll",
+      player: userName,
+      die: `d${lastRoll.die}`,
+      result: lastRoll.result,
+      total: tableData.totals[userId],
+      message: `${userName} rolled a d${lastRoll.die}${rollCostMsg}...${specialMsg}`,
+    });
+  }
+
   const updatedTable = { ...tableData, pendingAction: null };
 
   // V3.4: Resolve pending bust after cheat decision
@@ -364,7 +412,7 @@ export async function hold(userId) {
   }
 
   if (tableData.hunchLocked?.[userId]) {
-    await notifyUser(userId, "Your Hunch locked you into rolling!");
+    await notifyUser(userId, "Your Foresight locked you into rolling!");
     return state;
   }
 

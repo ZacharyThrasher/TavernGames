@@ -239,6 +239,13 @@ export async function bumpTable(payload, userId) {
         const updatedBusts = { ...tableData.busts };
         if (targetBusted) {
             updatedBusts[targetId] = true;
+            // V4.1: Explicitly log the bust
+            await addHistoryEntry({
+                type: "bust",
+                player: targetName,
+                total: newTotal,
+                message: `${targetName} BUSTED with ${newTotal} after being bumped!`,
+            });
         }
 
         const updatedTableData = {
@@ -249,6 +256,11 @@ export async function bumpTable(payload, userId) {
             busts: updatedBusts,
             bumpedThisRound: updatedBumpedThisRound,
         };
+
+        // V4.2: Bump Impact
+        try {
+            await tavernSocket.executeForEveryone("playBumpEffect", targetId);
+        } catch (e) { console.warn(e); }
 
         await addHistoryEntry({
             type: "bump",
@@ -288,7 +300,7 @@ export async function bumpTable(payload, userId) {
             icon: "fa-solid fa-hand-fist",
         });
 
-    
+
 
         return updateState({ tableData: { ...updatedTableData, skillUsedThisTurn: true } });
 

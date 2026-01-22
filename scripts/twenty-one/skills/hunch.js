@@ -19,7 +19,7 @@ import { getActorForUser, getGMUserIds, notifyUser } from "../utils/actors.js";
 export async function hunch(userId) {
     const state = getState();
     if (state.status !== "PLAYING") {
-        ui.notifications.warn("Cannot use Hunch outside of an active round.");
+        ui.notifications.warn("Cannot use Foresight outside of an active round.");
         return state;
     }
 
@@ -27,13 +27,13 @@ export async function hunch(userId) {
 
     // Must be your turn
     if (tableData.currentPlayer !== userId) {
-        await notifyUser(userId, "You can only use Hunch on your turn.");
+        await notifyUser(userId, "You can only use Foresight on your turn.");
         return state;
     }
 
     // Must be in betting phase
     if (tableData.phase !== "betting") {
-        await notifyUser(userId, "Hunch can only be used during the betting phase.");
+        await notifyUser(userId, "Foresight can only be used during the betting phase.");
         return state;
     }
 
@@ -45,7 +45,7 @@ export async function hunch(userId) {
 
     // Can't use if busted, folded, or holding
     if (tableData.busts?.[userId] || tableData.folded?.[userId] || tableData.holds?.[userId]) {
-        await notifyUser(userId, "You can't use Hunch right now.");
+        await notifyUser(userId, "You can't use Foresight right now.");
         return state;
     }
 
@@ -92,7 +92,7 @@ export async function hunch(userId) {
 
         await ChatMessage.create({
             content: `<div class="tavern-skill-result success">
-        <strong>Perfect Intuition!</strong><br>
+        <strong>Perfect Foresight!</strong><br>
         Your senses sharpen completely. You know exactly what each die will show:<br>
         <em>d4: ${predictions[4]}, d6: ${predictions[6]}, d8: ${predictions[8]}, 
         d10: ${predictions[10]}, d20: ${predictions[20]}</em>
@@ -104,7 +104,7 @@ export async function hunch(userId) {
         });
 
         await createChatCard({
-            title: "The Hunch",
+            title: "Foresight",
             subtitle: `${userName}'s eyes close...`,
             message: `A perfect read! They know exactly what's coming.`,
             icon: "fa-solid fa-eye",
@@ -127,7 +127,7 @@ export async function hunch(userId) {
         });
 
         await createChatCard({
-            title: "The Hunch",
+            title: "Foresight",
             subtitle: `${userName} spirals into doubt`,
             message: `Terrible intuition! Locked into rolling a <strong>d20</strong>!`,
             icon: "fa-solid fa-dice-d20",
@@ -148,7 +148,7 @@ export async function hunch(userId) {
 
         await ChatMessage.create({
             content: `<div class="tavern-skill-result success">
-        <strong>The Hunch</strong><br>
+        <strong>Foresight</strong><br>
         A feeling washes over you...<br>
         <em>d4: ${predictions[4]}, d6: ${predictions[6]}, d8: ${predictions[8]}, 
         d10: ${predictions[10]}, d20: ${predictions[20]}</em>
@@ -160,7 +160,7 @@ export async function hunch(userId) {
         });
 
         await createChatCard({
-            title: "The Hunch",
+            title: "Foresight",
             subtitle: `${userName} gets a feeling...`,
             message: `Something tells them what's coming. Choose wisely!`,
             icon: "fa-solid fa-eye",
@@ -209,7 +209,7 @@ export async function hunch(userId) {
         await ChatMessage.create({
             content: `<div class="tavern-gm-alert">
         <strong>BLIND DIE</strong><br>
-        ${userName}'s failed Hunch forced a blind d${blindDieType}.<br>
+        ${userName}'s failed Foresight forced a blind d${blindDieType}.<br>
         <em>Hidden value: <strong>${blindValue}</strong></em>
         ${newTotal > 21 ? '<br><span style="color: red;">HIDDEN BUST!</span>' : ''}
       </div>`,
@@ -230,7 +230,7 @@ export async function hunch(userId) {
         });
 
         await createChatCard({
-            title: "The Hunch",
+            title: "Foresight",
             subtitle: `${userName}'s intuition fails`,
             message: `Committed to a <strong>Blind Die</strong>! A d${blindDieType} was rolled but the result is hidden...`,
             icon: "fa-solid fa-question",
@@ -246,10 +246,10 @@ export async function hunch(userId) {
         success: success || isNat20,
         nat20: isNat20,
         nat1: isNat1,
-        message: isNat20 ? `${userName} got a perfect hunch! (Nat 20)`
-            : isNat1 ? `${userName}'s hunch locked them into a d20! (Nat 1)`
-                : success ? `${userName} successfully used Hunch.`
-                    : `${userName}'s hunch failed - locked into a Hit.`,
+        message: isNat20 ? `${userName} got a perfect foresight! (Nat 20)`
+            : isNat1 ? `${userName}'s foresight locked them into a d20! (Nat 1)`
+                : success ? `${userName} successfully used Foresight.`
+                    : `${userName}'s foresight failed - locked into a Hit.`,
     });
 
     tableData.skillUsedThisTurn = true;

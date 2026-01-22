@@ -47,7 +47,9 @@
     <ul class="rules-list">
       <li><strong>Deal:</strong> Everyone gets 2d10 (1 visible, 1 hole).</li>
       <li><strong>Betting:</strong> Buy dice (d4-d20) or <strong>Hold</strong>.</li>
-      <li><strong>Skills:</strong> Use <strong>Cheat</strong>, <strong>Bump</strong>, <strong>Goad</strong>, <strong>Hunch</strong>, or <strong>Profile</strong>.</li>
+      <li><strong>Skills:</strong> Use <strong>Cheat</strong>, <strong>Bump</strong>, <strong>Goad</strong>,
+        <strong>Foresight</strong>, or <strong>Profile</strong>.
+      </li>
       <li><strong>Duels:</strong> Ties are settled by rolling 1d20 + 1d4 per Hit.</li>
       <li><strong>Side Bets:</strong> Back a player to win for 2:1 payout!</li>
     </ul>
@@ -123,7 +125,7 @@
     {{!-- V3: Hit locked indicator --}}
     {{#if hunchLocked}}
     <p class="hunch-locked-warning">
-      <i class="fa-solid fa-lock"></i> Your Hunch locked you in! You MUST roll {{#if hunchLockedDie}}a
+      <i class="fa-solid fa-lock"></i> Your Foresight locked you in! You MUST roll {{#if hunchLockedDie}}a
       d{{hunchLockedDie}}{{else}}before your turn ends{{/if}}.
     </p>
     {{/if}}
@@ -164,7 +166,7 @@
       {{#if canHunch}}
       <button type="button" class="btn btn-skill btn-hunch" data-action="hunch"
         title="WIS - Predict high/low before rolling">
-        <i class="fa-solid fa-eye"></i> Hunch
+        <i class="fa-solid fa-eye"></i> Foresight
       </button>
       {{/if}}
 

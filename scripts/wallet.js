@@ -107,11 +107,13 @@ export async function deductAnteFromActors(state, ante) {
     // V4: NPCs use module wallet
     if (isNpcPlayer(userId)) {
       await updateNpcWallet(userId, -ante);
+      try { await tavernSocket.executeForEveryone("showFloatingText", userId, -ante); } catch (e) { }
     } else {
       const actor = getActorForUser(userId);
       if (!actor) continue;
       const current = actor.system?.currency?.gp ?? 0;
       await actor.update({ "system.currency.gp": current - ante });
+      try { await tavernSocket.executeForEveryone("showFloatingText", userId, -ante); } catch (e) { }
     }
   }
 }
@@ -144,11 +146,13 @@ export async function payOutWinners(payouts, flatShare) {
     // V4: NPCs use module wallet
     if (isNpcPlayer(oderId)) {
       await updateNpcWallet(oderId, amount);
+      try { await tavernSocket.executeForEveryone("showFloatingText", oderId, amount); } catch (e) { }
     } else {
       const actor = getActorForUser(oderId);
       if (!actor) continue;
       const current = actor.system?.currency?.gp ?? 0;
       await actor.update({ "system.currency.gp": current + amount });
+      try { await tavernSocket.executeForEveryone("showFloatingText", oderId, amount); } catch (e) { }
     }
   }
 }
@@ -171,6 +175,12 @@ export async function deductFromActor(userId, amount, stateOverride = null) {
     const wallet = getNpcWallet(userId);
     if (wallet < amount) return false;
     await updateNpcWallet(userId, -amount);
+
+    // V4.2: Floating Text
+    try {
+      await tavernSocket.executeForEveryone("showFloatingText", userId, -amount);
+    } catch (e) { }
+
     return true;
   }
 
@@ -181,6 +191,12 @@ export async function deductFromActor(userId, amount, stateOverride = null) {
   if (current < amount) return false;
 
   await actor.update({ "system.currency.gp": current - amount });
+
+  // V4.2: Floating Text
+  try {
+    await tavernSocket.executeForEveryone("showFloatingText", userId, -amount);
+  } catch (e) { }
+
   return true;
 }
 

@@ -35,11 +35,9 @@ export async function placeSideBet(payload, userId) {
         return state;
     }
 
-    // Can't bet on yourself if you're in the game
-    if (championId === userId && state.players?.[userId]) {
-        await notifyUser(userId, "You can't bet on yourself!");
-        return state;
-    }
+    // V4.1: Double Down allowed (can bet on self)
+    // if (championId === userId && state.players?.[userId]) { ... } removed
+
 
     // Can't bet on busted or caught players
     if (tableData.busts?.[championId] || tableData.caught?.[championId]) {

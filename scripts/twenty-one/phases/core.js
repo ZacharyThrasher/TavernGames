@@ -145,7 +145,7 @@ export async function revealDice() {
 
   // Mark as revealing
   await updateState({ status: "REVEALING" });
-  
+
 
   // Show all rolls publicly - launch all dice animations in parallel for speed
   const rollPromises = [];
@@ -222,7 +222,7 @@ export async function finishRound() {
     await new Promise(r => setTimeout(r, 1000));
 
     if (success) {
-      
+
 
       const refund = cost ?? 0;
       const bountyAmount = bounty ?? 0;
@@ -256,7 +256,7 @@ export async function finishRound() {
         message: `${accuserName} caught ${targetName} cheating and earned ${totalReward}gp!`,
       });
     } else {
-  
+
 
       await createChatCard({
         title: "False Accusation!",
@@ -304,7 +304,7 @@ export async function finishRound() {
       icon: "fa-solid fa-swords",
     });
 
-    
+
 
     const duel = {
       active: true,
@@ -355,6 +355,13 @@ export async function finishRound() {
   if (winners.length === 1) {
     const payouts = { [winners[0]]: finalPot };
     await payOutWinners(payouts);
+
+    // V4.1: Victory Fanfare
+    try {
+      await tavernSocket.executeForEveryone("showVictoryFanfare", winners[0]);
+    } catch (e) {
+      console.warn("Could not show victory fanfare:", e);
+    }
 
     // V4: Process side bet payouts
     await processSideBetPayouts(winners[0]);
