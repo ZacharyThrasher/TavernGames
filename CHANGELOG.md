@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.8.51] - 2026-01-22
+### Hotfix 51
+- **Simplified Visuals**: Per request, the "Versus Mode" (split-screen) layout has been scrapped for all skills (Bump, Goad, Profile) due to reliability issues. All skills now use the reliable "Standard" cut-in layout (Single Portrait + Stripe). The split-screen effect is now exclusive to "The Duel".
+- **Stylization Confirmed**: Re-applied the Heavy Stylization CSS which was previously missing. Now `FORESIGHT` (Floating), `GOAD` (Shaking), `PROFILE` (Glitching), and `BUMP` (Slamming) will all display their unique animations correctly in the Standard layout.
+
 ## [4.8.50] - 2026-01-22
 ### Hotfix 50
 - **Duel FX Fix**: The "DUEL" cinematic trigger was missing from the core game loop, which effectively made it "not work" despite the code existing in the effects module. It has been re-inserted so the Duel splash screen now plays correctly when a duel is triggered.

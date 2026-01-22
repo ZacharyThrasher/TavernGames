@@ -88,13 +88,17 @@ export class CinematicOverlay extends HandlebarsApplicationMixin(ApplicationV2) 
         });
 
         // Pass data via context
+        // V4.8.51: Scrapping Versus Mode for skills, only using it for actual Duels
+        const forceVersusOff = options.type !== "DUEL";
+        const isVersus = !!targetInfo && !forceVersusOff;
+
         overlay.cutInData = {
             type: options.type,
             img: actorInfo?.img, // V4.8.49: Allow null (no portrait mode)
             name: actorInfo?.name || "",
             targetImg: targetInfo?.img,
             targetName: targetInfo?.name,
-            isVersus: !!targetInfo,
+            isVersus: isVersus,
             text: options.text || options.type,
             color: CinematicOverlay.getColorForType(options.type),
             // V4.7.6: Result Data
