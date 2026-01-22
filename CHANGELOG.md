@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.8.42] - 2026-01-22
+### Hotfix 42
+- **Dared Fix**: Fixed an issue where the "Dared" status (forced d20 buy) was not being removed after the player complied and rolled the d20. The status now correctly clears upon rolling, allowing the player to continue their turn normally.
+
 ## [4.8.41] - 2026-01-22
 ### Hotfix 41
 - **Syntax Fix**: Fixed a syntax error in the Foresight (Hunch) skill that crashed the module on load. Apologies for the rapid-fire updates!

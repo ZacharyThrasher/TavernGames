@@ -209,9 +209,13 @@ export async function submitRoll(payload, userId) {
     }
   }
 
-  const goadBackfire = { ...tableData.goadBackfire };
   if (goadBackfire[userId]?.mustRoll) {
     delete goadBackfire[userId];
+  }
+
+  const dared = { ...tableData.dared };
+  if (dared[userId]) {
+    delete dared[userId];
   }
 
   const hunchLocked = { ...tableData.hunchLocked };
@@ -244,6 +248,7 @@ export async function submitRoll(payload, userId) {
     cleaningFees,
     visibleTotals,
     goadBackfire,
+    dared, // Include updated dared
     hunchLocked,
     hunchLockedDie,
     hunchPrediction,
