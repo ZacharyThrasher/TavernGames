@@ -1,5 +1,6 @@
 import { MODULE_ID, getState, updateState, addHistoryEntry } from "../../state.js";
 import { deductFromActor } from "../../wallet.js";
+import { createChatCard } from "../../ui/chat.js";
 
 import { tavernSocket } from "../../socket.js";
 import { getActorForUser } from "../utils/actors.js";

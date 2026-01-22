@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.8.24] - 2026-01-22
+### Hotfix 24
+- **Bug Fix**: Fixed a crash when clicking the "Fold" button caused by a missing import (`createChatCard`).
+
 ## [4.8.23] - 2026-01-22
 ### Hotfix 23
 - **Bug Fix**: NPCs now correctly pay for dice using the module's NPC wallet system instead of checking the GM's user character.
