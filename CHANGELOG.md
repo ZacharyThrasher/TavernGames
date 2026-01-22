@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.8.20] - 2026-01-22
+### Hotfix 20
+- **Bug Fix**: Fixed missing Accuse section in the sidebar. It now correctly appears during all active round phases (Playing, Inspection, Revealing, Duel) for eligible players.
+
 ## [4.8.19] - 2026-01-22
 ### Hotfix 19
 - **Bug Fix**: Resolved a critical issue where "The Cut" phase could get stuck due to a strict ID check and UI state mismatch.

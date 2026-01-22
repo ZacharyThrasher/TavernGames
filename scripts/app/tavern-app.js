@@ -272,7 +272,10 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
     // Centralized Targeting Logic
     const accuseTargets = !accusedThisRound ? getValidAccuseTargets(state, userId, accusedThisRound) : [];
-    const canAccuse = isInGame && !accusedThisRound && !isBusted && accuseTargets.length > 0 && !isHouse;
+
+    // V4.8.20: Improved Accuse visibility - show during all active phases if you have targets
+    const isRoundPhase = ["PLAYING", "INSPECTION", "REVEALING", "DUEL"].includes(state.status);
+    const canAccuse = isInGame && !accusedThisRound && !isBusted && accuseTargets.length > 0 && isRoundPhase && !isHouse;
 
     // Hunch Context
     const isHolding = tableData.holds?.[userId] ?? false;
