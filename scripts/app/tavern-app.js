@@ -262,7 +262,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const hunchLockedDie = tableData.hunchLockedDie?.[userId] ?? null;
 
     // Goad context updated (remove resist)
-    const hasGoadedThisRound = tableData.goadedThisRound?.[userId] ?? false;
+    const hasGoadedThisRound = tableData.goadedThisRound?.[userId] ?? tableData.usedSkills?.[userId]?.goad ?? false;
     const canGoad = isBettingPhase && !isCutPhase && myTurn && isInGame && !(tableData.busts?.[userId]) && !isFolded && !isHouse && !hasGoadedThisRound && !tableData.skillUsedThisTurn;
     const goadTargets = canGoad ? getValidGoadTargets(state, userId) : [];
 
@@ -299,15 +299,17 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
     // Hunch Context
     const isHolding = tableData.holds?.[userId] ?? false;
-    const canHunch = isBettingPhase && !isCutPhase && myTurn && isInGame && !isBusted && !isFolded && !isHolding && !isHouse && !hunchLocked && !tableData.skillUsedThisTurn;
+    const hasHunched = tableData.usedSkills?.[userId]?.hunch ?? false;
+    const canHunch = isBettingPhase && !isCutPhase && myTurn && isInGame && !isBusted && !isFolded && !isHolding && !isHouse && !hunchLocked && !tableData.skillUsedThisTurn && !hasHunched;
 
     // Profile Context
-    const profileTargets = (isBettingPhase && !isCutPhase && myTurn && !isBusted && !isFolded && !isHouse && !tableData.skillUsedThisTurn)
+    const hasProfiled = tableData.usedSkills?.[userId]?.profile ?? false;
+    const profileTargets = (isBettingPhase && !isCutPhase && myTurn && !isBusted && !isFolded && !isHouse && !tableData.skillUsedThisTurn && !hasProfiled)
       ? getValidProfileTargets(state, userId) : [];
     const canProfile = profileTargets.length > 0;
 
     // Bump Context
-    const hasBumpedThisRound = tableData.bumpedThisRound?.[userId] ?? false;
+    const hasBumpedThisRound = tableData.bumpedThisRound?.[userId] ?? tableData.usedSkills?.[userId]?.bump ?? false;
     const canBump = isBettingPhase && !isCutPhase && myTurn && isInGame && !isBusted && !isHolding && !isHouse && !hasBumpedThisRound && !tableData.skillUsedThisTurn;
     const bumpTargets = canBump ? getValidBumpTargets(state, userId) : [];
 

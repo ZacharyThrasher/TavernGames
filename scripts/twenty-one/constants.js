@@ -126,6 +126,8 @@ export function emptyTableData() {
         blindDice: {},
         // V4.7.1: Track who has accused this round (one accusation per round)
         accusedThisRound: {},
+        // V4.8.40: Unified skill usage tracking (Once per Round/Match limit)
+        usedSkills: {}, // { [userId]: { bump: true, goad: true, hunch: true, profile: true } }
     };
 }
 

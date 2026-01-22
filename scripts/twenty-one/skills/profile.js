@@ -53,6 +53,12 @@ export async function profile(payload, userId) {
         return state;
     }
 
+    // V4.8.40: Once per round/match
+    if (tableData.usedSkills?.[userId]?.profile) {
+        await notifyUser(userId, "You can only use Profile once per match.");
+        return state;
+    }
+
     // Can't profile yourself
     if (targetId === userId) {
         await notifyUser(userId, "You can't Profile yourself!");
@@ -284,6 +290,12 @@ export async function profile(payload, userId) {
     });
 
     tableData.skillUsedThisTurn = true;
+
+    // V4.8.40: Mark usage
+    const usedSkills = { ...tableData.usedSkills };
+    if (!usedSkills[userId]) usedSkills[userId] = {};
+    usedSkills[userId] = { ...usedSkills[userId], profile: true };
+    tableData.usedSkills = usedSkills;
 
     return updateState({ tableData });
 }

@@ -46,6 +46,12 @@ export async function hunch(userId) {
         return state;
     }
 
+    // V4.8.40: Once per round/match
+    if (tableData.usedSkills?.[userId]?.hunch) {
+        await notifyUser(userId, "You can only use Foresight once per match.");
+        return state;
+    }
+
     // Can't use if busted, folded, or holding
     if (tableData.busts?.[userId] || tableData.folded?.[userId] || tableData.holds?.[userId]) {
         await notifyUser(userId, "You can't use Foresight right now.");
@@ -287,14 +293,23 @@ export async function hunch(userId) {
                     : `${userName}'s foresight failed - locked into a Hit.`,
     });
 
-    tableData.skillUsedThisTurn = true;
-    await updateState({ tableData });
+});
 
-    // V4.7.9: Auto-end turn on Failure (Blind Hit)
-    // Note: Success/Nat20/Nat1 (Lock) keeps turn active
-    if (!success && !isNat20 && !isNat1) {
-        return finishTurn(userId);
-    }
+tableData.skillUsedThisTurn = true;
 
-    return getState();
+// V4.8.40: Mark usage
+const usedSkills = { ...tableData.usedSkills };
+if (!usedSkills[userId]) usedSkills[userId] = {};
+usedSkills[userId] = { ...usedSkills[userId], hunch: true };
+tableData.usedSkills = usedSkills;
+
+await updateState({ tableData });
+
+// V4.7.9: Auto-end turn on Failure (Blind Hit)
+// Note: Success/Nat20/Nat1 (Lock) keeps turn active
+if (!success && !isNat20 && !isNat1) {
+    return finishTurn(userId);
+}
+
+return getState();
 }

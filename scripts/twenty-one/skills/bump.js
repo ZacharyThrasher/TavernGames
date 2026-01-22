@@ -59,7 +59,7 @@ export async function bumpTable(payload, userId) {
     }
 
     // Player can only bump once per round
-    if (tableData.bumpedThisRound?.[userId]) {
+    if (tableData.usedSkills?.[userId]?.bump || tableData.bumpedThisRound?.[userId]) {
         ui.notifications.warn("You've already bumped the table this round.");
         return state;
     }
@@ -199,6 +199,10 @@ export async function bumpTable(payload, userId) {
 
     // Mark that attacker has bumped this round
     const updatedBumpedThisRound = { ...tableData.bumpedThisRound, [userId]: true };
+    const updatedUsedSkills = {
+        ...tableData.usedSkills,
+        [userId]: { ...tableData.usedSkills?.[userId], bump: true }
+    };
     let newPot = state.pot;
 
     if (success) {
@@ -248,7 +252,9 @@ export async function bumpTable(payload, userId) {
             totals: updatedTotals,
             visibleTotals: updatedVisibleTotals,
             busts: updatedBusts,
+            busts: updatedBusts,
             bumpedThisRound: updatedBumpedThisRound,
+            usedSkills: updatedUsedSkills,
         };
 
         // V4.2: Bump Impact
@@ -309,6 +315,7 @@ export async function bumpTable(payload, userId) {
         const updatedTableData = {
             ...tableData,
             bumpedThisRound: updatedBumpedThisRound,
+            usedSkills: updatedUsedSkills,
             pendingBumpRetaliation: {
                 attackerId: userId,
                 targetId: targetId,

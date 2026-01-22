@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.8.40] - 2026-01-22
+### Hotfix 40
+- **Skill Limits**: Implemented a "Once per Match" (Round) limit for **all** bonus skills. 
+    - Previously, only Bump and Goad were limited to once per round.
+    - Now, **Foresight** and **Profile** are also limited to once per round/match.
+    - This ensures players cannot spam skills indefinitely during a long betting phase.
+
 ## [4.8.39] - 2026-01-22
 ### Hotfix 39
 - **Critial Regresson Fix**: Fixed a "ReferenceError" in the rolling logic that prevented players from rolling dice. This was caused by the new Bump Lock check accessing the game state before it was fully initialized in the function. Rolling is now fully restored.

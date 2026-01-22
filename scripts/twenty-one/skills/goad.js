@@ -69,7 +69,7 @@ export async function goad(payload, userId) {
     }
 
     // Player can only goad once per round
-    if (tableData.goadedThisRound?.[userId]) {
+    if (tableData.usedSkills?.[userId]?.goad || tableData.goadedThisRound?.[userId]) {
         ui.notifications.warn("You've already used your goad this round.");
         return state;
     }
@@ -205,6 +205,10 @@ export async function goad(payload, userId) {
 
     // Track that this player has goaded this round
     const updatedGoadedThisRound = { ...tableData.goadedThisRound, [userId]: true };
+    const updatedUsedSkills = {
+        ...tableData.usedSkills,
+        [userId]: { ...tableData.usedSkills?.[userId], goad: true }
+    };
     const updatedGoadBackfire = { ...tableData.goadBackfire };
 
     if (attackerWins) {
@@ -225,6 +229,7 @@ export async function goad(payload, userId) {
             ...tableData,
             holds: updatedHolds,
             goadedThisRound: updatedGoadedThisRound,
+            usedSkills: updatedUsedSkills,
             goadBackfire: updatedGoadBackfire,
             skillUsedThisTurn: true,
         };
@@ -262,6 +267,7 @@ export async function goad(payload, userId) {
         const updatedTableData = {
             ...tableData,
             goadedThisRound: updatedGoadedThisRound,
+            usedSkills: updatedUsedSkills,
             goadBackfire: updatedGoadBackfire,
             dared: updatedDared, // V4: Add dared state
             skillUsedThisTurn: true,
