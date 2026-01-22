@@ -200,8 +200,8 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         isMe,
         status,
         statusLabel,
-        canAct: isCurrent && isMe && state.status === "PLAYING" && !isHolding && !isBusted,
-        canCheat: state.status === "PLAYING" && isMe && rolls.length > 0 && !isBusted,
+        canAct: isCurrent && isMe && state.status === "PLAYING" && !isHolding && !isBusted && !tableData.pendingAction,
+        // For cheating: can cheat if it's playing, you're in the game, have at least 1 die, and haven't busted
       };
     });
 
@@ -587,28 +587,29 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const canCheat = lastDieIndex >= 0 && !cheatIsHouse;
 
     if (canCheat) {
-      // For quick cheat after roll, we reuse the CheatDialog but pre-filled/specific
-      // Or we can keep the simple prompt here. 
-      // Given the "Refactor" mandate, let's use the full CheatDialog but targeting the specific die?
-      // Actually, the original Quick Cheat was a simple "Radio Button" prompt. 
-      // Let's keep the forced prompt but make it the nice new dialog.
-      
       const lastDie = myRolls[lastDieIndex];
       const heatDC = updatedState.tableData?.heatDC ?? 10;
       
-      // Auto-open cheat dialog? Or prompt "Do you want to cheat?"
-      // The original logic showed the dialog immediately.
-      
-      const result = await CheatDialog.show({
-        myRolls, // Pass all rolls, but maybe pre-select the last one?
-        actor: game.user.character,
-        heatDC
-      });
+      console.log("Tavern | Triggering Cheat Dialog", { lastDie, heatDC, actor: game.user.character });
 
-      if (result) {
-        await tavernSocket.executeAsGM("playerAction", "cheat", result, game.user.id);
-      } else if (updatedState.tableData?.phase === "betting") {
-        await tavernSocket.executeAsGM("playerAction", "finishTurn", {}, game.user.id);
+      try {
+        const result = await CheatDialog.show({
+          myRolls,
+          actor: game.user.character,
+          heatDC
+        });
+
+        if (result) {
+          await tavernSocket.executeAsGM("playerAction", "cheat", result, game.user.id);
+        } else if (updatedState.tableData?.phase === "betting") {
+          await tavernSocket.executeAsGM("playerAction", "finishTurn", {}, game.user.id);
+        }
+      } catch (err) {
+        console.error("Tavern | Cheat Dialog Failed:", err);
+        // Ensure turn finishes if dialog crashes to prevent lock
+        if (updatedState.tableData?.phase === "betting") {
+          await tavernSocket.executeAsGM("playerAction", "finishTurn", {}, game.user.id);
+        }
       }
     } else {
        if (updatedState.tableData?.phase === "betting") {

@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.8.8] - 2026-01-22
+### Hotfix 8
+- **Infinite Roll Fix**: Updated `canAct` logic to prevent players from rolling again while a decision (like Cheat or Retaliation) is pending.
+- **Cheat Dialog Stability**: Added error handling to the Cheat Dialog trigger. If the dialog fails to render, the turn will now automatically finish to prevent a soft lock. Added debug logging for cheat flow.
+
 ## [4.8.7] - 2026-01-22
 ### Hotfix 7
 - **Critical Fix**: Fixed logic error in `Foresight` (Hunch) skill that caused a crash when failing, and allowed skill spamming (bypassing "one skill per turn" lock) due to state update failure.
