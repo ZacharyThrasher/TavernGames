@@ -41,6 +41,12 @@ export async function submitRoll(payload, userId) {
     return state;
   }
 
+  // V3.5: Bump Retaliation Lock
+  if (tableData.pendingBumpRetaliation?.attackerId === userId) {
+    ui.notifications.warn("You were caught bumping! Wait for retaliation.");
+    return state;
+  }
+
   // V2.0: Variable dice costs in betting phase
   let newPot = state.pot;
   let rollCost = 0;
@@ -430,6 +436,12 @@ export async function hold(userId) {
   // V4: Dared check - cannot hold if dared
   if (tableData.dared?.[userId]) {
     await notifyUser(userId, "You are Dared! You forced to roll a d20 or Fold.");
+    return state;
+  }
+
+  // V3.5: Bump Retaliation Lock
+  if (tableData.pendingBumpRetaliation?.attackerId === userId) {
+    await notifyUser(userId, "You were caught bumping! Wait for retaliation.");
     return state;
   }
 

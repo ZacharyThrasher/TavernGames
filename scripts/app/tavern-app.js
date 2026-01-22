@@ -307,9 +307,13 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const retaliationAttackerName = pendingRetaliation
       ? (state.players?.[pendingRetaliation.attackerId]?.name ?? "Unknown")
       : null;
-    const retaliationAttackerDice = pendingRetaliation
-      ? (tableData.rolls?.[pendingRetaliation.attackerId] ?? []).map((r, idx) => ({ index: idx, die: r.die, result: r.result }))
       : [];
+
+    // Bump Lock Context
+    const isBumpLocked = tableData.pendingBumpRetaliation?.attackerId === userId;
+    const retaliationTargetName = tableData.pendingBumpRetaliation
+      ? (state.players?.[tableData.pendingBumpRetaliation.targetId]?.name ?? "Unknown")
+      : null;
 
     // History
     const history = (state.history ?? []).slice().reverse().map(entry => ({
@@ -359,6 +363,8 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       isRetaliationTarget,
       retaliationAttackerName,
       retaliationAttackerDice,
+      isBumpLocked,
+      retaliationTargetName,
       isOpeningPhase,
       isBettingPhase,
       openingRollsRemaining,
@@ -579,6 +585,12 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
   static async onRoll(event, target) {
     const die = target?.dataset?.die;
     if (!die) return;
+
+    // V4: Bump Retaliation Lock (Client Side)
+    if (state.tableData?.pendingBumpRetaliation?.attackerId === game.user.id) {
+      ui.notifications.warn("You were caught bumping! Wait for retaliation.");
+      return;
+    }
 
     // V4: Dared Client-Side Validation
     const state = getState();

@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.8.35] - 2026-01-22
+### Hotfix 35
+- **Bump Mechanics**: Implemented "Retaliation Lock". If a player fails a Bump attempt, they are now completely locked out of taking further actions (Hit/Hold/Fold) until the target completes their retaliation. The UI will specifically indicated they are "Locked" and waiting for the target.
+
 ## [4.8.34] - 2026-01-22
 ### Hotfix 34
 - **UI Polish**: Aligned the "Cinematic Cut-in" text to match the diagonal stripe angle (-15 degrees). The text is now perfectly centered and rotated to sit "on top" of the stripe for a cleaner look.

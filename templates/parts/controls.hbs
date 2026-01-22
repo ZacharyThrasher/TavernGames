@@ -93,7 +93,15 @@
 
   {{#if myTurn}}
   {{!-- V3.4: During cut phase, ONLY show cut UI (handled above), not your-turn controls --}}
+  {{!-- V3.4: During cut phase, ONLY show cut UI (handled above), not your-turn controls --}}
   {{#unless isCutPhase}}
+  {{#if isBumpLocked}}
+  <div class="control-section waiting">
+    <h3><i class="fa-solid fa-lock"></i> Locked!</h3>
+    <p class="waiting-text" style="color: #ffaaaa;">You were caught bumping!</p>
+    <p class="waiting-text">Waiting for <strong>{{retaliationTargetName}}</strong> to retaliate...</p>
+  </div>
+  {{else}}
   <div class="control-section your-turn">
     <h3><i class="fa-solid fa-dice"></i> Your Turn!</h3>
 
@@ -151,6 +159,7 @@
     </div>
     {{/if}}
   </div>
+  {{/if}}
   {{/unless}}
 
   {{!-- V3: Bonus Action Skills Section --}}
