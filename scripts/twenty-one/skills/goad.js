@@ -6,9 +6,9 @@
  * - Only during betting phase, on your turn (bonus action)
  * - Once per round per player
  * - Attacker: Intimidation OR Persuasion vs Defender: Insight
- * - Success: Target must roll or pay 1x ante to resist
+ * - Success: Target must roll
  * - Backfire: Attacker pays 1x ante to pot
- * - Nat 20: Target cannot pay to resist
+ * - Nat 20: Target must roll (Nat 20 effect remains but 'resist' is gone)
  * - Nat 1: Backfire + attacker forced to roll
  * - Sloppy/Folded players cannot be goaded
  */
@@ -214,12 +214,10 @@ export async function goad(payload, userId) {
             delete updatedHolds[targetId];
         }
 
-        // V3: Target can pay to resist, unless Nat 20
+        // Target must roll
         updatedGoadBackfire[targetId] = {
             mustRoll: true,
             goadedBy: userId,
-            canPayToResist: !isNat20,
-            resistCost: ante,
         };
 
 
@@ -242,7 +240,7 @@ export async function goad(payload, userId) {
             nat20: isNat20,
             message: isNat20
                 ? `${attackerName} CRITICALLY goaded ${defenderName}! No escape!`
-                : `${attackerName} goaded ${defenderName} (can resist for ${ante}gp)`,
+                : `${attackerName} goaded ${defenderName}!`,
         });
 
         return updateState({ tableData: updatedTableData });
@@ -287,56 +285,3 @@ export async function goad(payload, userId) {
     }
 }
 
-/**
- * V3: Resist a goad by paying 1x ante to the pot
- * @param {string} userId - The player resisting
- */
-export async function resistGoad(userId) {
-    const state = getState();
-    if (state.status !== "PLAYING") return state;
-
-    const tableData = state.tableData ?? emptyTableData();
-    const ante = game.settings.get(MODULE_ID, "fixedAnte");
-
-    const goadState = tableData.goadBackfire?.[userId];
-    if (!goadState?.canPayToResist) {
-        await notifyUser(userId, "You cannot pay to resist this goad.");
-        return state;
-    }
-
-    const cost = goadState.resistCost ?? ante;
-    const canAfford = await deductFromActor(userId, cost);
-    if (!canAfford) {
-        await notifyUser(userId, `You need ${cost}gp to resist the goad.`);
-        return state;
-    }
-
-    // Add to pot
-    const newPot = state.pot + cost;
-
-    // Remove goad state
-    const updatedGoadBackfire = { ...tableData.goadBackfire };
-    delete updatedGoadBackfire[userId];
-
-    const actor = getActorForUser(userId);
-    const userName = actor?.name ?? game.users.get(userId)?.name ?? "Unknown";
-
-    await createChatCard({
-        title: "Goad Resisted",
-        subtitle: `${userName} pays ${cost}gp`,
-        message: `Ignoring the goad and staying composed.`,
-        icon: "fa-solid fa-hand-holding-dollar",
-    });
-
-    await addHistoryEntry({
-        type: "goad_resisted",
-        player: userName,
-        cost,
-        message: `${userName} paid ${cost}gp to resist a goad.`,
-    });
-
-    return updateState({
-        pot: newPot,
-        tableData: { ...tableData, goadBackfire: updatedGoadBackfire },
-    });
-}

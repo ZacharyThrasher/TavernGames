@@ -2,11 +2,11 @@ import { MODULE_ID, getState } from "../state.js";
 import { tavernSocket } from "../socket.js";
 import { getDieCost } from "../twenty-one/constants.js";
 import { getNpcWallet } from "../wallet.js"; // V4: Import NPC wallet helper
-import { 
-  getValidProfileTargets, 
-  getValidGoadTargets, 
-  getValidBumpTargets, 
-  getValidAccuseTargets, 
+import {
+  getValidProfileTargets,
+  getValidGoadTargets,
+  getValidBumpTargets,
+  getValidAccuseTargets,
   isActingAsHouse,
   getAccusationCost,
   getInspectionCost
@@ -45,7 +45,6 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       hold: TavernApp.onHold,
       fold: TavernApp.onFold,
       useCut: TavernApp.onUseCut,
-      resistGoad: TavernApp.onResistGoad,
       hunch: TavernApp.onHunch,
       profile: TavernApp.onProfile,
       cheat: TavernApp.onCheat,
@@ -85,12 +84,12 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const userId = game.user.id;
     const isInGame = Boolean(state.players?.[userId]);
     const isGM = game.user.isGM;
-    
+
     // Check NPC/House status
     const playerData = state.players?.[userId];
     const isPlayingAsNpc = isGM && playerData?.playingAsNpc;
-    const isHouse = isActingAsHouse(userId, state); 
-    
+    const isHouse = isActingAsHouse(userId, state);
+
     const players = Object.values(state.players ?? {});
     const tableData = state.tableData ?? {};
     const ante = game.settings.get(MODULE_ID, "fixedAnte");
@@ -186,13 +185,31 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       const visibleTotal = tableData.visibleTotals?.[player.id] ?? 0;
       const showFullTotal = isMe || isRevealPhase;
 
+      // V4: For my view, hide blind dice values from the total until reveal
+      let displayTotal = "?";
+      if (showFullTotal) {
+        if (isMe && !isRevealPhase) {
+          // Sum only non-blind dice
+          const nonBlindTotal = rolls
+            .filter(r => !r.blind)
+            .reduce((acc, r) => acc + (r.result || 0), 0);
+
+          const hasBlind = rolls.some(r => r.blind);
+          displayTotal = hasBlind ? `${nonBlindTotal}+?` : `${nonBlindTotal}`;
+        } else {
+          displayTotal = `${total}`;
+        }
+      } else {
+        displayTotal = visibleTotal > 0 ? `${visibleTotal}+?` : "?";
+      }
+
       return {
         ...player,
         rolls,
         diceDisplay,
         total,
         visibleTotal,
-        displayTotal: showFullTotal ? total : (visibleTotal > 0 ? `${visibleTotal}+?` : "?"),
+        displayTotal,
         isHolding,
         isBusted,
         isCaught,
@@ -233,13 +250,10 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const hunchLocked = tableData.hunchLocked?.[userId] ?? false;
     const hunchLockedDie = tableData.hunchLockedDie?.[userId] ?? null;
 
-    // Goad Resist
-    const goadBackfireState = tableData.goadBackfire?.[userId];
-    const canResistGoad = goadBackfireState?.canPayToResist ?? false;
-    const goadResistCost = goadBackfireState?.resistCost ?? ante;
-    const goadedByName = goadBackfireState?.goadedBy
-      ? (game.users.get(goadBackfireState.goadedBy)?.character?.name ?? game.users.get(goadBackfireState.goadedBy)?.name ?? "Someone")
-      : null;
+    // Goad context updated (remove resist)
+    const hasGoadedThisRound = tableData.goadedThisRound?.[userId] ?? false;
+    const canGoad = isBettingPhase && !isCutPhase && myTurn && isInGame && !isBusted && !isFolded && !isHouse && !hasGoadedThisRound && !tableData.skillUsedThisTurn;
+    const goadTargets = canGoad ? getValidGoadTargets(state, userId) : [];
 
     // Cheating Context
     const canCheat = state.status === "PLAYING" && state.players?.[userId] && myRolls.length > 0 && !tableData.busts?.[userId] && !isHouse;
@@ -254,23 +268,18 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const isInspection = state.status === "INSPECTION";
     const accusedThisRound = tableData.accusedThisRound?.[userId] ?? false;
     const accusationCost = getAccusationCost(ante);
-    const isBusted = tableData.busts?.[userId] ?? false;
-    
+    const isBustedActual = tableData.busts?.[userId] ?? false; // Avoid name collision
+
     // Centralized Targeting Logic
     const accuseTargets = !accusedThisRound ? getValidAccuseTargets(state, userId, accusedThisRound) : [];
-    const canAccuse = isInGame && !accusedThisRound && !isBusted && accuseTargets.length > 0 && !isHouse;
-
-    // Goad Context
-    const hasGoadedThisRound = tableData.goadedThisRound?.[userId] ?? false;
-    const canGoad = isBettingPhase && !isCutPhase && myTurn && isInGame && !isBusted && !isFolded && !isHouse && !hasGoadedThisRound && !tableData.skillUsedThisTurn;
-    const goadTargets = canGoad ? getValidGoadTargets(state, userId) : [];
+    const canAccuse = isInGame && !accusedThisRound && !isBustedActual && accuseTargets.length > 0 && !isHouse;
 
     // Hunch Context
     const isHolding = tableData.holds?.[userId] ?? false;
     const canHunch = isBettingPhase && !isCutPhase && myTurn && isInGame && !isBusted && !isFolded && !isHolding && !isHouse && !hunchLocked && !tableData.skillUsedThisTurn;
 
     // Profile Context
-    const profileTargets = (isBettingPhase && !isCutPhase && myTurn && !isBusted && !isFolded && !isHouse && !tableData.skillUsedThisTurn) 
+    const profileTargets = (isBettingPhase && !isCutPhase && myTurn && !isBusted && !isFolded && !isHouse && !tableData.skillUsedThisTurn)
       ? getValidProfileTargets(state, userId) : [];
     const canProfile = profileTargets.length > 0;
 
@@ -358,9 +367,6 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       hunchLockedDie,
       canProfile,
       profileTargets,
-      canResistGoad,
-      goadResistCost,
-      goadedByName,
       isDared: tableData.dared?.[userId] ?? false,
     };
   }
@@ -382,7 +388,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   _formatCostLabel(cost, ante, isBettingPhase) {
-    if (!isBettingPhase) return ""; 
+    if (!isBettingPhase) return "";
     if (cost === 0) return "FREE";
     return `${cost}gp`;
   }
@@ -414,7 +420,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   _onRender(context, options) {
     super._onRender(context, options);
-    
+
     // Handle ante input changes (GM only)
     const anteInput = this.element.querySelector('#ante-input');
     if (anteInput) {
@@ -430,8 +436,17 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       });
     }
 
-    // Accuse selection handling moved to Dialog but maintaining for main table if needed
-    // (Currently no on-table accuse selection, only in dialog)
+    // Accuse selection handling
+    const accusePortraits = this.element.querySelectorAll('.accuse-portrait');
+    const accuseBtn = this.element.querySelector('.btn-accuse');
+
+    accusePortraits.forEach(p => {
+      p.addEventListener('click', () => {
+        accusePortraits.forEach(attr => attr.classList.remove('selected'));
+        p.classList.add('selected');
+        if (accuseBtn) accuseBtn.disabled = false;
+      });
+    });
   }
 
   static async onJoin() {
@@ -575,7 +590,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }
 
     const updatedState = await tavernSocket.executeAsGM("playerAction", "roll", { die, payWithDrink }, game.user.id);
-    
+
     // Quick Cheat Opportunity
     await new Promise(resolve => setTimeout(resolve, 1500)); // Animation delay
 
@@ -589,7 +604,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     if (canCheat) {
       const lastDie = myRolls[lastDieIndex];
       const heatDC = updatedState.tableData?.heatDC ?? 10;
-      
+
       console.log("Tavern | Triggering Cheat Dialog", { lastDie, heatDC, actor: game.user.character });
 
       try {
@@ -612,7 +627,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         }
       }
     } else {
-       if (updatedState.tableData?.phase === "betting") {
+      if (updatedState.tableData?.phase === "betting") {
         await tavernSocket.executeAsGM("playerAction", "finishTurn", {}, game.user.id);
       }
     }
@@ -635,10 +650,6 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
   static async onUseCut(event, target) {
     const reroll = target?.dataset?.reroll === "true";
     await tavernSocket.executeAsGM("playerAction", "useCut", { reroll }, game.user.id);
-  }
-
-  static async onResistGoad() {
-    await tavernSocket.executeAsGM("playerAction", "resistGoad", {}, game.user.id);
   }
 
   static async onHunch() {
@@ -685,16 +696,16 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const state = getState();
     const userId = game.user.id;
     const ante = game.settings.get(MODULE_ID, "fixedAnte");
-    
+
     // Get target from UI selection
     const selectedPortrait = document.querySelector('.accuse-portrait.selected');
     const targetId = selectedPortrait?.dataset?.targetId;
 
     if (!targetId) return ui.notifications.warn("Select a player to accuse.");
-    
+
     const targetName = selectedPortrait.dataset.targetName ?? "Unknown";
     const targetRolls = state.tableData?.rolls?.[targetId] ?? [];
-    
+
     if (targetRolls.length === 0) return ui.notifications.warn("That player has no dice to accuse.");
 
     const result = await AccuseDialog.show({
@@ -800,12 +811,12 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static async promptPayment(cost, ante, purpose) {
     if (cost <= 0) return "gold";
-    
+
     const actor = game.user.character;
     const gp = actor?.system?.currency?.gp ?? 0;
     const canAffordGold = gp >= cost;
     const isHouse = isActingAsHouse(game.user.id, getState());
-    
+
     if (isHouse) return "gold";
     if (!event.shiftKey && canAffordGold) return "gold";
 
@@ -822,7 +833,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const state = getState();
     const tableData = state.tableData ?? {};
     const ante = game.settings.get(MODULE_ID, "fixedAnte");
-    
+
     // Valid Champions: Active players not busted/caught
     const champions = state.turnOrder
       .filter(id => !tableData.busts?.[id] && !tableData.caught?.[id])

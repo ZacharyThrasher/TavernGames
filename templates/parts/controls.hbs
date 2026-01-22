@@ -82,19 +82,6 @@
   {{/if}}
   {{/if}}
 
-  {{!-- V3: Goad Resist Option --}}
-  {{#if canResistGoad}}
-  <div class="control-section goad-resist">
-    <h3><i class="fa-solid fa-comments"></i> You've Been Goaded!</h3>
-    <p>{{goadedByName}} is pressuring you to roll.</p>
-    <div class="goad-resist-buttons">
-      <button type="button" class="btn btn-warning" data-action="resistGoad">
-        <i class="fa-solid fa-coins"></i> Pay {{goadResistCost}}gp to Resist
-      </button>
-      <p class="hint">Or just roll a die to comply.</p>
-    </div>
-  </div>
-  {{/if}}
 
   {{!-- V4: Dared Warning --}}
   {{#if isDared}}

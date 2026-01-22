@@ -1,5 +1,11 @@
 # Changelog
 
+## [4.8.17] - 2026-01-22
+### Hotfix 17
+- **Mechanics**: Removed "Pay to Resist" option from Goad skill. Success now forces the target to roll.
+- **UX**: Hunch (Foresight) failures now correctly hide the blind die value from the player's total display until reveal or bust.
+- **Bug Fix**: Fixed Accuse button in the sidebar; it now correctly activates upon player portrait selection.
+
 ## [4.8.16] - 2026-01-22
 ### Hotfix 16
 - **UI Polish**: Removed the manual "Cheat" button from the skills panel. Cheating is now exclusively handled via the automatic dialog pop-up after a roll to streamline the interface.

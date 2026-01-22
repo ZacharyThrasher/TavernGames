@@ -1,5 +1,5 @@
 import { MODULE_ID, getState, updateState } from "./state.js";
-import { startRound, submitRoll, hold, revealDice, finishRound, returnToLobby, cheat, accuse, skipInspection, goad, resistGoad, bumpTable, bumpRetaliation, hunch, profile, useCut, fold, submitDuelRoll, finishTurn } from "./twenty-one/index.js";
+import { startRound, submitRoll, hold, revealDice, finishRound, returnToLobby, cheat, accuse, skipInspection, goad, bumpTable, bumpRetaliation, hunch, profile, useCut, fold, submitDuelRoll, finishTurn } from "./twenty-one/index.js";
 import { placeSideBet } from "./twenty-one/phases/side-bets.js";
 import { setNpcWallet, getNpcCashOutSummary } from "./wallet.js";
 import { createChatCard } from "./ui/chat.js";
@@ -70,7 +70,7 @@ export async function handleLeaveTable(userId) {
     ui.notifications.warn("Cannot leave while a round is in progress.");
     return state;
   }
-  
+
   const player = state.players[userId];
   if (!player) return state;
 
@@ -130,8 +130,7 @@ export async function handlePlayerAction(action, payload, userId) {
       return fold(userId);
     case "useCut":
       return useCut(userId, payload?.reroll);
-    case "resistGoad":
-      return resistGoad(userId);
+
     case "hunch":
       return hunch(userId);
     case "profile":
