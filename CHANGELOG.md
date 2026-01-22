@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.8.29] - 2026-01-22
+### Hotfix 29
+- **Bug Fix (Revert)**: Reverted the restriction preventing Dared players from using Cheat/Sleight of Hand. Dared players *can* now cheat on their forced roll, as intended.
+- **Bug Fix**: Added strict client-side validation to prevent Dared players from attempting to roll non-d20 dice. This prevents the glitch where an invalid selection would incorrectly trigger a cheat opportunity on a previous die.
+
 ## [4.8.28] - 2026-01-22
 ### Hotfix 28
 - **Bug Fix**: Players who are "Dared" (forced to roll d20) can no longer use the Cheat/Sleight of Hand skill on that roll. The prompt is now skipped, closing the loop on the "Dared" condition mechanics.

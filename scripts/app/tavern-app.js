@@ -580,9 +580,16 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const die = target?.dataset?.die;
     if (!die) return;
 
+    // V4: Dared Client-Side Validation
+    const state = getState();
+    if (state.tableData?.dared?.[game.user.id] && die !== "20") {
+      ui.notifications.warn("You are Dared! You can only buy a d20.");
+      return;
+    }
+
     // Payment Logic (Iron Liver)
     const liquidMode = game.settings.get(MODULE_ID, "liquidMode");
-    const state = getState();
+    // const state = getState(); // Reuse existing state variable from above
     const ante = game.settings.get(MODULE_ID, "fixedAnte");
     const isBettingPhase = state.tableData?.phase === "betting";
     const isHouse = isActingAsHouse(game.user.id, state); // Helpers imported? No, need to verify imports or use static
