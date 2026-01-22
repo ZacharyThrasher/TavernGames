@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.8.36] - 2026-01-22
+### Hotfix 36
+- **UI Update**: Added distinct visual styling for **Folded** players. They will now appear greyed out (grayscale + 50% opacity) with a "Folded" status label, making it immediately clear who has left the round.
+
 ## [4.8.35] - 2026-01-22
 ### Hotfix 35
 - **Bump Mechanics**: Implemented "Retaliation Lock". If a player fails a Bump attempt, they are now completely locked out of taking further actions (Hit/Hold/Fold) until the target completes their retaliation. The UI will specifically indicated they are "Locked" and waiting for the target.

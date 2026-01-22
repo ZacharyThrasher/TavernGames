@@ -289,6 +289,19 @@
   border-color: var(--tavern-success);
 }
 
+.player-seat.folded {
+  opacity: 0.5;
+  filter: grayscale(0.8);
+  border-color: #666;
+  background: var(--tavern-wood-dark);
+}
+
+.player-status-label.folded {
+  color: #999;
+  font-style: italic;
+  font-weight: bold;
+}
+
 /* Avatar */
 .player-avatar {
   position: relative;

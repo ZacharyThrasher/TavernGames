@@ -104,6 +104,8 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       const isCaught = tableData.caught?.[player.id] ?? false;
       const isCurrent = tableData.currentPlayer === player.id;
       const isMe = player.id === userId;
+      // V3.5: Check for folded status
+      const isFolded = tableData.folded?.[player.id] ?? false;
 
       // Determine status
       let status = "waiting";
@@ -112,6 +114,9 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         if (isBusted) {
           status = "busted";
           statusLabel = "BUST!";
+        } else if (isFolded) {
+          status = "folded";
+          statusLabel = "Folded";
         } else if (isHolding) {
           status = "holding";
           statusLabel = "Holding";
@@ -129,6 +134,9 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         } else if (isCaught) {
           status = "caught";
           statusLabel = "CAUGHT!";
+        } else if (isFolded) {
+          status = "folded";
+          statusLabel = "Folded";
         } else if (isHolding) {
           status = "holding";
           statusLabel = "Holding";
@@ -140,6 +148,9 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         if (isCaught) {
           status = "caught";
           statusLabel = `CHEATER! (${total})`;
+        } else if (isFolded) {
+          status = "folded";
+          statusLabel = "Folded";
         } else if (isBusted) {
           status = "busted";
           statusLabel = `BUST (${total})`;
