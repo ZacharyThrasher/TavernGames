@@ -151,7 +151,7 @@ export async function hunch(userId) {
             message: `Terrible intuition! Locked into rolling a <strong>d20</strong>!`,
             icon: "fa-solid fa-dice-d20",
         });
-        await playSound("lose");
+        // await playSound("lose"); // V4.8.54: Removed undefined sound call check
     } else if (success) {
         // Success = Learn high/low for each die type (and store exact values for enforcement)
         const predictions = {};

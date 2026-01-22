@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.8.54] - 2026-01-22
+### Hotfix 54
+- **Crash Fix**: Resolved a `ReferenceError` in the Foresight (Hunch) skill. Rolling a Nat 1 triggered a call to an undefined `playSound` function, crashing the logic. I removed the erroneous call.
+
 ## [4.8.53] - 2026-01-22
 ### Hotfix 53
 - **Duel Visual Update**: Per request, the "Duel" cinematic has been updated to match the "Staredown" style. It no longer uses the Versus split-screen or shows character portraits. Instead, it displays a clean, stylized "DUEL!" splash screen (Yellow/Red) to dramatically announce the face-off.
