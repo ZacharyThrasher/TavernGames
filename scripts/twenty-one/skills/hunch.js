@@ -166,21 +166,11 @@ export async function hunch(userId) {
             icon: "fa-solid fa-eye",
         });
     } else {
-        // V4: Failure = Forced "Blind Hit" - roll a random die but hide the result
-        // Pick a random die type for the blind roll
-        const blindDieType = VALID_DICE[Math.floor(Math.random() * VALID_DICE.length)];
+        // V4: Failure = Forced "Blind Hit" - roll a d4 (balance: small die for punishment)
+        // V4.6.1: Fixed to d4 instead of random die for balance reasons
+        const blindDieType = 4;
         const blindRoll = await new Roll(`1d${blindDieType}`).evaluate();
         const blindValue = blindRoll.total;
-
-        // Add the die to rolls but mark as blind (hidden until reveal)
-        const currentRolls = tableData.rolls?.[userId] ?? [];
-        const newDie = {
-            die: blindDieType,
-            result: blindValue,
-            public: true, // It's visible, but the VALUE is hidden
-            blind: true,  // V4: Indicates value is hidden until reveal
-        };
-        const updatedRolls = { ...tableData.rolls, [userId]: [...currentRolls, newDie] };
 
         // Update totals (internally tracked, but not shown to player)
         const currentTotal = tableData.totals?.[userId] ?? 0;
@@ -188,14 +178,43 @@ export async function hunch(userId) {
         const updatedTotals = { ...tableData.totals, [userId]: newTotal };
 
         // Track blind dice for reveal phase
+        const currentRolls = tableData.rolls?.[userId] ?? [];
         const currentBlindDice = tableData.blindDice?.[userId] ?? [];
-        const updatedBlindDice = { ...tableData.blindDice, [userId]: [...currentBlindDice, currentRolls.length] };
+
+        // V4.6.1: Check if bust BEFORE creating the roll entry
+        const isBust = newTotal > 21;
+
+        // Create the die entry - if bust, NOT blind; if not bust, IS blind
+        const newDie = {
+            die: blindDieType,
+            result: blindValue,
+            public: true, // It's visible, but the VALUE may be hidden
+            blind: !isBust,  // V4.6.1: If bust, reveal immediately; otherwise hide
+        };
+        const updatedRolls = { ...tableData.rolls, [userId]: [...currentRolls, newDie] };
+
+        // Only track as blind dice if NOT busting
+        const updatedBlindDice = isBust
+            ? tableData.blindDice
+            : { ...tableData.blindDice, [userId]: [...currentBlindDice, currentRolls.length] };
+
+        // Update busts
+        const updatedBusts = { ...tableData.busts };
+        if (isBust) {
+            updatedBusts[userId] = true;
+        }
+
+        // Update tableData now
+        tableData = {
+            ...tableData,
+            rolls: updatedRolls,
+            totals: updatedTotals,
+            blindDice: updatedBlindDice,
+            busts: updatedBusts,
+        };
 
         // V4.6: If blind die causes bust, reveal it immediately and trigger bust fanfare
-        if (newTotal > 21) {
-            // Reveal the blind die
-            newDie.blind = false;
-
+        if (isBust) {
             await ChatMessage.create({
                 content: `<div class="tavern-skill-result failure">
             <strong>Bad Read - BUST!</strong><br>
@@ -207,13 +226,19 @@ export async function hunch(userId) {
                 rolls: [roll],
             });
 
+            await createChatCard({
+                title: "Foresight",
+                subtitle: `${userName}'s intuition fails`,
+                message: `A <strong>Blind Die</strong> reveals their doom! d${blindDieType}: ${blindValue} - BUST!`,
+                icon: "fa-solid fa-skull",
+            });
+
             // Trigger bust fanfare for everyone
             try {
                 const { tavernSocket } = await import("../../socket.js");
                 await tavernSocket.executeForEveryone("showBustFanfare", userId);
             } catch (e) { console.warn("Could not show bust fanfare:", e); }
         } else {
-
             await ChatMessage.create({
                 content: `<div class="tavern-skill-result failure">
         <strong>Bad Read</strong><br>
@@ -229,25 +254,10 @@ export async function hunch(userId) {
             await createChatCard({
                 title: "Foresight",
                 subtitle: `${userName}'s intuition fails`,
-                message: newTotal > 21
-                    ? `A <strong>Blind Die</strong> reveals their doom! d${blindDieType}: ${blindValue} - BUST!`
-                    : `Committed to a <strong>Blind Die</strong>! A d${blindDieType} was rolled but the result is hidden...`,
-                icon: newTotal > 21 ? "fa-solid fa-skull" : "fa-solid fa-question",
+                message: `Committed to a <strong>Blind Die</strong>! A d${blindDieType} was rolled but the result is hidden...`,
+                icon: "fa-solid fa-question",
             });
         }
-
-        // Update tableData after the if/else
-        const updatedBusts = { ...tableData.busts };
-        if (newTotal > 21) {
-            updatedBusts[userId] = true;
-        }
-        tableData = {
-            ...tableData,
-            rolls: updatedRolls,
-            totals: updatedTotals,
-            blindDice: updatedBlindDice,
-            busts: updatedBusts,
-        };
     }
 
     await addHistoryEntry({
