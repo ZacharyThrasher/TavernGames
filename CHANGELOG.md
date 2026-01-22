@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.8.3] - 2026-01-22
+### Hotfix 3
+- **Socket Error**: Fixed `Uncaught SyntaxError` in `socket.js` by correcting the import path for `playBumpEffect` (moved to `ui/fx.js`).
+- **Circular Dependency**: Fixed circular dependency between `tavern-app.js` and `accuse-dialog.js`.
+
 ## [4.8.2] - 2026-01-22
 ### Hotfix 2
 - **Import Error**: Fixed another `Uncaught SyntaxError` in `special.js` caused by incorrect import path for `getDieCost`.

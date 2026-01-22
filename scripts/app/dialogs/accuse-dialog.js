@@ -1,5 +1,13 @@
 import { MODULE_ID } from "../../state.js";
-import { TavernApp } from "../tavern-app.js"; // For DICE_ICONS if needed, but better to duplicate or move constants
+
+const DICE_ICONS = {
+  4: "d4",
+  6: "d6",
+  8: "d8",
+  10: "d10",
+  12: "d12",
+  20: "d20",
+};
 
 export class AccuseDialog {
   static async show(params) {
@@ -12,7 +20,7 @@ export class AccuseDialog {
       const isHole = !(roll.public ?? true);
       const displayResult = isBlind ? "?" : (isHole ? "?" : roll.result);
       // Simple logic for icon mapping
-      const icon = roll.die; 
+      const icon = DICE_ICONS[roll.die] || "d6"; 
       
       let label = `d${roll.die}`;
       if (isBlind) label += " (Blind)";

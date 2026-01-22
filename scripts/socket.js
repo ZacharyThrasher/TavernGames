@@ -1,7 +1,7 @@
 import { MODULE_ID } from "./state.js";
 import { handleJoinTable, handleLeaveTable, handleStartRound, handlePlayerAction, handleResetTable } from "./tavern-actions.js";
 import { showRollToUser } from "./dice.js";
-import { showVictoryFanfare, showBustFanfare, playBumpEffect, showFloatingText, showSkillCutIn, showSkillResult } from "./main.js";
+import { showVictoryFanfare, showBustFanfare, playBumpEffect, showFloatingText, showSkillCutIn, showSkillResult } from "./ui/fx.js";
 
 export let tavernSocket;
 
