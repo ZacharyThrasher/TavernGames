@@ -52,17 +52,17 @@
   <div class="form-group" id="physical-skill-group">
     <label>{{localize "TAVERN.Cheat.SkillPhysical"}}</label>
     <select name="physicalSkill">
-      <option value="slt" {{selected (gte sltMod decMod)}}>{{localize "DND5E.SkillSlt"}} ({{localize "DND5E.AbilityDexAbbr"}}) {{formatMod sltMod}}</option>
-      <option value="dec" {{selected (gt decMod sltMod)}}>{{localize "DND5E.SkillDec"}} ({{localize "DND5E.AbilityChaAbbr"}}) {{formatMod decMod}}</option>
+      <option value="slt" {{#if (gte sltMod decMod)}}selected{{/if}}>{{localize "DND5E.SkillSlt"}} ({{localize "DND5E.AbilityDexAbbr"}}) {{formatMod sltMod}}</option>
+      <option value="dec" {{#if (gt decMod sltMod)}}selected{{/if}}>{{localize "DND5E.SkillDec"}} ({{localize "DND5E.AbilityChaAbbr"}}) {{formatMod decMod}}</option>
     </select>
   </div>
 
   <div class="form-group" id="magical-skill-group" style="display: none;">
     <label>{{localize "TAVERN.Cheat.SkillMagical"}}</label>
     <select name="magicalSkill">
-      <option value="int" {{selected (and (gte intMod wisMod) (gte intMod chaMod))}}>{{localize "DND5E.AbilityInt"}} {{formatMod intMod}}</option>
-      <option value="wis" {{selected (and (gt wisMod intMod) (gte wisMod chaMod))}}>{{localize "DND5E.AbilityWis"}} {{formatMod wisMod}}</option>
-      <option value="cha" {{selected (and (gt chaMod intMod) (gt chaMod wisMod))}}>{{localize "DND5E.AbilityCha"}} {{formatMod chaMod}}</option>
+      <option value="int" {{#if (and (gte intMod wisMod) (gte intMod chaMod))}}selected{{/if}}>{{localize "DND5E.AbilityInt"}} {{formatMod intMod}}</option>
+      <option value="wis" {{#if (and (gt wisMod intMod) (gte wisMod chaMod))}}selected{{/if}}>{{localize "DND5E.AbilityWis"}} {{formatMod wisMod}}</option>
+      <option value="cha" {{#if (and (gt chaMod intMod) (gt chaMod wisMod))}}selected{{/if}}>{{localize "DND5E.AbilityCha"}} {{formatMod chaMod}}</option>
     </select>
   </div>
 

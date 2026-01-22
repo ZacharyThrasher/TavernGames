@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.8.9] - 2026-01-22
+### Hotfix 9
+- **Crash Fix**: Fixed `Missing helper: "selected"` error that prevented `CheatDialog` and `GoadDialog` from rendering. Replaced custom Handlebars helper with standard conditional logic.
+- **Cheat Dialog**: Ensured helper functions like `formatMod` are correctly passed to the template context.
+
 ## [4.8.8] - 2026-01-22
 ### Hotfix 8
 - **Infinite Roll Fix**: Updated `canAct` logic to prevent players from rolling again while a decision (like Cheat or Retaliation) is pending.

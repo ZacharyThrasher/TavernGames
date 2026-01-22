@@ -81,7 +81,8 @@ export class CheatDialog extends HandlebarsApplicationMixin(ApplicationV2) {
         { value: 1, label: "+1", colorClass: "gain", isDefault: true },
         { value: 2, label: "+2", colorClass: "gain" },
         { value: 3, label: "+3", colorClass: "gain" }
-      ]
+      ],
+      formatMod: (mod) => mod >= 0 ? `+${mod}` : mod
     };
   }
 

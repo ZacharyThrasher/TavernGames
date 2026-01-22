@@ -14,8 +14,8 @@
   <div class="form-group">
     <label>{{localize "TAVERN.Goad.YourSkill"}}</label>
     <select name="attackerSkill">
-      <option value="itm" {{selected (eq defaultSkill "itm")}}>{{localize "DND5E.SkillItm"}} ({{localize "DND5E.AbilityChaAbbr"}}) {{formatMod itmMod}}</option>
-      <option value="per" {{selected (eq defaultSkill "per")}}>{{localize "DND5E.SkillPer"}} ({{localize "DND5E.AbilityChaAbbr"}}) {{formatMod perMod}}</option>
+      <option value="itm" {{#if (eq defaultSkill "itm")}}selected{{/if}}>{{localize "DND5E.SkillItm"}} ({{localize "DND5E.AbilityChaAbbr"}}) {{formatMod itmMod}}</option>
+      <option value="per" {{#if (eq defaultSkill "per")}}selected{{/if}}>{{localize "DND5E.SkillPer"}} ({{localize "DND5E.AbilityChaAbbr"}}) {{formatMod perMod}}</option>
     </select>
   </div>
   
