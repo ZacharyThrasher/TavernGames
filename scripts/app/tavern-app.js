@@ -318,6 +318,9 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const retaliationAttackerName = pendingRetaliation
       ? (state.players?.[pendingRetaliation.attackerId]?.name ?? "Unknown")
       : null;
+
+    const retaliationAttackerDice = pendingRetaliation
+      ? (tableData.rolls?.[pendingRetaliation.attackerId] ?? []).map((r, idx) => ({ index: idx, die: r.die, result: r.result }))
       : [];
 
     // Bump Lock Context

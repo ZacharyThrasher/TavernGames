@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.8.37] - 2026-01-22
+### Hotfix 37
+- **Crash Fix**: Resolved a syntax error (`Unexpected token :`) in `tavern-app.js` that caused the application to crash. This was due to a malformed variable declaration introduced in the previous update. Retaliation interaction is now fully functional.
+
 ## [4.8.36] - 2026-01-22
 ### Hotfix 36
 - **UI Update**: Added distinct visual styling for **Folded** players. They will now appear greyed out (grayscale + 50% opacity) with a "Folded" status label, making it immediately clear who has left the round.
