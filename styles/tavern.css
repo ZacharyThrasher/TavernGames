@@ -3122,8 +3122,8 @@
   margin: 0;
   border-radius: 50%;
   overflow: visible;
-  opacity: 0;
-  /* Start hidden for animation */
+  /* V4.8.45: Force visible by default (fallback) */
+  opacity: 1;
   mask-image: none;
   -webkit-mask-image: none;
   z-index: 100;

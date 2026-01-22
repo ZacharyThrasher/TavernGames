@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.8.45] - 2026-01-22
+### Hotfix 45
+- **Showdown Visibility Fix**: Modified the "Versus Mode" CSS to force the portraits to be visible by default (`opacity: 1`), rather than resolving to visible via animation. This ensures that even if the entrance animation fails to trigger (causing the strict "invisible" appearance seen in reports), the portraits will still appear on screen.
+
 ## [4.8.44] - 2026-01-22
 ### Hotfix 44
 - **Critical Fix**: Resolved a `ReferenceError` in `turn.js` that caused rolling to crash under specific conditions.
