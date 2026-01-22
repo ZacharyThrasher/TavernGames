@@ -143,7 +143,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       const diceDisplay = rolls.map((r, idx) => {
         const isPublicDie = r.public ?? false;
         const isBlindDie = r.blind ?? false; // V4: Blind dice from failed Hunch
-        const canSeeThisDie = isMe || isHouse || isRevealPhase || isPublicDie;
+        const canSeeThisDie = isMe || isRevealPhase || isPublicDie;
 
         // V4: Blind dice show "?" to everyone until reveal phase
         if (isBlindDie && !isRevealPhase) {
@@ -175,7 +175,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       // V2.0: Calculate visible total for display to other players
       // V3.5: GM-as-NPC sees same view as regular players
       const visibleTotal = tableData.visibleTotals?.[player.id] ?? 0;
-      const showFullTotal = isMe || isHouse || isRevealPhase;
+      const showFullTotal = isMe || isRevealPhase;
 
       return {
         ...player,

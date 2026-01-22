@@ -1,4 +1,5 @@
 import { MODULE_ID, getState, updateState } from "./state.js";
+import { tavernSocket } from "./socket.js";
 
 // V3.5: Updated to return NPC actor for GM-as-NPC
 export function getActorForUser(userId) {

@@ -13,9 +13,9 @@ import { notifyUser } from "../utils/game-logic.js";
 export async function placeSideBet(payload, userId) {
     const state = getState();
 
-    // Can only place side bets during active play
-    if (state.status !== "PLAYING" && state.status !== "INSPECTION") {
-        await notifyUser(userId, "Side bets can only be placed during active rounds.");
+    // Can only place side bets during active play (not staredown/inspection)
+    if (state.status !== "PLAYING") {
+        await notifyUser(userId, "Side bets can only be placed during active betting rounds.");
         return state;
     }
 
