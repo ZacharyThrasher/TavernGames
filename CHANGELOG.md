@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.8.53] - 2026-01-22
+### Hotfix 53
+- **Duel Visual Update**: Per request, the "Duel" cinematic has been updated to match the "Staredown" style. It no longer uses the Versus split-screen or shows character portraits. Instead, it displays a clean, stylized "DUEL!" splash screen (Yellow/Red) to dramatically announce the face-off.
+
 ## [4.8.52] - 2026-01-22
 ### Hotfix 52
 - **Result Display Fix**: Fixed a regression where skill outcomes (SUCCESS/FAIL) were hidden because the Standard/Single layout didn't know how to display them. I updated the template to check for result data and display the outcome text correctly even when not in Versus mode. Now, Goad/Bump/Profile results will properly show "SUCCESS" or "FAIL" instead of just the skill name.

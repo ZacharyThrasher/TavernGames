@@ -88,15 +88,16 @@ export class CinematicOverlay extends HandlebarsApplicationMixin(ApplicationV2) 
         });
 
         // Pass data via context
-        // V4.8.51: Scrapping Versus Mode for skills, only using it for actual Duels
-        const forceVersusOff = options.type !== "DUEL";
-        const isVersus = !!targetInfo && !forceVersusOff;
+        // V4.8.53: Duel now behaves like Staredown (System Event, No Portraits)
+        const isSystemEvent = options.type === "DUEL" || options.type === "STAREDOWN";
+        const isVersus = !!targetInfo && !isSystemEvent && options.type !== "DUEL";
 
         overlay.cutInData = {
             type: options.type,
-            img: actorInfo?.img, // V4.8.49: Allow null (no portrait mode)
+            // Force null image for system events to prevent portrait rendering
+            img: isSystemEvent ? null : actorInfo?.img,
             name: actorInfo?.name || "",
-            targetImg: targetInfo?.img,
+            targetImg: isSystemEvent ? null : targetInfo?.img,
             targetName: targetInfo?.name,
             isVersus: isVersus,
             text: options.text || options.type,
