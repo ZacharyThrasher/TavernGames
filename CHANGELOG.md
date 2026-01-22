@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.8.43] - 2026-01-22
+### Hotfix 43
+- **CSS Repair**: Fixed broken "Showdown" (Versus mode) cinematic cut-ins. Consolidated multiple conflicting hotfixes in the CSS that were causing the portraits to be misaligned or hidden. The fetch logic for images remains unchanged (it works the same as the solo cut-ins), but the display logic is now unified and clean.
+
 ## [4.8.42] - 2026-01-22
 ### Hotfix 42
 - **Dared Fix**: Fixed an issue where the "Dared" status (forced d20 buy) was not being removed after the player complied and rolled the d20. The status now correctly clears upon rolling, allowing the player to continue their turn normally.

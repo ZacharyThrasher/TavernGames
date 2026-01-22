@@ -3085,257 +3085,10 @@
 }
 
 /* ==========================================================================
-     VERSUS MODE (REFACTORED V13)
+     VERSUS MODE (REFACTORED V13 & UNIFIED v4.8)
      ========================================================================== */
-.portrait-container.versus {
-  width: 40vh;
-  height: 60vh;
-  bottom: 0;
-  position: absolute;
-  opacity: 1;
-  /* Ensure visibility */
-  mask-image: none;
-  -webkit-mask-image: none;
-  z-index: 100;
-  /* V4.8.34: Increased Z-index to guaranteed top */
-}
 
-/* Ensure images are blocks in versus mode */
-.portrait-container.versus .portrait-img {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.portrait-container.versus.left {
-  left: 5vw;
-  right: auto;
-  transform: none;
-}
-
-.portrait-container.versus.right {
-  right: 5vw;
-  left: auto;
-  transform: none;
-}
-
-.versus-center {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 10;
-  text-align: center;
-  width: 100%;
-}
-
-.versus-badge {
-  font-family: var(--tavern-font-primary);
-  font-size: 8em;
-  color: var(--tavern-gold);
-  text-shadow: 0 0 20px black;
-  font-weight: 900;
-  opacity: 1;
-  /* V4: Default to visible to prevent disappearing */
-  transform: scale(1);
-  animation: stamp-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.5s backwards;
-}
-
-@keyframes stamp-in {
-  from {
-    opacity: 0;
-    transform: scale(3);
-  }
-
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes flash-impact {
-  0% {
-    opacity: 0.8;
-  }
-
-  100% {
-    opacity: 0;
-  }
-}
-
-/* Text */
-/* Text */
-.text-container {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) rotate(-15deg);
-  /* Match stripe angle and center */
-  z-index: 10;
-  text-align: center;
-  /* Ensure centering */
-  width: 100%;
-}
-
-.cinematic-title {
-  font-family: var(--tavern-font-primary);
-  font-size: 15vh;
-  /* Massive */
-  font-weight: 900;
-  color: white;
-  text-transform: uppercase;
-  text-shadow:
-    0 0 20px var(--stripe-color),
-    4px 4px 0 black;
-  margin: 0;
-  line-height: 0.9;
-  transform: scale(3);
-  opacity: 0;
-  font-style: italic;
-  animation: text-slam 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s forwards;
-}
-
-@keyframes text-slam {
-  0% {
-    transform: scale(3);
-    opacity: 0;
-  }
-
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-.cinematic-subtitle {
-  font-family: var(--tavern-font-body);
-  font-size: 5vh;
-  font-weight: 700;
-  color: var(--tavern-parchment);
-  margin: 0;
-  opacity: 0;
-  transform: translateY(20px);
-  animation: subtitle-fade 0.5s ease-out 0.5s forwards;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
-}
-
-@keyframes subtitle-fade {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes subtitle-slide {
-  0% {
-    transform: translateX(-50px);
-    opacity: 0;
-  }
-
-  100% {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-/* Type Specifics */
-.type-BUST .cinematic-title {
-  color: #ffaaaa;
-}
-}
-
-/* ============================================
-   V4.7.4: Showdown (Versus) Cinematic Styles
-   ============================================ */
-
-.cinematic-cut-in.versus-mode .cinematic-content {
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  padding: 0 5%;
-  gap: 20px;
-}
-
-.cinematic-cut-in.versus-mode .portrait-container {
-  flex: 0 0 auto;
-  transform: scale(0.8);
-}
-
-.cinematic-cut-in.versus-mode .portrait-container.left {
-  animation: slideInLeft 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-}
-
-.cinematic-cut-in.versus-mode .portrait-container.right {
-  animation: slideInRight 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-}
-
-.cinematic-cut-in.versus-mode .versus-center {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  z-index: 10;
-}
-
-.cinematic-cut-in.versus-mode .cinematic-title {
-  font-size: 4em;
-  margin: 0;
-  line-height: 1;
-}
-
-.versus-badge {
-  font-family: var(--tavern-font-primary);
-  font-size: 5em;
-  font-weight: 700;
-  color: var(--tavern-gold-bright);
-  text-shadow: 0 0 20px rgba(212, 160, 74, 0.8);
-  margin-top: -10px;
-  animation: zoomIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s backwards;
-}
-
-@keyframes slideInLeft {
-  from {
-    transform: translateX(-100%) scale(0.8);
-    opacity: 0;
-  }
-
-  to {
-    transform: translateX(0) scale(0.8);
-    opacity: 1;
-  }
-}
-
-@keyframes slideInRight {
-  from {
-    transform: translateX(100%) scale(0.8);
-    opacity: 0;
-  }
-
-  to {
-    transform: translateX(0) scale(0.8);
-    opacity: 1;
-  }
-}
-
-@keyframes zoomIn {
-  from {
-    transform: scale(0);
-    opacity: 0;
-  }
-
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-/* ============================================
-   V4.7.4 Hotfix: Showdown Layout Correction
-   ============================================ */
-
-/* 1. Reset Content Container to match Stripe Geometry */
+/* 1. Container: Rotated Stripe Alignment */
 .cinematic-cut-in.versus-mode .cinematic-content {
   position: absolute;
   top: 50%;
@@ -3346,40 +3099,48 @@
   transform: translateY(-50%) rotate(-15deg);
   /* Match rotation */
   display: flex !important;
-  /* Force flex */
   flex-direction: row;
   justify-content: space-between;
-  /* Avatars at edges */
   align-items: center;
-  /* Center Vertically on stripe */
   z-index: 100;
-  padding: 0 28%;
-  /* V4.7.6: Adjusted to bring avatars on screen (200% width container) */
-  /* Keep avatars from extreme edges */
+  padding: 0 25%;
+  /* Balanced padding for avatars */
   box-sizing: border-box;
 }
 
-/* 2. Fix Portrait Positioning (Reset Absolute) */
+/* 2. Portraits: Relative Flex Items */
 .cinematic-cut-in.versus-mode .portrait-container {
   position: relative !important;
   bottom: auto;
   right: auto;
+  left: auto;
   width: 180px;
   height: 180px;
   transform: none;
-  /* Reset base transform */
+  /* Reset base transforms */
   flex: 0 0 auto;
-  /* Don't shrink */
-  opacity: 0;
-  /* Still fade in */
   margin: 0;
   border-radius: 50%;
-  /* Ensure circular */
   overflow: visible;
-  /* Allow flash outside? */
+  opacity: 0;
+  /* Start hidden for animation */
+  mask-image: none;
+  -webkit-mask-image: none;
+  z-index: 100;
 }
 
-/* 3. Animations adjusted for Flex layout */
+.cinematic-cut-in.versus-mode .portrait-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid var(--tavern-gold);
+  background: #000;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+}
+
+/* 3. Animations */
 .cinematic-cut-in.versus-mode .portrait-container.left {
   animation: versus-slide-left 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards !important;
 }
@@ -3388,15 +3149,7 @@
   animation: versus-slide-right 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards !important;
 }
 
-.cinematic-cut-in.versus-mode .portrait-img {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  border: 4px solid var(--tavern-gold);
-  background: #000;
-}
-
-/* 4. Center Badge Text */
+/* 4. Center Content (Badge/Outcome) */
 .cinematic-cut-in.versus-mode .versus-center {
   flex: 1;
   display: flex;
@@ -3404,25 +3157,30 @@
   justify-content: center;
   align-items: center;
   text-align: center;
-  color: white;
-  z-index: 101;
-  /* Counter-rotate text if we want it straight? 
-     User said "diagonally across center in stripe". 
-     Since parent is rotated, text IS diagonal. Correct. */
+  z-index: 10;
+  /* Counter-rotate text relative to stripe? No, keep diagonal flow. */
+}
+
+.cinematic-cut-in.versus-mode .versus-badge {
+  font-family: var(--tavern-font-primary);
+  font-size: 5em;
+  font-weight: 700;
+  color: var(--tavern-gold-bright);
+  text-shadow: 0 0 20px rgba(212, 160, 74, 0.8);
+  margin-top: -10px;
+  animation: zoomIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s backwards;
+  opacity: 1;
 }
 
 .cinematic-cut-in.versus-mode .cinematic-title {
+  font-family: var(--tavern-font-primary);
   font-size: 3.5em;
-  /* Visible size */
+  font-weight: 900;
   color: #fff;
   text-shadow: 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
   margin: 0;
   line-height: 1;
-}
-
-.cinematic-cut-in.versus-mode .versus-badge {
-  font-size: 2.5em;
-  color: var(--tavern-gold-bright);
+  animation: text-slam 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s forwards;
 }
 
 @keyframes versus-slide-left {
@@ -3449,69 +3207,20 @@
   }
 }
 
-/* ============================================
-   V4.7.6 Premium Results
-   ============================================ */
-
-.portrait-result {
-  position: absolute;
-  bottom: -50px;
-  /* Below name */
-  left: 0;
-  width: 100%;
-  text-align: center;
-  font-family: var(--tavern-font-primary);
-  font-size: 3em;
-  color: #fff;
-  text-shadow: 0 0 10px #000, 0 0 20px var(--tavern-gold);
-  font-weight: bold;
-  opacity: 0;
-  animation: fadeUp 0.5s ease 0.5s forwards;
-}
-
-.versus-outcome {
-  font-family: var(--tavern-font-primary);
-  font-size: 5em;
-  color: var(--tavern-gold-bright);
-  text-transform: uppercase;
-  text-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
-  animation: zoomIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  line-height: 1;
-}
-
-.versus-outcome.success {
-  color: var(--tavern-success);
-}
-
-.versus-outcome.failure {
-  color: var(--tavern-danger);
-}
-
-@keyframes fadeUp {
+@keyframes zoomIn {
   from {
+    transform: scale(0);
     opacity: 0;
-    transform: translateY(20px);
   }
 
   to {
+    transform: scale(1);
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
-/* V4.7.8 Hotfix Overrides */
-.cinematic-cut-in.versus-mode .cinematic-content {
-  padding: 0 20% !important;
-  /* Safer padding for avatars */
-}
-
-.cinematic-cut-in.versus-mode .portrait-container {
-  opacity: 1 !important;
-  /* Ensure visibility fallback */
-}
-
 /* ============================================
-   V4.8: Sub-Dialog Styling (Extracted from TavernApp)
+   V4.7.6 Premium Results
    ============================================ */
 
 .tavern-dialog-window .window-content {
