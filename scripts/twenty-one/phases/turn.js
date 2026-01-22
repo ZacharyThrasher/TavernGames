@@ -427,6 +427,12 @@ export async function hold(userId) {
     return state;
   }
 
+  // V4: Dared check - cannot hold if dared
+  if (tableData.dared?.[userId]) {
+    await notifyUser(userId, "You are Dared! You forced to roll a d20 or Fold.");
+    return state;
+  }
+
   const holds = { ...tableData.holds, [userId]: true };
   const updatedTable = { ...tableData, holds };
   updatedTable.currentPlayer = getNextActivePlayer(state, updatedTable);

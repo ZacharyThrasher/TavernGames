@@ -15,32 +15,40 @@ export class GoadDialog {
 
     let selectedTargetId = null;
 
-    return Dialog.prompt({
-      title: "Goad",
-      content,
-      label: "Goad!",
-      render: (html) => {
-        const portraits = html.find('.portrait-option');
-        portraits.on('click', function () {
-          portraits.removeClass('selected');
-          $(this).addClass('selected');
-          selectedTargetId = $(this).data('target-id');
-        });
-
-        portraits.on('keydown', function (e) {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            $(this).click();
+    return new Promise((resolve) => {
+      new Dialog({
+        title: "Goad",
+        content,
+        buttons: {
+          goad: {
+            label: "Goad!",
+            icon: '<i class="fa-solid fa-comments"></i>',
+            callback: (html) => {
+              if (!selectedTargetId) return resolve(null);
+              const attackerSkill = html.find('[name="attackerSkill"]').val();
+              resolve({ targetId: selectedTargetId, attackerSkill });
+            }
           }
-        });
-      },
-      callback: (html) => {
-        if (!selectedTargetId) return null;
-        const attackerSkill = html.find('[name="attackerSkill"]').val();
-        return { targetId: selectedTargetId, attackerSkill };
-      },
-      rejectClose: false,
-      options: { classes: ["tavern-dialog-window"] }
+        },
+        default: "goad",
+        render: (html) => {
+          const portraits = html.find('.portrait-option');
+          portraits.on('click', function () {
+            portraits.removeClass('selected');
+            $(this).addClass('selected');
+            selectedTargetId = $(this).data('target-id');
+          });
+
+          portraits.on('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              $(this).click();
+            }
+          });
+        },
+        close: () => resolve(null),
+        options: { classes: ["tavern-dialog-window"] }
+      }).render(true);
     });
   }
 }

@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.8.27] - 2026-01-22
+### Hotfix 27
+- **Bug Fix**: Added server-side validation to the `hold` action to forcefully reject Dared players, ensuring the rule is enforced even if the UI client is bypassed.
+- **Deprecation Fix**: Replaced `Dialog.prompt` with `new Dialog()` in the Goad dialog to resolve V13 deprecation errors.
+
 ## [4.8.26] - 2026-01-22
 ### Hotfix 26
 - **Regression Fix**: Restored missing animation keyframes for standard (non-versus) Cinematic Cut-Ins. Avatars should now slide in correctly instead of remaining invisible.
