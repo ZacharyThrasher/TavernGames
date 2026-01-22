@@ -63,6 +63,7 @@ export async function useCut(userId, reroll = false) {
         <em>New Total: ${tableData.totals[userId]}</em>
       </div>`,
       whisper: [userId],
+      blind: true, // V4.8.55: Hide from GM
       speaker: { alias: "Tavern Twenty-One" },
     });
 

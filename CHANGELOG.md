@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.8.55] - 2026-01-22
+### Hotfix 55
+- **Cut Privacy**: Fixed an issue where the GM was able to see the private value of "The Cut" re-roll. Added the `blind: true` flag to the whispered chat message to ensure it remains secret between the player and the system.
+
 ## [4.8.54] - 2026-01-22
 ### Hotfix 54
 - **Crash Fix**: Resolved a `ReferenceError` in the Foresight (Hunch) skill. Rolling a Nat 1 triggered a call to an undefined `playSound` function, crashing the logic. I removed the erroneous call.
