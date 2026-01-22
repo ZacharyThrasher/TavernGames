@@ -3081,6 +3081,8 @@
   mask-image: none;
   -webkit-mask-image: none;
   position: absolute !important;
+  animation: none !important;
+  /* V4.8.31: Killing the inherited animation is crucial */
 }
 
 .cinematic-cut-in.versus-mode .portrait-container.left {

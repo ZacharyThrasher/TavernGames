@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.8.31] - 2026-01-22
+### Hotfix 31
+- **UI Fix**: Explicitly disabled the inherited `portrait-slide` animation for Versus Mode cut-ins. This animation was conflicting with the static positioning, likely keeping the avatars at `opacity: 0` or transformed off-screen despite other visibility settings.
+
 ## [4.8.30] - 2026-01-22
 ### Hotfix 30
 - **Bug Fix**: Folded players are now correctly disqualified from the winner's pool, ensuring they cannot win the pot even if they had a high total before folding.
