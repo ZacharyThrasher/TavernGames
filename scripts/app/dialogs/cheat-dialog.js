@@ -70,7 +70,7 @@ export class CheatDialog extends HandlebarsApplicationMixin(ApplicationV2) {
         { value: 2, label: "+2", colorClass: "gain" },
         { value: 3, label: "+3", colorClass: "gain" }
       ],
-      formatMod: (mod) => mod >= 0 ? `+${mod}` : mod
+      // No formatMod in context - registered globally now
     };
   }
 
@@ -86,7 +86,10 @@ export class CheatDialog extends HandlebarsApplicationMixin(ApplicationV2) {
       // Get current from HTML or context? HTML is safer if we had select, but here it's static
       const current = context.initialCurrent;
       const max = context.maxVal;
-      const adj = parseInt(html.find('[name="adjustment"]:checked').val() ?? 0);
+      
+      // Vanilla JS selector for robustness
+      const checkedRadio = this.element.querySelector('input[name="adjustment"]:checked');
+      const adj = parseInt(checkedRadio?.value ?? 0);
       
       let newVal = current + adj;
       if (newVal < 1) newVal = 1;
@@ -115,19 +118,31 @@ export class CheatDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 
   async _onSubmit(event) {
     event.preventDefault();
-    const formData = new FormDataExtended(event.target).object;
     
-    const result = {
-      // dieIndex undefined -> backend picks last
-      adjustment: parseInt(formData.adjustment),
-      // cheatType/skill removed -> backend hardcodes Physical/Slt
-    };
-    
-    if (this.resolve) {
-      this.resolve(result);
-      this.resolve = null;
+    try {
+        const formData = new FormData(event.target);
+        
+        // Manual parsing to avoid dependency on FormDataExtended
+        const adjustment = parseInt(formData.get("adjustment"));
+        
+        const result = {
+          adjustment: isNaN(adjustment) ? 1 : adjustment,
+        };
+        
+        if (this.resolve) {
+          this.resolve(result);
+          this.resolve = null;
+        }
+        this.close();
+    } catch (err) {
+        console.error("Tavern | Cheat Dialog Submit Error:", err);
+        // Ensure we don't hang
+        if (this.resolve) {
+            this.resolve(null);
+            this.resolve = null;
+        }
+        this.close();
     }
-    this.close();
   }
 
   async close(options) {

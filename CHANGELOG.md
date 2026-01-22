@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.8.13] - 2026-01-22
+### Hotfix 13
+- **Stability**: Hardened `CheatDialog` form submission logic to use native DOM APIs instead of Foundry helpers, reducing the risk of errors causing client crashes/reloads. Added explicit error trapping to the submit handler.
+
 ## [4.8.12] - 2026-01-22
 ### Hotfix 12
 - **Critical Crash Fix**: Fixed a severe application crash caused by the missing `formatMod` Handlebars helper in dialog templates. Registered the helper globally in `main.js`. This resolves the "black screen/reload" issue when attempting to use skills like Cheat, Bump, or Goad.
