@@ -434,7 +434,7 @@ export async function bumpRetaliation(payload, userId) {
         totals: updatedTotals,
         visibleTotals: updatedVisibleTotals,
         busts: updatedBusts,
-        pendingBumpRetaliation: null, // Clear the pending state
+        pendingBumpRetaliation: undefined, // Clear the pending state (undefined removes key)
     };
 
     await addHistoryEntry({

@@ -43,6 +43,7 @@ export async function submitRoll(payload, userId) {
 
   // V3.5: Bump Retaliation Lock
   if (tableData.pendingBumpRetaliation?.attackerId === userId) {
+    console.warn("Tavern | Blocked Roll due to Lock:", tableData.pendingBumpRetaliation);
     ui.notifications.warn("You were caught bumping! Wait for retaliation.");
     return state;
   }

@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.8.38] - 2026-01-22
+### Hotfix 38
+- **Lock Fix**: Fixed an issue where the Bump Retaliation Lock would persist even after the target retaliated, preventing the attacker from finishing their turn. This was due to the state update not fully clearing the pending flag.
+
 ## [4.8.37] - 2026-01-22
 ### Hotfix 37
 - **Crash Fix**: Resolved a syntax error (`Unexpected token :`) in `tavern-app.js` that caused the application to crash. This was due to a malformed variable declaration introduced in the previous update. Retaliation interaction is now fully functional.
