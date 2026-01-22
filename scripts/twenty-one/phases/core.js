@@ -167,6 +167,10 @@ export async function revealDice() {
   await Promise.all(rollPromises);
   await new Promise(r => setTimeout(r, 500));
 
+  // V4.8.47: Staredown Cinematic
+  tavernSocket.executeForEveryone("showSkillCutIn", "STAREDOWN", null, null);
+  await new Promise(r => setTimeout(r, 2500));
+
   // Now transition to The Staredown
   const accusationCost = Math.floor(state.pot / 2);
 

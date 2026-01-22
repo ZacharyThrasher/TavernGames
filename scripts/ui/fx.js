@@ -225,6 +225,9 @@ export function showSkillCutIn(type, userId, targetId) {
     else if (type === "GOAD") text = "GOADED!";
     else if (type === "PROFILE") text = "ANALYSIS!";
     else if (type === "BUMP") text = "TABLE BUMP!";
+    else if (type === "ACCUSE") text = "ACCUSATION!"; // V4.8.47
+    else if (type === "STAREDOWN") text = "THE STAREDOWN"; // V4.8.47
+    else if (type === "DUEL") text = "DUEL!"; // V4.8.47
 
     CinematicOverlay.show({
       type,

@@ -62,10 +62,10 @@ export class CinematicOverlay extends HandlebarsApplicationMixin(ApplicationV2) 
                 // Try Token Image first (if unlinked/specific)
                 const token = actor?.token ?? (actor ? canvas.tokens.placeables.find(t => t.actor?.id === actor.id) : null);
                 if (token) img = token.texture?.src || token.img;
-                
+
                 // Then Actor Image
                 if ((!img || img.includes("mystery-man")) && actor) img = actor.img;
-                
+
                 // Then User Avatar
                 if ((!img || img.includes("mystery-man")) && u) img = u.avatar;
             }
@@ -125,6 +125,8 @@ export class CinematicOverlay extends HandlebarsApplicationMixin(ApplicationV2) 
             case "GOAD": return "#e67e22";      // Aggressive Orange
             case "PROFILE": return "#1abc9c";   // Detective Cyan
             case "BUMP": return "#d35400";      // Punchy Amber/Red
+            case "ACCUSE": return "#c0392b";    // Accusatory Red
+            case "STAREDOWN": return "#2c3e50"; // Dramatic Dark Blue/Grey
             default: return "var(--tavern-parchment)";
         }
     }

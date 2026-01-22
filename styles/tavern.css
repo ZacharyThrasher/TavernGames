@@ -3149,6 +3149,39 @@
   .type-BUST .cinematic-title {
     color: #ffaaaa;
   }
+
+  /* V4.8.47: Extremely Stylized Cut-Ins */
+  .type-ACCUSE .cinematic-title {
+    color: #e74c3c;
+    text-shadow: 4px 4px 0 #000, 0 0 30px red;
+    animation: text-slam 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s forwards, shake 0.5s ease-in-out 1s;
+  }
+
+  .type-STAREDOWN .cinematic-title {
+    color: #ecf0f1;
+    text-shadow: 0 0 10px #3498db, 0 0 20px #2980b9;
+    letter-spacing: 10px;
+    animation: text-slam 0.4s ease 0.3s forwards, pulse-glow 2s infinite 1s;
+  }
+
+  .type-DUEL .cinematic-title {
+    color: #f1c40f;
+    text-shadow: 3px 3px 0 #c0392b;
+    font-style: italic;
+    transform: skew(-10deg);
+  }
+
+  @keyframes pulse-glow {
+
+    0%,
+    100% {
+      text-shadow: 0 0 10px #3498db;
+    }
+
+    50% {
+      text-shadow: 0 0 30px #ecf0f1, 0 0 50px #3498db;
+    }
+  }
 }
 
 /* ==========================================================================

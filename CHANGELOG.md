@@ -1,5 +1,14 @@
 # Changelog
 
+## [4.8.47] - 2026-01-22
+### Hotfix 47
+- **Bump Privacy**: Fixed an issue where Bumping a blind die (game logic) would accidentally reveal its value in the chat/history log. It now correctly masks the value as "?" or "Hidden".
+- **Added DRAMA**: 
+    - **Accuse Cut-In**: Making an accusation now triggers a dramatic red cut-in before the result is revealed.
+    - **Staredown Cut-In**: The "The Staredown" phase change now has its own mysterious, pulsing cinematic title.
+    - **Duel Cut-In**: Duels now trigger a "DUEL!" splash screen using the Versus Mode visuals.
+- **Styling**: All new cut-ins have received "extremely stylized" CSS treatments (shakes, glows, and unique text shadows) to match the D&D tavern theme.
+
 ## [4.8.46] - 2026-01-22
 ### Hotfix 46
 - **CSS Restoration**: Fixed a regression where standard Cinematic Cut-Ins (Bust, Victory, Critical) had their text misaligned (stuck in top-left). Restored the missing text container styles that were accidentally overwritten during the Versus Mode refactor. Now text should correctly slam into the center of the stripe.

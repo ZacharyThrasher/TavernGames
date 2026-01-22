@@ -327,6 +327,12 @@ export async function accuse(payload, userId) {
     return state;
   }
 
+  // V4.8.47: Accuse Cinematic Cut-In
+  state.suspectId = targetId; // Track for UI if needed
+  tavernSocket.executeForEveryone("showSkillCutIn", "ACCUSE", userId, targetId);
+
+  // Dramatic Pause
+  await new Promise(r => setTimeout(r, 2500));
 
   const accuserActor = getActorForUser(userId);
   const accuserName = accuserActor?.name ?? game.users.get(userId)?.name ?? "Unknown";

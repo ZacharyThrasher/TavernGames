@@ -273,7 +273,7 @@ export async function bumpTable(payload, userId) {
             isHoleDie: !wasPublic,
             message: wasPublic
                 ? `${attackerName} bumped ${targetName}'s d${dieSides}: ${oldValue} → ${newValue}`
-                : `${attackerName} bumped ${targetName}'s hole die (d${dieSides})!`,
+                : `${attackerName} bumped ${targetName}'s hole die (d${dieSides})! (Value hidden)`, // V4.8.47: Value Masked
         });
 
         // Create success chat card
@@ -282,7 +282,7 @@ export async function bumpTable(payload, userId) {
 
         let resultMessage = wasPublic
             ? `<strong>${targetName}'s</strong> d${dieSides} (was ${oldValue}) → <strong>${newValue}</strong><br>Visible Total: ${oldVisibleTotal} → <strong>${newVisibleTotal}</strong>`
-            : `<strong>${targetName}'s</strong> hole die (d${dieSides}) was bumped!<br><em>The new value remains hidden...</em>`;
+            : `<strong>${targetName}'s</strong> hole die (d${dieSides}) was bumped!<br><em>New value? Who knows... (Hidden)</em>`; // V4.8.47: Value Masked
 
         if (targetBusted && wasPublic) {
             resultMessage += `<br><span style="color: #ff6666; font-weight: bold;">BUST!</span>`;
