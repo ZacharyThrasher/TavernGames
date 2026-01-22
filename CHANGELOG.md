@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.8.26] - 2026-01-22
+### Hotfix 26
+- **Regression Fix**: Restored missing animation keyframes for standard (non-versus) Cinematic Cut-Ins. Avatars should now slide in correctly instead of remaining invisible.
+
 ## [4.8.25] - 2026-01-22
 ### Hotfix 25
 - **Bug Fix**: Fixed `accusedThisRound` not clearing between rounds, which permanently hid the Accuse button after the first time.
