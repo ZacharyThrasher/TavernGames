@@ -4,7 +4,7 @@ export class ProfileDialog {
   static async show(params) {
     const { targets, actor, invMod } = params;
 
-    const content = await renderTemplate(`modules/${MODULE_ID}/templates/dialogs/profile-dialog.hbs`, {
+    const content = await foundry.applications.handlebars.renderTemplate(`modules/${MODULE_ID}/templates/dialogs/profile-dialog.hbs`, {
       targets,
       invMod,
       formatMod: (mod) => mod >= 0 ? `+${mod}` : mod
@@ -23,7 +23,7 @@ export class ProfileDialog {
           $(this).addClass('selected');
           selectedTargetId = $(this).data('target-id');
         });
-        
+
         // Keyboard accessibility
         portraits.on('keydown', function (e) {
           if (e.key === 'Enter' || e.key === ' ') {

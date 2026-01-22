@@ -4,7 +4,7 @@ export class BumpDialog {
   static async show(params) {
     const { targets, actor, athMod } = params;
 
-    const content = await renderTemplate(`modules/${MODULE_ID}/templates/dialogs/bump-dialog.hbs`, {
+    const content = await foundry.applications.handlebars.renderTemplate(`modules/${MODULE_ID}/templates/dialogs/bump-dialog.hbs`, {
       targets,
       athMod,
       formatMod: (mod) => mod >= 0 ? `+${mod}` : mod
@@ -44,14 +44,14 @@ export class BumpDialog {
                   <span class="die-visibility">${visLabel}</span>
                 </button>
               `);
-              
+
               btn.on('click', function (e) {
                 e.preventDefault();
                 diceContainer.find('.die-btn').removeClass('selected');
                 $(this).addClass('selected');
                 selectedDieIndex = d.index;
               });
-              
+
               diceContainer.append(btn);
             });
             dieSelection.removeClass('hidden');

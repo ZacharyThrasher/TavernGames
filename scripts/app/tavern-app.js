@@ -277,10 +277,12 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const isRoundPhase = ["PLAYING", "INSPECTION", "REVEALING", "DUEL"].includes(state.status);
     const canAccuse = isInGame && !accusedThisRound && !isBusted && accuseTargets.length > 0 && isRoundPhase && !isHouse;
 
-    // DEBUG: Accuse Button Visibility
-    if (!canAccuse && isInGame && !isHouse) {
-      console.log("Tavern | Accuse Button Hidden:", {
-        isInGame, accusedThisRound, isBusted, targets: accuseTargets.length, isRoundPhase, isHouse, status: state.status
+    // DEBUG: ALWAYS log Accuse state status to find why it's hidden
+    if (isInGame) {
+      console.log("Tavern | Accuse Status:", {
+        visible: canAccuse,
+        checks: { isInGame, notAccused: !accusedThisRound, notBusted: !isBusted, hasTargets: accuseTargets.length > 0, isRoundPhase, notHouse: !isHouse },
+        state: { status: state.status, busted: tableData.busts?.[userId], accused: tableData.accusedThisRound?.[userId] }
       });
     }
 

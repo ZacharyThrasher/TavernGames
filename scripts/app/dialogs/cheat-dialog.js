@@ -46,7 +46,7 @@ export class CheatDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 
   async _prepareContext(options) {
     const { myRolls, actor, heatDC } = this.params;
-    
+
     // Skill modifier (Sleight of Hand only)
     const sltMod = actor?.system?.skills?.slt?.total ?? 0;
 
@@ -87,18 +87,18 @@ export class CheatDialog extends HandlebarsApplicationMixin(ApplicationV2) {
       // Get current from HTML or context? HTML is safer if we had select, but here it's static
       const current = context.initialCurrent;
       const max = context.maxVal;
-      
+
       // Vanilla JS selector for robustness
       const checkedRadio = this.element.querySelector('input[name="adjustment"]:checked');
       const adj = parseInt(checkedRadio?.value ?? 0);
-      
+
       let newVal = current + adj;
       if (newVal < 1) newVal = 1;
-      if (newVal > max) newVal = max; 
+      if (newVal > max) newVal = max;
 
       const previewEl = html.find('#cheat-preview-value');
       previewEl.text(newVal);
-      
+
       previewEl.removeClass('gain loss neutral');
       if (adj > 0) previewEl.addClass('gain');
       else if (adj < 0) previewEl.addClass('loss');
@@ -106,11 +106,11 @@ export class CheatDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     };
 
     html.find('[name="adjustment"]').on('change', updatePreview);
-    
+
     // Style radio buttons
-    html.find('.cheat-adj-btn').on('click', function() {
-       html.find('.cheat-adj-btn').removeClass('selected');
-       $(this).addClass('selected');
+    html.find('.cheat-adj-btn').on('click', function () {
+      html.find('.cheat-adj-btn').removeClass('selected');
+      $(this).addClass('selected');
     });
 
     // Close button
@@ -119,30 +119,30 @@ export class CheatDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 
   async _onSubmit(event) {
     event.preventDefault();
-    
+
     try {
-        const formData = new FormData(event.target);
-        
-        // Manual parsing to avoid dependency on FormDataExtended
-        const adjustment = parseInt(formData.get("adjustment"));
-        
-        const result = {
-          adjustment: isNaN(adjustment) ? 1 : adjustment,
-        };
-        
-        if (this.resolve) {
-          this.resolve(result);
-          this.resolve = null;
-        }
-        this.close();
+      const formData = new FormData(event.target);
+
+      // Manual parsing to avoid dependency on FormDataExtended
+      const adjustment = parseInt(formData.get("adjustment"));
+
+      const result = {
+        adjustment: isNaN(adjustment) ? 1 : adjustment,
+      };
+
+      if (this.resolve) {
+        this.resolve(result);
+        this.resolve = null;
+      }
+      this.close();
     } catch (err) {
-        console.error("Tavern | Cheat Dialog Submit Error:", err);
-        // Ensure we don't hang
-        if (this.resolve) {
-            this.resolve(null);
-            this.resolve = null;
-        }
-        this.close();
+      console.error("Tavern | Cheat Dialog Submit Error:", err);
+      // Ensure we don't hang
+      if (this.resolve) {
+        this.resolve(null);
+        this.resolve = null;
+      }
+      this.close();
     }
   }
 

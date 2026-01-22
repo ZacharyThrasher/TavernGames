@@ -4,7 +4,7 @@ export class PaymentDialog {
   static async show(params) {
     const { cost, purpose, gp, canAffordGold, drinksNeeded } = params;
 
-    const content = await renderTemplate(`modules/${MODULE_ID}/templates/dialogs/payment-dialog.hbs`, {
+    const content = await foundry.applications.handlebars.renderTemplate(`modules/${MODULE_ID}/templates/dialogs/payment-dialog.hbs`, {
       cost,
       purpose,
       gp,

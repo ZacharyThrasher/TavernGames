@@ -5,7 +5,7 @@ export class GoadDialog {
     const { targets, actor, itmMod, perMod } = params;
     const defaultSkill = itmMod >= perMod ? "itm" : "per";
 
-    const content = await renderTemplate(`modules/${MODULE_ID}/templates/dialogs/goad-dialog.hbs`, {
+    const content = await foundry.applications.handlebars.renderTemplate(`modules/${MODULE_ID}/templates/dialogs/goad-dialog.hbs`, {
       targets,
       itmMod,
       perMod,
@@ -26,7 +26,7 @@ export class GoadDialog {
           $(this).addClass('selected');
           selectedTargetId = $(this).data('target-id');
         });
-        
+
         portraits.on('keydown', function (e) {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();

@@ -4,7 +4,7 @@ export class SideBetDialog {
   static async show(params) {
     const { champions, ante } = params;
 
-    const content = await renderTemplate(`modules/${MODULE_ID}/templates/dialogs/side-bet-dialog.hbs`, {
+    const content = await foundry.applications.handlebars.renderTemplate(`modules/${MODULE_ID}/templates/dialogs/side-bet-dialog.hbs`, {
       champions,
       ante
     });

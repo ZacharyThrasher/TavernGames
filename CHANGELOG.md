@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.8.22] - 2026-01-22
+### Hotfix 22
+- **Deprecation Fix**: Updated all dialog template rendering to use `foundry.applications.handlebars.renderTemplate` in compliance with Foundry V13 standards.
+- **Debug**: Enhanced Accuse button logging to be unconditional, ensuring we can diagnose visibility issues even if specific conditions fail.
+
 ## [4.8.21] - 2026-01-22
 ### Hotfix 21
 - **UI Fix**: Corrected CSS for "Versus Mode" cinematic cut-ins (e.g., Goad, Duel) to ensure player avatars are visible and correctly animated.

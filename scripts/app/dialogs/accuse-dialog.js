@@ -20,8 +20,8 @@ export class AccuseDialog {
       const isHole = !(roll.public ?? true);
       const displayResult = isBlind ? "?" : (isHole ? "?" : roll.result);
       // Simple logic for icon mapping
-      const icon = DICE_ICONS[roll.die] || "d6"; 
-      
+      const icon = DICE_ICONS[roll.die] || "d6";
+
       let label = `d${roll.die}`;
       if (isBlind) label += " (Blind)";
       else if (isHole) label += " (Hole)";
@@ -30,7 +30,7 @@ export class AccuseDialog {
       return { index: idx, icon, displayResult, label };
     });
 
-    const content = await renderTemplate(`modules/${MODULE_ID}/templates/dialogs/accuse-dialog.hbs`, {
+    const content = await foundry.applications.handlebars.renderTemplate(`modules/${MODULE_ID}/templates/dialogs/accuse-dialog.hbs`, {
       targetName,
       dice,
       cost,
