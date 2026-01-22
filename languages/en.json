@@ -6,6 +6,7 @@
     "Leave": "Leave Table",
     "Start": "Deal the Dice!",
     "Hold": "Hold",
+    "Fold": "Fold",
     "NewRound": "New Round",
     "Reset": "Reset Table",
     "YourTurn": "Your Turn!",
@@ -22,12 +23,103 @@
       "Line2": "Choose your risk: d4 is safe, d20 is dangerous",
       "Line3": "Hold when you're satisfied with your total",
       "Line4": "Highest total ≤21 wins the pot!"
-    },
-    "Settings": {
-      "FixedAnte": "Fixed Ante (GP)",
-      "FixedAnteHint": "The ante amount each player must pay to join a round.",
-      "EnableSounds": "Enable Sound Effects",
-      "EnableSoundsHint": "Play sound effects for dice rolls, coins, and game events."
     }
+  },
+  "TAVERN": {
+    "Cancel": "Cancel",
+    "Confirm": "Confirm",
+    "Cost": "Cost",
+    "Success": "SUCCESS",
+    "Backfire": "BACKFIRE",
+    "Warning": "WARNING",
+    "Payout": "Payout",
+    "Visible": "Visible",
+    "Min": "min",
+    "Drink": "Drink",
+    "PassiveDeception": "Passive Deception",
+    "Cheat": {
+      "Title": "Attempt Cheat",
+      "SelectDie": "Select Die to Modify:",
+      "Adjustment": "Adjustment (±1 to ±3):",
+      "Type": "Cheat Type:",
+      "Physical": "Physical",
+      "PhysicalHint": "Sleight of Hand / Deception",
+      "Magical": "Magical",
+      "MagicalHint": "INT / WIS / CHA",
+      "SkillPhysical": "Physical Skill:",
+      "SkillMagical": "Spellcasting Ability:",
+      "HeatDC": "Heat DC",
+      "Nat20": "Nat 20",
+      "Nat20Effect": "Invisible cheat (DC 0)",
+      "Nat1": "Nat 1",
+      "Nat1Effect": "Auto-caught + pay 1× ante",
+      "Action": "Cheat"
+    },
+    "Profile": {
+      "Title": "Profile",
+      "Instruction": "Who do you want to read?",
+      "Effect": "Success: Learn their hole die. Failure: They learn yours!"
+    },
+    "Goad": {
+      "Title": "Goad",
+      "Instruction": "Select a target to goad into rolling:",
+      "YourSkill": "Your Skill:",
+      "TargetDefense": "Target defends with:",
+      "SuccessEffect": "Target must roll a die of their choice!",
+      "BackfireEffect": "YOU must roll a die of your choice!"
+    },
+    "Bump": {
+      "Title": "Bump the Table",
+      "Instruction": "Select a target to bump:",
+      "YourSkill": "Your Skill:",
+      "SelectDie": "Select which die to bump:",
+      "DieHint": "V2.0: You can target visible dice OR the hole die!",
+      "FailureEffect": "If you fail, they choose one of YOUR dice to re-roll!"
+    },
+    "Accuse": {
+      "Title": "Accuse",
+      "Instruction": "Select which die to accuse on {name}:",
+      "Success": "SUCCESS",
+      "SuccessEffect": "Refund + {bounty}gp bounty!",
+      "Failure": "FAILURE",
+      "FailureEffect": "Lose {cost}gp",
+      "Note": "Note: Even if they cheated on another die, accusing the wrong one fails!"
+    },
+    "SideBet": {
+      "Title": "Place Side Bet",
+      "Instruction": "Pick your Champion:",
+      "Amount": "Bet Amount",
+      "Win": "If they win",
+      "Lose": "If they lose",
+      "LoseEffect": "You lose your bet"
+    },
+    "Payment": {
+      "Title": "Payment Method",
+      "Required": "Payment Required",
+      "PayGold": "Pay Gold",
+      "Have": "Have",
+      "Tab": "Put it on the Tab",
+      "SaveDC": "Roll CON Save (DC 10+)",
+      "ShiftHint": "Hold SHIFT to show this menu when you have gold."
+    },
+    "Status": {
+      "Holding": "HOLDING"
+    }
+  },
+  "DND5E": {
+    "SkillSlt": "Sleight of Hand",
+    "SkillDec": "Deception",
+    "SkillInv": "Investigation",
+    "SkillItm": "Intimidation",
+    "SkillPer": "Persuasion",
+    "SkillAth": "Athletics",
+    "SkillIns": "Insight",
+    "AbilityDexAbbr": "DEX",
+    "AbilityChaAbbr": "CHA",
+    "AbilityInt": "Intelligence",
+    "AbilityWis": "Wisdom",
+    "AbilityCha": "Charisma",
+    "AbilityStrAbbr": "STR",
+    "AbilityWisAbbr": "WIS"
   }
 }

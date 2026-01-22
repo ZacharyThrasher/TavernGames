@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.8.6] - 2026-01-22
+### Hotfix 6
+- **Localization**: Restored missing English localization keys for all dialogs (Cheat, Bump, Goad, Profile, Accuse, SideBet). This fixes the "broken menu" text strings.
+
 ## [4.8.5] - 2026-01-22
 ### Hotfix 5
 - **Critical Fix**: Fixed `CheatDialog` crashing on submission due to incorrect static context handling in `ApplicationV2`. Now properly binds the submit handler to the instance.
