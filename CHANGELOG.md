@@ -1,5 +1,23 @@
 # Changelog
 
+## [4.7.0] - 2026-01-22
+### V13 "Premium Sauce" Upgrade
+- **Architecture**: Full compliance with Foundry V13 Module Development Guide.
+  - Replaced legacy jQuery usage with native DOM in core visual effects.
+  - Implemented CSS Layers (`@layer components, utilities, animations`) for robust styling.
+  - Exposed module API via `game.modules.get('tavern-dice-master').api`.
+  - Added `performanceMode` setting to disable heavy effects on low-end hardware.
+- **Cinematic Cut-Ins**: New "Persona-style" full-screen overlays for dramatic moments (Victory, Bust).
+  - Uses V13 Frameless Application pattern (`window: { frame: false }`).
+  - Features dynamic diagonal stripes, sliding character portraits, and impact text.
+  - Properly handles `pointer-events` to allow interaction with the canvas below.
+- **Visual Enhancements**:
+  - Glassmorphism panels for UI.
+  - Particle sparkle effects on victory banners.
+  - Enhanced, multi-stage screen shake animations.
+  - Pop-in entrance animations for banners.
+  - Fonts now consume system variables (`--dnd5e-font-modesto`, etc.) for seamless theming.
+
 ## [4.0.2] - 2026-01-21
 ### Architecture (V4 Refactor)
 - **State Migration**: Moved game state from Macro to World Settings for better persistence and stability.

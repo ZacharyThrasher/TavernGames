@@ -34,6 +34,16 @@ export function registerSettings() {
     type: Object,
     default: {},
   });
+
+  // V13: Performance Mode - disable heavy visual effects for lower-end hardware
+  game.settings.register(MODULE_ID, "performanceMode", {
+    name: "Performance Mode",
+    hint: "Disable heavy visual effects (screen shake, banners, floating text) for better performance on lower-end hardware.",
+    scope: "client",
+    config: true,
+    type: Boolean,
+    default: false,
+  });
 }
 
 export async function preloadTemplates() {
@@ -42,6 +52,7 @@ export async function preloadTemplates() {
     `modules/${MODULE_ID}/templates/parts/table.hbs`,
     `modules/${MODULE_ID}/templates/parts/controls.hbs`,
     `modules/${MODULE_ID}/templates/parts/history.hbs`,
+    `modules/${MODULE_ID}/templates/cinematic-overlay.hbs`,
   ]);
 }
 

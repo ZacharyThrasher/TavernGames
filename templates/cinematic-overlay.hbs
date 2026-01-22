@@ -1,0 +1,20 @@
+<div class="cinematic-cut-in type-{{type}}">
+    <div class="cinematic-stripe" style="--stripe-color: {{color}}"></div>
+
+    <div class="cinematic-content">
+        <div class="portrait-container">
+            <img src="{{img}}" alt="{{name}}" class="portrait-img" />
+            <div class="portrait-flash"></div>
+        </div>
+
+        <div class="text-container">
+            <h1 class="cinematic-title">{{text}}</h1>
+            <h2 class="cinematic-subtitle">{{name}}</h2>
+        </div>
+    </div>
+
+    {{!-- V13 Juice: Sparkles for Victory/Critical --}}
+    {{#if (or isVictory isCritical)}}
+    <div class="cinematic-sparkles"></div>
+    {{/if}}
+</div>
