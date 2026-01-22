@@ -33,15 +33,15 @@
 ## Future / Planned (V4.1+)
 
 ### The Sauce (Visual FX)
-- [ ] **Floating Text Engine (`scripts/ui/fx.js`):**
-    - [ ] Create a system to spawn floating text elements over specific DOM elements.
-    - [ ] Utilize GSAP (GreenSock) for smooth animation (float up + fade out).
-- [ ] **Screenshake:**
-    - [ ] Add CSS keyframes for `shake` effects.
-    - [ ] Implement JS helper to apply shake classes temporarily.
-- [ ] **Integration:**
-    - [ ] **Bust:** Trigger heavy shake + Red "BUST!" text.
-    - [ ] **Gold Changes:** Float "-X gp" (Red) or "+X gp" (Green) over player avatars when wallet changes.
-    - [ ] **Nat 20:** Golden pulse/glow effect.
-    - [ ] **Nat 1:** "Cracked" effect or shake.
-    - [ ] **Win:** Confetti or gold particle effect (optional/stretch).
+- [x] **Floating Text Engine (`scripts/ui/fx.js`):**
+    - [x] Create a system to spawn floating text elements over specific DOM elements.
+    - [x] Utilize GSAP (GreenSock) for smooth animation (float up + fade out).
+- [x] **Screenshake:**
+    - [x] Add CSS keyframes for `shake` effects.
+    - [x] Implement JS helper to apply shake classes temporarily.
+- [x] **Integration:**
+    - [x] **Bust:** Trigger heavy shake + Red "BUST!" text.
+    - [x] **Gold Changes:** Float "-X gp" (Red) or "+X gp" (Green) over player avatars when wallet changes.
+    - [x] **Nat 20:** Golden pulse/glow effect.
+    - [x] **Nat 1:** "Cracked" effect or shake.
+    - [x] **Win:** Confetti or gold particle effect (optional/stretch).

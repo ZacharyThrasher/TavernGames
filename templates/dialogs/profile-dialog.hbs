@@ -1,0 +1,22 @@
+<form class="tavern-dialog profile-dialog">
+  <p class="dialog-instruction">{{localize "TAVERN.Profile.Instruction"}}</p>
+  
+  <div class="portrait-grid">
+    {{#each targets}}
+    <div class="portrait-option" data-target-id="{{id}}" tabindex="0">
+      <img src="{{img}}" alt="{{name}}" />
+      <div class="name">{{name}}</div>
+    </div>
+    {{/each}}
+  </div>
+  
+  <hr>
+  
+  <div class="dialog-info">
+    <p class="skill-check">
+      <i class="fa-solid fa-eye"></i> 
+      <strong>{{localize "DND5E.SkillInv"}}</strong> {{formatMod invMod}} vs {{localize "TAVERN.PassiveDeception"}}
+    </p>
+    <p class="hint">{{localize "TAVERN.Profile.Effect"}}</p>
+  </div>
+</form>

@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.8.0] - 2026-01-22
+### V13 AppV2 Refactor & Premium Polish
+- **Codebase Modernization**: Refactored major dialogs (`Cheat`, `Profile`, `Goad`, `Bump`, `Accuse`, `SideBet`) into dedicated `ApplicationV2` classes (`scripts/app/dialogs/*.js`) with Handlebars templates. This eliminates inline HTML spaghetti and ensures future V13 compatibility.
+- **Cinematic Overlays**: Improved avatar resolution in cut-ins. Now robustly falls back: State Avatar -> Token Image -> Actor Image -> User Avatar -> Mystery Man. This fixes missing avatars in "Showdown" cut-ins.
+- **Logic Centralization**: Moved target filtering logic (e.g., `getValidBumpTargets`) to `game-logic.js` to adhere to DRY principles.
+- **Visuals**: Standardized dialog styling in `tavern.css` using CSS variables and layers.
+
 ## [4.7.9] - 2026-01-22
 ### Mechanics & Visuals Refinement
 - **Visuals Check**: Fixed issue where Intro avatars didn't match Table avatars (prioritized state over token). Suppressed duplicate 3D dice rolls in Chat Cards.

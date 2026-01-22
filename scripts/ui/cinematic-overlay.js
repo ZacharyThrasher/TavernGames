@@ -50,26 +50,31 @@ export class CinematicOverlay extends HandlebarsApplicationMixin(ApplicationV2) 
             if (!uid) return null;
             const pData = state.players?.[uid];
             const u = game.users.get(uid);
+            const actor = u?.character;
 
-            // Priority 1: Table State (Joined Avatar/Name)
-            if (pData) {
-                return {
-                    name: pData.name,
-                    img: pData.avatar || pData.img || "icons/svg/mystery-man.svg"
-                };
+            // 1. Try State Data (if valid)
+            let img = pData?.avatar || pData?.img;
+            let name = pData?.name;
+
+            // 2. Fallback to Live Actor Data if state is missing or "mystery-man"
+            const isDefault = !img || img.includes("mystery-man");
+            if (isDefault) {
+                // Try Token Image first (if unlinked/specific)
+                const token = actor?.token ?? (actor ? canvas.tokens.placeables.find(t => t.actor?.id === actor.id) : null);
+                if (token) img = token.texture?.src || token.img;
+                
+                // Then Actor Image
+                if ((!img || img.includes("mystery-man")) && actor) img = actor.img;
+                
+                // Then User Avatar
+                if ((!img || img.includes("mystery-man")) && u) img = u.avatar;
             }
 
-            // Priority 2: Foundry Character/Token
-            const act = u?.character;
-            const tok = act ? canvas.tokens.placeables.find(t => t.actor?.id === act.id) : null;
-            if (tok) return { img: tok.document.texture.src, name: tok.document.name };
-            if (act) return { img: act.img, name: act.name };
+            // 3. Fallback Name
+            if (!name) name = actor?.name || u?.name || "Player";
+            if (!img) img = "icons/svg/mystery-man.svg";
 
-            // Fallback
-            return {
-                img: u?.avatar || "icons/svg/mystery-man.svg",
-                name: u?.name || "Player"
-            };
+            return { name, img };
         };
 
         const actorInfo = resolveActorInfo(options.userId);

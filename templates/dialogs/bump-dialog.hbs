@@ -1,0 +1,30 @@
+<form class="tavern-dialog bump-dialog">
+  <p class="dialog-instruction">{{localize "TAVERN.Bump.Instruction"}}</p>
+  
+  <div class="portrait-grid">
+    {{#each targets}}
+    <div class="portrait-option" data-target-id="{{id}}" tabindex="0">
+      <img src="{{img}}" alt="{{name}}" />
+      <div class="name">{{name}}</div>
+    </div>
+    {{/each}}
+  </div>
+  
+  <div class="form-group">
+    <label>{{localize "TAVERN.Bump.YourSkill"}} {{localize "DND5E.SkillAth"}} ({{localize "DND5E.AbilityStrAbbr"}}) {{formatMod athMod}}</label>
+  </div>
+  
+  <div class="form-group hidden" id="bump-die-selection">
+    <label>{{localize "TAVERN.Bump.SelectDie"}}</label>
+    <p class="hint">{{localize "TAVERN.Bump.DieHint"}}</p>
+    <div id="bump-dice-container" class="dice-grid">
+      {{!-- Populated via JS --}}
+    </div>
+  </div>
+  
+  <hr>
+  
+  <div class="dialog-info">
+    <p class="hint danger"><strong>{{localize "TAVERN.Warning"}}:</strong> {{localize "TAVERN.Bump.FailureEffect"}}</p>
+  </div>
+</form>

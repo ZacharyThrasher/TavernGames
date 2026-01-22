@@ -1,0 +1,25 @@
+<form class="tavern-dialog side-bet-dialog">
+  <p class="dialog-instruction">{{localize "TAVERN.SideBet.Instruction"}}</p>
+  
+  <div class="portrait-grid">
+    {{#each champions}}
+    <div class="portrait-option" data-champion-id="{{id}}" tabindex="0">
+      <img src="{{img}}" alt="{{name}}" />
+      <div class="name">{{name}}</div>
+      <div class="sub-label">{{localize "TAVERN.Visible"}}: {{visibleTotal}}</div>
+    </div>
+    {{/each}}
+  </div>
+  
+  <hr>
+  
+  <div class="form-group">
+    <label>{{localize "TAVERN.SideBet.Amount"}} ({{localize "TAVERN.Min"}} {{ante}}gp)</label>
+    <input type="number" name="betAmount" value="{{ante}}" min="{{ante}}" step="{{ante}}" />
+  </div>
+  
+  <div class="dialog-info">
+    <p class="hint success"><strong>{{localize "TAVERN.SideBet.Win"}}:</strong> 2:1 {{localize "TAVERN.Payout"}}</p>
+    <p class="hint danger"><strong>{{localize "TAVERN.SideBet.Lose"}}:</strong> {{localize "TAVERN.SideBet.LoseEffect"}}</p>
+  </div>
+</form>

@@ -2,6 +2,7 @@ import { MODULE_ID, getState, updateState } from "../../state.js";
 import { getActorForUser } from "./actors.js";
 import { createChatCard } from "../../ui/chat.js";
 import { tavernSocket } from "../../socket.js";
+import { getDieCost } from "../constants.js";
 
 // V2.0: d12 removed, variable costs
 export const VALID_DICE = [20, 10, 8, 6, 4];
@@ -25,18 +26,136 @@ export function isActingAsHouse(userId, state) {
 }
 
 /**
+ * Alias for isActingAsHouse to match previous ad-hoc usage
+ */
+export const isPlayerHouse = isActingAsHouse;
+
+/**
+ * Helper to check if a player is an NPC (GM playing as NPC)
+ */
+export function isPlayerNpc(userId, state) {
+    const user = game.users.get(userId);
+    if (!user?.isGM) return false;
+    const playerData = state?.players?.[userId];
+    return !!playerData?.playingAsNpc;
+}
+
+/**
  * V3.0 Economy: Get the cost for rolling a specific die
  * d20 = ½ ante, d10 = ½ ante, d6/d8 = 1x ante, d4 = 2x ante
+ * @deprecated Use constants.js getDieCost instead
  */
-export function getDieCost(die, ante) {
-    switch (die) {
-        case 20: return Math.floor(ante / 2);     // V3: ½ Ante (not free)
-        case 10: return Math.floor(ante / 2);     // ½ Ante - The Builder
-        case 8: return ante;                      // 1x Ante - Standard
-        case 6: return ante;                      // 1x Ante - Standard
-        case 4: return ante * 2;                  // 2x Ante - Precision
-        default: return ante;
-    }
+export function getDieCostLegacy(die, ante) {
+    return getDieCost(die, ante);
+}
+
+/**
+ * Calculate the cost of an accusation
+ * @param {number} ante 
+ * @returns {number}
+ */
+export function getAccusationCost(ante) {
+    return ante * 2;
+}
+
+/**
+ * Calculate the cost of an inspection
+ * @param {number} pot 
+ * @returns {number}
+ */
+export function getInspectionCost(pot) {
+    return Math.floor(pot / 2);
+}
+
+/* ============================================
+   Targeting Logic helpers (DRY)
+   ============================================ */
+
+/**
+ * Get valid targets for the Profile skill
+ */
+export function getValidProfileTargets(state, userId) {
+    const tableData = state.tableData ?? {};
+    const players = Object.values(state.players ?? {});
+
+    return players
+      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !isActingAsHouse(p.id, state) && !tableData.folded?.[p.id])
+      .map(p => {
+        const user = game.users.get(p.id);
+        const actor = user?.character;
+        const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
+        return { id: p.id, name: p.name, img };
+      });
+}
+
+/**
+ * Get valid targets for the Goad skill
+ */
+export function getValidGoadTargets(state, userId) {
+    const tableData = state.tableData ?? {};
+    const players = Object.values(state.players ?? {});
+
+    return players
+      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !isActingAsHouse(p.id, state))
+      .filter(p => !tableData.sloppy?.[p.id] && !tableData.folded?.[p.id]) // V3: Can't goad Sloppy or Folded
+      .map(p => {
+        const user = game.users.get(p.id);
+        const actor = user?.character;
+        const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
+        const isHolding = tableData.holds?.[p.id] ?? false;
+        return { id: p.id, name: p.name, img, isHolding };
+      });
+}
+
+/**
+ * Get valid targets for the Bump skill
+ */
+export function getValidBumpTargets(state, userId) {
+    const tableData = state.tableData ?? {};
+    const players = Object.values(state.players ?? {});
+
+    return players
+      .filter(p => {
+        const isNotSelf = p.id !== userId;
+        const isNotBusted = !tableData.busts?.[p.id];
+        const isNotHouse = !isActingAsHouse(p.id, state);
+        const isNotHeld = !tableData.holds?.[p.id];
+        const isNotFolded = !tableData.folded?.[p.id];
+        const hasRolls = (tableData.rolls?.[p.id]?.length ?? 0) > 0;
+        return isNotSelf && isNotBusted && isNotHouse && isNotHeld && isNotFolded && hasRolls;
+      })
+      .map(p => {
+        const user = game.users.get(p.id);
+        const actor = user?.character;
+        const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
+        const dice = (tableData.rolls?.[p.id] ?? []).map((r, idx) => ({ 
+            index: idx, 
+            die: r.die, 
+            result: r.result,
+            isPublic: r.public ?? true 
+        }));
+        const isHolding = tableData.holds?.[p.id] ?? false;
+        return { id: p.id, name: p.name, img, dice, isHolding };
+      });
+}
+
+/**
+ * Get valid targets for Accusations
+ */
+export function getValidAccuseTargets(state, userId, accusedThisRound) {
+    const tableData = state.tableData ?? {};
+    const players = Object.values(state.players ?? {});
+    
+    if (accusedThisRound) return [];
+
+    return players
+      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !isActingAsHouse(p.id, state))
+      .map(p => {
+        const user = game.users.get(p.id);
+        const actor = user?.character;
+        const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
+        return { id: p.id, name: p.name, img };
+      });
 }
 
 /**

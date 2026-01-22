@@ -1,0 +1,27 @@
+<div class="tavern-dialog payment-dialog">
+  <p class="payment-title">{{localize "TAVERN.Payment.Required"}}: <strong>{{cost}}gp</strong></p>
+  <p class="payment-purpose">{{purpose}}</p>
+  <hr>
+  <div class="payment-options">
+    <button type="button" class="btn-payment gold {{#unless canAffordGold}}disabled{{/unless}}" data-method="gold" {{#unless canAffordGold}}disabled{{/unless}}>
+      <div class="payment-icon"><i class="fa-solid fa-coins"></i></div>
+      <div class="payment-details">
+        <span class="payment-label">{{localize "TAVERN.Payment.PayGold"}}</span>
+        <span class="payment-cost">{{cost}} gp</span>
+        <span class="payment-balance {{#unless canAffordGold}}insufficient{{/unless}}">({{localize "TAVERN.Payment.Have"}}: {{gp}} gp)</span>
+      </div>
+    </button>
+    
+    <button type="button" class="btn-payment drink" data-method="drink">
+      <div class="payment-icon"><i class="fa-solid fa-beer-mug-empty"></i></div>
+      <div class="payment-details">
+        <span class="payment-label">{{localize "TAVERN.Payment.Tab"}}</span>
+        <span class="payment-cost">{{drinksNeeded}} {{localize "TAVERN.Drink"}}{{#if (gt drinksNeeded 1)}}s{{/if}}</span>
+        <span class="payment-desc">{{localize "TAVERN.Payment.SaveDC"}}</span>
+      </div>
+    </button>
+  </div>
+  <p class="hint centered">
+    <i class="fa-solid fa-info-circle"></i> {{localize "TAVERN.Payment.ShiftHint"}}
+  </p>
+</div>

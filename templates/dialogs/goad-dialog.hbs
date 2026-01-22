@@ -1,0 +1,32 @@
+<form class="tavern-dialog goad-dialog">
+  <p class="dialog-instruction">{{localize "TAVERN.Goad.Instruction"}}</p>
+  
+  <div class="portrait-grid">
+    {{#each targets}}
+    <div class="portrait-option {{#if isHolding}}is-holding{{/if}}" data-target-id="{{id}}" tabindex="0">
+      <img src="{{img}}" alt="{{name}}" />
+      <div class="name">{{name}}</div>
+      {{#if isHolding}}<div class="status-badge holding">{{localize "TAVERN.Status.Holding"}}</div>{{/if}}
+    </div>
+    {{/each}}
+  </div>
+  
+  <div class="form-group">
+    <label>{{localize "TAVERN.Goad.YourSkill"}}</label>
+    <select name="attackerSkill">
+      <option value="itm" {{selected (eq defaultSkill "itm")}}>{{localize "DND5E.SkillItm"}} ({{localize "DND5E.AbilityChaAbbr"}}) {{formatMod itmMod}}</option>
+      <option value="per" {{selected (eq defaultSkill "per")}}>{{localize "DND5E.SkillPer"}} ({{localize "DND5E.AbilityChaAbbr"}}) {{formatMod perMod}}</option>
+    </select>
+  </div>
+  
+  <div class="form-group">
+    <label class="secondary-label">{{localize "TAVERN.Goad.TargetDefense"}} <strong>{{localize "DND5E.SkillIns"}} ({{localize "DND5E.AbilityWisAbbr"}})</strong></label>
+  </div>
+  
+  <hr>
+  
+  <div class="dialog-info">
+    <p class="hint success"><strong>{{localize "TAVERN.Success"}}:</strong> {{localize "TAVERN.Goad.SuccessEffect"}}</p>
+    <p class="hint danger"><strong>{{localize "TAVERN.Backfire"}}:</strong> {{localize "TAVERN.Goad.BackfireEffect"}}</p>
+  </div>
+</form>

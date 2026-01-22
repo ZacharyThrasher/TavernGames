@@ -1,0 +1,22 @@
+<form class="tavern-dialog accuse-dialog">
+  <p class="dialog-instruction">{{localize "TAVERN.Accuse.Instruction" name=targetName}}</p>
+  
+  <div class="dice-grid">
+    {{#each dice}}
+    <div class="die-option" data-die-index="{{index}}" tabindex="0">
+      <i class="fas fa-dice-{{icon}}"></i>
+      <span class="die-result">{{displayResult}}</span>
+      <span class="die-label">{{label}}</span>
+    </div>
+    {{/each}}
+  </div>
+  
+  <hr>
+  
+  <div class="dialog-info">
+    <p><strong>{{localize "TAVERN.Cost"}}:</strong> {{cost}}gp</p>
+    <p class="hint success"><strong>{{localize "TAVERN.Accuse.Success"}}:</strong> {{localize "TAVERN.Accuse.SuccessEffect" bounty=bounty}}</p>
+    <p class="hint danger"><strong>{{localize "TAVERN.Accuse.Failure"}}:</strong> {{localize "TAVERN.Accuse.FailureEffect" cost=cost}}</p>
+    <p class="hint italic">{{localize "TAVERN.Accuse.Note"}}</p>
+  </div>
+</form>
