@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.8.41] - 2026-01-22
+### Hotfix 41
+- **Syntax Fix**: Fixed a syntax error in the Foresight (Hunch) skill that crashed the module on load. Apologies for the rapid-fire updates!
+
 ## [4.8.40] - 2026-01-22
 ### Hotfix 40
 - **Skill Limits**: Implemented a "Once per Match" (Round) limit for **all** bonus skills. 

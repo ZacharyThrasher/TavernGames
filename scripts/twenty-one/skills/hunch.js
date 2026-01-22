@@ -293,23 +293,23 @@ export async function hunch(userId) {
                     : `${userName}'s foresight failed - locked into a Hit.`,
     });
 
-});
 
-tableData.skillUsedThisTurn = true;
 
-// V4.8.40: Mark usage
-const usedSkills = { ...tableData.usedSkills };
-if (!usedSkills[userId]) usedSkills[userId] = {};
-usedSkills[userId] = { ...usedSkills[userId], hunch: true };
-tableData.usedSkills = usedSkills;
+    tableData.skillUsedThisTurn = true;
 
-await updateState({ tableData });
+    // V4.8.40: Mark usage
+    const usedSkills = { ...tableData.usedSkills };
+    if (!usedSkills[userId]) usedSkills[userId] = {};
+    usedSkills[userId] = { ...usedSkills[userId], hunch: true };
+    tableData.usedSkills = usedSkills;
 
-// V4.7.9: Auto-end turn on Failure (Blind Hit)
-// Note: Success/Nat20/Nat1 (Lock) keeps turn active
-if (!success && !isNat20 && !isNat1) {
-    return finishTurn(userId);
-}
+    await updateState({ tableData });
 
-return getState();
+    // V4.7.9: Auto-end turn on Failure (Blind Hit)
+    // Note: Success/Nat20/Nat1 (Lock) keeps turn active
+    if (!success && !isNat20 && !isNat1) {
+        return finishTurn(userId);
+    }
+
+    return getState();
 }
