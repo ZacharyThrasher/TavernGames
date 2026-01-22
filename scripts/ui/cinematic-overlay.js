@@ -88,9 +88,12 @@ export class CinematicOverlay extends HandlebarsApplicationMixin(ApplicationV2) 
         });
 
         // Pass data via context
-        // V4.8.53: Duel now behaves like Staredown (System Event, No Portraits)
+        // Pass data via context
+        // V4.8.56: Versus Mode completely scrapped per user request.
+        // Duel & Staredown = System Event (Text Only)
+        // Skills (Bump/Goad) = Standard (Single Portrait)
         const isSystemEvent = options.type === "DUEL" || options.type === "STAREDOWN";
-        const isVersus = !!targetInfo && !isSystemEvent && options.type !== "DUEL";
+        const isVersus = false; // Always false now
 
         overlay.cutInData = {
             type: options.type,

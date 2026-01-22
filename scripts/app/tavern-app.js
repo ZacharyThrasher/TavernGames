@@ -405,9 +405,15 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       hunchLockedDie,
       canProfile,
       profileTargets,
+      canProfile,
+      profileTargets,
       isDared: tableData.dared?.[userId] ?? false,
+      uiLocked: TavernApp.uiLocked // V4.8.56: UI Lock State
     };
   }
+
+  // V4.8.56: UI Lock State
+  static uiLocked = false;
 
   _buildDiceArray(ante, isBettingPhase) {
     const diceConfig = [

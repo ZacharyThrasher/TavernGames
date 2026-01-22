@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.8.56] - 2026-01-22
+### Hotfix 56
+- **Immediate UI Locking**: Addressed critical race conditions where players could double-click buttons or interact with the board while an action was processing suitable for the speed of the "Twenty-One" game loop. The interface now immediately locks (grays out + no clicks) when you perform an action like Rolling, Holding, or using a Skill, unlocking only when the action completes. This explicitly fixes the "Infinite Roll / Cheat Bypass" exploit.
+- **Bump Style Fix**: Fixed the "Bump" cut-in unexpectedly using the Versus Mode layout. It now correctly uses the Standard (Single Portrait) layout like all other skills.
+
 ## [4.8.55] - 2026-01-22
 ### Hotfix 55
 - **Cut Privacy**: Fixed an issue where the GM was able to see the private value of "The Cut" re-roll. Added the `blind: true` flag to the whispered chat message to ensure it remains secret between the player and the system.
