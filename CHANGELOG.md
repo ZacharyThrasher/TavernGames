@@ -1,5 +1,11 @@
 # Changelog
 
+## [4.8.23] - 2026-01-22
+### Hotfix 23
+- **Bug Fix**: NPCs now correctly pay for dice using the module's NPC wallet system instead of checking the GM's user character.
+- **Rules Enforcement**: The "Hold" button is now disabled when a player is "Dared" (from a Goad), forcing them to roll a d20 or Fold.
+- **Maintenance**: Added debug script `debug-fold-wallet.js` to root for diagnosing specific state issues.
+
 ## [4.8.22] - 2026-01-22
 ### Hotfix 22
 - **Deprecation Fix**: Updated all dialog template rendering to use `foundry.applications.handlebars.renderTemplate` in compliance with Foundry V13 standards.

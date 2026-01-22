@@ -331,6 +331,10 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       pot: state.pot,
       accusationCost,
       status: state.status,
+      // Dared Context
+      isDared: tableData.dared?.[userId] ?? false,
+      canHold: (isBettingPhase || isCutPhase) && myTurn && isInGame && !tableData.busts?.[userId] && !isFolded && !tableData.dared?.[userId],
+      status: state.status,
       isLobby: state.status === "LOBBY",
       isPlaying: state.status === "PLAYING",
       isInspection,
@@ -581,17 +585,31 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const state = getState();
     const ante = game.settings.get(MODULE_ID, "fixedAnte");
     const isBettingPhase = state.tableData?.phase === "betting";
-    const isHouse = isActingAsHouse(game.user.id, state);
-    const cost = (isBettingPhase && !isHouse) ? getDieCost(parseInt(die), ante) : 0;
+    const isHouse = isActingAsHouse(game.user.id, state); // Helpers imported? No, need to verify imports or use static
+    // Actually tavern-app.js imports these.
 
+    // V4 NPC Wallet Fix: Use centralized wallet helper
+    // We need to import getPlayerGold or duplicate logic because imports might be tricky in this class scope if not top-level
+    // Assuming getPlayerGold is available or we check isPlayingAsNpc
+
+    const isPlayingAsNpc = state.players?.[game.user.id]?.playingAsNpc;
+    const isNpc = isPlayingAsNpc;
+
+    const cost = (isBettingPhase && !isHouse) ? getDieCost(parseInt(die), ante) : 0;
     let payWithDrink = false;
 
     if (liquidMode) {
       payWithDrink = true;
     } else {
-      const actor = game.user.character;
-      const gp = actor?.system?.currency?.gp ?? 0;
-      if (cost > 0 && gp < cost) {
+      let currentGold = 0;
+      if (isNpc) {
+        currentGold = state.npcWallets?.[game.user.id] ?? 0;
+      } else {
+        currentGold = game.user.character?.system?.currency?.gp ?? 0;
+      }
+
+      if (cost > 0 && currentGold < cost) {
+        // Should we allow NPC to put on tab? Maybe.
         const confirm = await Dialog.confirm({
           title: "Insufficient Gold",
           content: `<p>You don't have enough gold (${cost}gp).</p><p><strong>Put it on the Tab?</strong></p>`
