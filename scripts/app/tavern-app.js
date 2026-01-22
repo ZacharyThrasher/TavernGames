@@ -215,6 +215,13 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const isBettingPhase = phase === "betting";
     const isCutPhase = phase === "cut";
 
+    // The Cut
+    const theCutPlayer = tableData.theCutPlayer;
+    const isTheCutPlayer = theCutPlayer === userId;
+    const theCutPlayerName = theCutPlayer
+      ? (game.users.get(theCutPlayer)?.character?.name ?? game.users.get(theCutPlayer)?.name ?? "Unknown")
+      : null;
+
     // Action Constraints
     const myRolls = tableData.rolls?.[userId] ?? [];
     const isFolded = tableData.folded?.[userId] ?? false;

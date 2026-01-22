@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.8.4] - 2026-01-22
+### Hotfix 4
+- **App Crash**: Fixed `ReferenceError: isTheCutPlayer is not defined` in `tavern-app.js` caused by missing variable definitions.
+
 ## [4.8.3] - 2026-01-22
 ### Hotfix 3
 - **Socket Error**: Fixed `Uncaught SyntaxError` in `socket.js` by correcting the import path for `playBumpEffect` (moved to `ui/fx.js`).
