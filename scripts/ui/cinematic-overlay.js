@@ -50,22 +50,26 @@ export class CinematicOverlay extends HandlebarsApplicationMixin(ApplicationV2) 
             if (!uid) return null;
             const pData = state.players?.[uid];
             const u = game.users.get(uid);
-            let i, n;
 
-            // Token priority
+            // Priority 1: Table State (Joined Avatar/Name)
+            if (pData) {
+                return {
+                    name: pData.name,
+                    img: pData.avatar || pData.img || "icons/svg/mystery-man.svg"
+                };
+            }
+
+            // Priority 2: Foundry Character/Token
             const act = u?.character;
             const tok = act ? canvas.tokens.placeables.find(t => t.actor?.id === act.id) : null;
-            if (tok) { i = tok.document.texture.src; n = tok.document.name; }
-
-            // State priority
-            if (!i && pData) { i = pData.avatar; n = pData.name; }
+            if (tok) return { img: tok.document.texture.src, name: tok.document.name };
+            if (act) return { img: act.img, name: act.name };
 
             // Fallback
-            if (!i) {
-                i = act?.img || u?.avatar || "icons/svg/mystery-man.svg";
-                n = act?.name || u?.name || "Player";
-            }
-            return { img: i, name: n };
+            return {
+                img: u?.avatar || "icons/svg/mystery-man.svg",
+                name: u?.name || "Player"
+            };
         };
 
         const actorInfo = resolveActorInfo(options.userId);

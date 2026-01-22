@@ -202,12 +202,9 @@ export async function cheat(payload, userId) {
         }
     }
 
-    // V3: Update Heat DC (increases by 2 per cheat, unless Nat 20)
-    // Even if cheat failed (but not fumbled), heat increases!
-    let newHeatDC = heatDC;
-    if (!isNat20) {
-        newHeatDC = heatDC + 2;
-    }
+    // V3: Update Heat DC (increases by 2 per cheat attempt, regardless of outcome)
+    // V4.7.9: Heat goes up no matter what (even on Nat 20)
+    let newHeatDC = heatDC + 2;
     const newCheatsThisRound = (tableData.cheatsThisRound ?? 0) + 1;
 
     const updatedCaught = { ...tableData.caught };

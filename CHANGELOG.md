@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.7.9] - 2026-01-22
+### Mechanics & Visuals Refinement
+- **Visuals Check**: Fixed issue where Intro avatars didn't match Table avatars (prioritized state over token). Suppressed duplicate 3D dice rolls in Chat Cards.
+- **Mechanics**: 
+  - Cheat Heat now increases on *every* attempt (even Nat 20/Failures) as requested.
+  - Failed Foresight (Blind Hit) now automatically ends the player's turn to streamline flow.
+
 ## [4.7.8] - 2026-01-22
 ### Dice So Nice & Visibility Fixes
 - **Dice So Nice Integration**: Added 3D dice rolling during the "Cinematic Pause" of skill cut-ins! Rolls for Goad, Bump, Profile, and Foresight now appear dramatically alongside the cinematic.

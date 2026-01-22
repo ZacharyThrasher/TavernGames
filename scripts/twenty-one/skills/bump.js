@@ -193,7 +193,7 @@ export async function bumpTable(payload, userId) {
          ... (omitted for brevity) ...
     </div>`,
         speaker: { alias: "Tavern Twenty-One" },
-        rolls: [attackerRoll, defenderRoll],
+        // rolls: [attackerRoll, defenderRoll], // V4.7.9: Removed to prevent DSN dupe
     });
     */
 

@@ -199,7 +199,7 @@ export async function goad(payload, userId) {
         ... (omitted for brevity) ...
     </div>`,
         speaker: { alias: "Tavern Twenty-One" },
-        rolls: [attackRoll, defendRoll],
+        // rolls: [attackRoll, defendRoll], // V4.7.9: Removed to prevent DSN dupe
     });
     */
 

@@ -166,7 +166,7 @@ export async function profile(payload, userId) {
             flavor: `${userName} rolled ${d20} + ${invMod} = ${attackTotal} vs passive ${defenseTotal} — <strong style="color: gold;">NAT 20!</strong>`,
             whisper: [userId],
             blind: true, // V3.5.2: Hide from GM-as-NPC
-            rolls: [roll],
+            // rolls: [roll], // V4.7.9: Suppress DSN
         });
 
         /* Suppressed Public Card
@@ -190,7 +190,7 @@ export async function profile(payload, userId) {
             flavor: `Investigation vs Deception — ${userName} got exposed!`,
             whisper: [targetId],
             blind: true, // V3.5.2: Hide from GM-as-NPC
-            rolls: [roll],
+            // rolls: [roll], // V4.7.9: Suppress DSN
         });
 
         await ChatMessage.create({
@@ -201,7 +201,7 @@ export async function profile(payload, userId) {
             flavor: `${userName} rolled ${d20} + ${invMod} = ${attackTotal} — <strong style="color: #ff4444;">NAT 1!</strong>`,
             whisper: [userId],
             blind: true, // V3.5.2: Hide from GM-as-NPC
-            rolls: [roll],
+            // rolls: [roll], // V4.7.9: Suppress DSN
         });
 
         /* Suppressed Public Card

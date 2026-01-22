@@ -112,7 +112,7 @@ export async function hunch(userId) {
             flavor: `${userName} rolled ${d20} + ${wisMod} = ${rollTotal} (DC ${HUNCH_DC}) — <strong style="color: gold;">NAT 20!</strong>`,
             whisper: [userId],
             blind: true, // V3.5.2: Hide from GMs not in whisper list
-            rolls: [roll],
+            // rolls: [roll], // V4.7.9: Suppress DSN
         });
 
         await createChatCard({
@@ -135,7 +135,7 @@ export async function hunch(userId) {
             flavor: `${userName} rolled ${d20} + ${wisMod} = ${rollTotal} — <strong style="color: #ff4444;">NAT 1!</strong>`,
             whisper: [userId],
             blind: true, // V3.5.2: Hide from GMs not in whisper list
-            rolls: [roll],
+            // rolls: [roll], // V4.7.9: Suppress DSN
         });
 
         await createChatCard({
@@ -168,7 +168,7 @@ export async function hunch(userId) {
             flavor: `${userName} rolled ${d20} + ${wisMod} = ${rollTotal} vs DC ${HUNCH_DC} — Success!`,
             whisper: [userId],
             blind: true, // V3.5.2: Hide from GMs not in whisper list
-            rolls: [roll],
+            // rolls: [roll], // V4.7.9: Suppress DSN
         });
 
         await createChatCard({
@@ -288,5 +288,7 @@ export async function hunch(userId) {
 
     tableData.skillUsedThisTurn = true;
 
+    // V4.7.9: Auto-end turn on Failure (Blind Hit)
+    await tavernSocket.executeAsGM("passTurn", userId);
     return updateState({ tableData });
 }
