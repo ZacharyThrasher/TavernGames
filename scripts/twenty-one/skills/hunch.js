@@ -11,6 +11,7 @@
 
 import { MODULE_ID, getState, updateState } from "../../state.js";
 import { tavernSocket } from "../../socket.js";
+import { showPublicRoll } from "../../dice.js";
 import { HUNCH_DC, HUNCH_THRESHOLDS, VALID_DICE, emptyTableData } from "../constants.js";
 import { createChatCard, addHistoryEntry } from "../../ui/chat.js";
 
@@ -65,8 +66,8 @@ export async function hunch(userId) {
     // V4.7.1: Visual Cut-In
     tavernSocket.executeForEveryone("showSkillCutIn", "FORESIGHT", userId);
 
-    // V4.7.7: Foresight Pause
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    // V4.7.7: Foresight Pause (Moved down)
+    // await new Promise(resolve => setTimeout(resolve, 3000));
 
     const actor = getActorForUser(userId);
     const userName = actor?.name ?? game.users.get(userId)?.name ?? "Unknown";
@@ -79,6 +80,10 @@ export async function hunch(userId) {
     const d20 = roll.total;
     const isNat20 = d20Raw === 20;
     const isNat1 = d20Raw === 1;
+
+    // V4.7.8: Dice So Nice & Sync Pause
+    showPublicRoll(roll, userId);
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
     const rollTotal = d20 + wisMod;
     const success = !isNat1 && rollTotal >= HUNCH_DC;

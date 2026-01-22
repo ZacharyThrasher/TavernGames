@@ -14,6 +14,7 @@ import { getState, updateState, emptyTableData } from "../../state.js";
 import { getActorForUser, notifyUser } from "../utils/actors.js";
 import { createChatCard, addHistoryEntry } from "../../ui/chat.js";
 import { tavernSocket } from "../../socket.js";
+import { showPublicRoll } from "../../dice.js";
 
 export async function profile(payload, userId) {
     const state = getState();
@@ -93,8 +94,8 @@ export async function profile(payload, userId) {
     // V4.7.1: Visual Cut-In
     tavernSocket.executeForEveryone("showSkillCutIn", "PROFILE", userId, targetId);
 
-    // V4.7.7: Analysis Pause
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    // V4.7.7: Analysis Pause (Moved down)
+    // await new Promise(resolve => setTimeout(resolve, 3000));
 
     const actor = getActorForUser(userId);
     const targetActor = getActorForUser(targetId);
@@ -108,6 +109,10 @@ export async function profile(payload, userId) {
     const d20 = roll.total;
     const isNat20 = d20Raw === 20;
     const isNat1 = d20Raw === 1;
+
+    // V4.7.8: Dice So Nice & Sync Pause
+    showPublicRoll(roll, userId);
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
     const invMod = actor?.system?.skills?.inv?.total ?? 0;
     const attackTotal = d20 + invMod;

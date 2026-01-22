@@ -18,6 +18,7 @@ import { deductFromActor, getActorForUser, notifyUser } from "../utils/actors.js
 import { createChatCard } from "../../ui/chat.js";
 import { emptyTableData } from "../constants.js";
 import { tavernSocket } from "../../socket.js";
+import { showPublicRoll } from "../../dice.js";
 
 /**
  * Goad another player during the betting phase.
@@ -123,8 +124,8 @@ export async function goad(payload, userId) {
     // V4.7.1: Visual Cut-In
     tavernSocket.executeForEveryone("showSkillCutIn", "GOAD", userId, targetId);
 
-    // V4.7.7: Cinematic Pause (Let the intro breathe!)
-    await new Promise(resolve => setTimeout(resolve, 3500));
+    // V4.7.7: Cinematic Pause (Moved below rolls)
+    // await new Promise(resolve => setTimeout(resolve, 3500));
 
     // Get actors
     const attackerActor = getActorForUser(userId);
@@ -147,6 +148,9 @@ export async function goad(payload, userId) {
     const attackMod = attackerActor?.system?.skills?.[attackerSkill]?.total ?? 0;
     const attackTotal = attackD20 + attackMod;
 
+    // V4.7.8: Dice So Nice
+    showPublicRoll(attackRoll, userId);
+
     // V3: Check for Nat 20/Nat 1
     const isNat20 = attackD20Raw === 20;
     const isNat1 = attackD20Raw === 1;
@@ -157,6 +161,12 @@ export async function goad(payload, userId) {
     const defendD20 = defendRoll.total;
     const defendMod = defenderActor?.system?.skills?.ins?.total ?? 0;
     const defendTotal = defendD20 + defendMod;
+
+    // V4.7.8: Dice So Nice
+    showPublicRoll(defendRoll, targetId);
+
+    // V4.7.7: Cinematic Pause (Sync with Dice3D)
+    await new Promise(resolve => setTimeout(resolve, 3500));
 
     // Determine winner: attacker must beat (not tie) defender
     // V3: Nat 1 always fails regardless of total

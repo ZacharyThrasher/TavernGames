@@ -3401,3 +3401,10 @@
     transform: translateY(0);
   }
 }
+/* V4.7.8 Hotfix Overrides */
+.cinematic-cut-in.versus-mode .cinematic-content {
+  padding: 0 20% !important; /* Safer padding for avatars */
+}
+.cinematic-cut-in.versus-mode .portrait-container {
+  opacity: 1 !important; /* Ensure visibility fallback */
+}

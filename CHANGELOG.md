@@ -1,5 +1,11 @@
 # Changelog
 
+## [4.7.8] - 2026-01-22
+### Dice So Nice & Visibility Fixes
+- **Dice So Nice Integration**: Added 3D dice rolling during the "Cinematic Pause" of skill cut-ins! Rolls for Goad, Bump, Profile, and Foresight now appear dramatically alongside the cinematic.
+- **Avatar Visibility**: Fixed a CSS issue where portraits were pushed off-screen in the Intro Cut-In. Avatars are now correctly centered and visible.
+- **Polish**: Forced opacity overrides to prevent "ghost" cut-ins if animations lag.
+
 ## [4.7.7] - 2026-01-22
 ### Dramatic Timing Update
 - **Showdown Sequencing**: Implemented a cinematic pause (3-4 seconds) between the "Action" cut-in (e.g., "GOADED!", "BUMP!") and the "Result" overlay. This allows the action to "breathe" and builds suspense before the outcome is revealed.

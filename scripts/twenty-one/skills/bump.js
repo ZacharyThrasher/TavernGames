@@ -17,6 +17,7 @@ import { deductFromActor, getActorForUser, notifyUser } from "../utils/actors.js
 import { createChatCard } from "../../ui/chat.js";
 import { emptyTableData } from "../constants.js";
 import { tavernSocket } from "../../socket.js";
+import { showPublicRoll } from "../../dice.js";
 
 /**
  * Bump the table to force a die reroll.
@@ -127,8 +128,8 @@ export async function bumpTable(payload, userId) {
     // V4.7.4: Bump Showdown Cut-In
     tavernSocket.executeForEveryone("showSkillCutIn", "BUMP", userId, targetId);
 
-    // V4.7.7: Impact Pause
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    // V4.7.7: Impact Pause (Moved below rolls for Dice3D sync)
+    // await new Promise(resolve => setTimeout(resolve, 3000));
 
     const ante = game.settings.get(MODULE_ID, "fixedAnte");
 
@@ -152,6 +153,11 @@ export async function bumpTable(payload, userId) {
     const defenderD20 = defenderRoll.total;
     const defenderStrMod = targetActor?.system?.abilities?.str?.mod ?? 0;
     const defenderTotal = defenderD20 + defenderStrMod;
+
+    // V4.7.8: Dice So Nice & Sync Pause
+    showPublicRoll(attackerRoll, userId);
+    showPublicRoll(defenderRoll, targetId);
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
     // V3: Check for Nat 20/Nat 1
     const isNat20 = attackerD20Raw === 20;
