@@ -1,5 +1,11 @@
 # Changelog
 
+## [4.7.7] - 2026-01-22
+### Dramatic Timing Update
+- **Showdown Sequencing**: Implemented a cinematic pause (3-4 seconds) between the "Action" cut-in (e.g., "GOADED!", "BUMP!") and the "Result" overlay. This allows the action to "breathe" and builds suspense before the outcome is revealed.
+- **Affected Skills**: Goad, Table Bump, Profile, and Foresight.
+- **Feel**: Matches the "Video Game" aesthetic (Persona/Ace Attorney style) where the declaration of an action is distinct from its resolution.
+
 ## [4.7.6] - 2026-01-22
 ### Premium Visuals Update
 - **Result Overlays**: Replaced standard chat cards for Goad, Bump, and Profile with dramatic **Result Cinematic Cut-Ins**. These show the roll outcome directly on screen in the Showdown layout.

@@ -123,6 +123,9 @@ export async function goad(payload, userId) {
     // V4.7.1: Visual Cut-In
     tavernSocket.executeForEveryone("showSkillCutIn", "GOAD", userId, targetId);
 
+    // V4.7.7: Cinematic Pause (Let the intro breathe!)
+    await new Promise(resolve => setTimeout(resolve, 3500));
+
     // Get actors
     const attackerActor = getActorForUser(userId);
     const defenderActor = getActorForUser(targetId);

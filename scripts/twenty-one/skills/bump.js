@@ -127,6 +127,9 @@ export async function bumpTable(payload, userId) {
     // V4.7.4: Bump Showdown Cut-In
     tavernSocket.executeForEveryone("showSkillCutIn", "BUMP", userId, targetId);
 
+    // V4.7.7: Impact Pause
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
     const ante = game.settings.get(MODULE_ID, "fixedAnte");
 
     // Get actor info

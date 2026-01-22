@@ -65,6 +65,9 @@ export async function hunch(userId) {
     // V4.7.1: Visual Cut-In
     tavernSocket.executeForEveryone("showSkillCutIn", "FORESIGHT", userId);
 
+    // V4.7.7: Foresight Pause
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
     const actor = getActorForUser(userId);
     const userName = actor?.name ?? game.users.get(userId)?.name ?? "Unknown";
     const wisMod = actor?.system?.abilities?.wis?.mod ?? 0;

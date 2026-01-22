@@ -93,6 +93,9 @@ export async function profile(payload, userId) {
     // V4.7.1: Visual Cut-In
     tavernSocket.executeForEveryone("showSkillCutIn", "PROFILE", userId, targetId);
 
+    // V4.7.7: Analysis Pause
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
     const actor = getActorForUser(userId);
     const targetActor = getActorForUser(targetId);
     const userName = actor?.name ?? game.users.get(userId)?.name ?? "Unknown";
