@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.7.2] - 2026-01-22
+### Fixed
+- **Bust Cut-In Triggers**: Fixed an issue where the new Bust Cut-In/Fanfare wasn't triggering for normal gameplay busts (only triggered on Hunch fails). Now it consistently plays for any bust event.
+
 ## [4.7.1] - 2026-01-22
 ### Improvements & Fixes
 - **Nat 20 Mechanic**: Rolling a Natural 20 on a d20 now instantly sets your total to 21 (instead of adding 21), allowing for clutch saves.

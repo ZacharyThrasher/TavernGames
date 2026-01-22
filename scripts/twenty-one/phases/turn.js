@@ -148,6 +148,8 @@ export async function submitRoll(payload, userId) {
   } else if (isBust) {
     // In opening phase, bust immediately (no cheat allowed)
     busts[userId] = true;
+    // Trigger fanfare
+    tavernSocket.executeForEveryone("showBustFanfare", userId);
   }
 
   const userName = game.users.get(userId)?.name ?? "Unknown";
@@ -363,6 +365,8 @@ export async function finishTurn(userId) {
         total: currentTotal,
         message: `${userName} BUSTED with ${currentTotal}!`,
       });
+      // Trigger fanfare
+      await tavernSocket.executeForEveryone("showBustFanfare", userId);
     }
     // Clear the pending bust flag
     updatedTable.pendingBust = null;
