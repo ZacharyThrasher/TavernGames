@@ -3086,15 +3086,15 @@
 .cinematic-cut-in.versus-mode .portrait-container.left {
   left: 5vw;
   right: auto;
-  transform: translateX(-100%);
-  animation: slide-in-left 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
+  transform: none;
+  /* Removed animation transform */
 }
 
 .cinematic-cut-in.versus-mode .portrait-container.right {
   right: 5vw;
   left: auto;
-  transform: translateX(100%);
-  animation: slide-in-right 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
+  transform: none;
+  /* Removed animation transform */
 }
 
 @keyframes slide-in-left {

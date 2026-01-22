@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.8.28] - 2026-01-22
+### Hotfix 28
+- **Bug Fix**: Players who are "Dared" (forced to roll d20) can no longer use the Cheat/Sleight of Hand skill on that roll. The prompt is now skipped, closing the loop on the "Dared" condition mechanics.
+- **UI Fix**: Simplified the Versus Mode (Showdown) cut-in animation. Removed the sliding entrance effect which was causing avatars to remain invisible on some resolutions/browsers. Avatars now appear instantly to ensure visibility.
+
 ## [4.8.27] - 2026-01-22
 ### Hotfix 27
 - **Bug Fix**: Added server-side validation to the `hold` action to forcefully reject Dared players, ensuring the rule is enforced even if the UI client is bypassed.

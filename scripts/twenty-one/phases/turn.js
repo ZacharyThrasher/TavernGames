@@ -288,7 +288,13 @@ export async function submitRoll(payload, userId) {
 
     return updateState({ tableData: updatedTable });
   } else {
-    updatedTable.pendingAction = "cheat_decision";
+    // V4: If Dared, skip cheat decision (forced roll, no tricks)
+    if (tableData.dared?.[userId]) {
+      updatedTable.pendingAction = null;
+      await finishTurn(userId); // Auto-finish turn since they can't cheat
+    } else {
+      updatedTable.pendingAction = "cheat_decision";
+    }
 
     const rolling = { ...updatedTable.rolling };
     delete rolling[userId];
