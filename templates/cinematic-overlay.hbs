@@ -30,14 +30,18 @@
         </div>
         {{else}}
         {{!-- Classic Single Mode --}}
+        {{#if img}}
         <div class="portrait-container single">
             <img src="{{img}}" alt="{{name}}" class="portrait-img" />
             <div class="portrait-flash"></div>
         </div>
+        {{/if}}
 
         <div class="text-container">
             <h1 class="cinematic-title">{{text}}</h1>
+            {{#if img}}
             <h2 class="cinematic-subtitle">{{name}}</h2>
+            {{/if}}
         </div>
         {{/if}}
     </div>

@@ -90,8 +90,8 @@ export class CinematicOverlay extends HandlebarsApplicationMixin(ApplicationV2) 
         // Pass data via context
         overlay.cutInData = {
             type: options.type,
-            img: actorInfo?.img ?? "icons/svg/mystery-man.svg",
-            name: actorInfo?.name ?? "",
+            img: actorInfo?.img, // V4.8.49: Allow null (no portrait mode)
+            name: actorInfo?.name || "",
             targetImg: targetInfo?.img,
             targetName: targetInfo?.name,
             isVersus: !!targetInfo,

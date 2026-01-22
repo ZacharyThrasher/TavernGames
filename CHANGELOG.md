@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.8.49] - 2026-01-22
+### Hotfix 49
+- **System Event Polish**: Updated the Cinematic Overlay to hide the default "Mystery Man" portrait for system-level events (like The Staredown). Now, events without a connected player will purely show the stylized text and color stripe, making for a cleaner, more dramatic presentation.
+
 ## [4.8.48] - 2026-01-22
 ### Hotfix 48
 - **Staredown Crash Fix**: Resolved a `TypeError` that occurred when triggering the "The Staredown" cinematic. The system was crashing because it tried to fetch a player portrait for a global event (which has no specific player). It now correctly handles these "system events" by falling back to a safe default instead of crashing.
