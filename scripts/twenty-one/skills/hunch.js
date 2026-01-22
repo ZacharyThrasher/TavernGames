@@ -13,7 +13,7 @@ import { MODULE_ID, getState, updateState } from "../../state.js";
 import { HUNCH_DC, HUNCH_THRESHOLDS, VALID_DICE, emptyTableData } from "../constants.js";
 import { createChatCard, addHistoryEntry } from "../../ui/chat.js";
 
-import { getActorForUser, getGMUserIds, notifyUser } from "../utils/actors.js";
+import { getActorForUser, notifyUser } from "../utils/actors.js";
 
 
 export async function hunch(userId) {
@@ -76,7 +76,7 @@ export async function hunch(userId) {
     const rollTotal = d20 + wisMod;
     const success = !isNat1 && rollTotal >= HUNCH_DC;
 
-    const gmIds = getGMUserIds();
+
 
     if (isNat20) {
         // Nat 20 = Learn exact value for each die type
@@ -98,7 +98,7 @@ export async function hunch(userId) {
         d10: ${predictions[10]}, d20: ${predictions[20]}</em>
       </div>`,
             flavor: `${userName} rolled ${d20} + ${wisMod} = ${rollTotal} (DC ${HUNCH_DC}) — <strong style="color: gold;">NAT 20!</strong>`,
-            whisper: [userId, ...gmIds],
+            whisper: [userId],
             blind: true, // V3.5.2: Hide from GMs not in whisper list
             rolls: [roll],
         });
@@ -121,7 +121,7 @@ export async function hunch(userId) {
         <br><em>You MUST roll a d20 before your turn ends.</em>
       </div>`,
             flavor: `${userName} rolled ${d20} + ${wisMod} = ${rollTotal} — <strong style="color: #ff4444;">NAT 1!</strong>`,
-            whisper: [userId, ...gmIds],
+            whisper: [userId],
             blind: true, // V3.5.2: Hide from GMs not in whisper list
             rolls: [roll],
         });
@@ -154,7 +154,7 @@ export async function hunch(userId) {
         d10: ${predictions[10]}, d20: ${predictions[20]}</em>
       </div>`,
             flavor: `${userName} rolled ${d20} + ${wisMod} = ${rollTotal} vs DC ${HUNCH_DC} — Success!`,
-            whisper: [userId, ...gmIds],
+            whisper: [userId],
             blind: true, // V3.5.2: Hide from GMs not in whisper list
             rolls: [roll],
         });
@@ -191,12 +191,56 @@ export async function hunch(userId) {
         const currentBlindDice = tableData.blindDice?.[userId] ?? [];
         const updatedBlindDice = { ...tableData.blindDice, [userId]: [...currentBlindDice, currentRolls.length] };
 
-        // Check for bust (hidden from player until reveal)
+        // V4.6: If blind die causes bust, reveal it immediately and trigger bust fanfare
+        if (newTotal > 21) {
+            // Reveal the blind die
+            newDie.blind = false;
+
+            await ChatMessage.create({
+                content: `<div class="tavern-skill-result failure">
+            <strong>Bad Read - BUST!</strong><br>
+            Your instincts betray you - you rolled a <strong>d${blindDieType}: ${blindValue}</strong>!<br>
+            <em>Total: ${newTotal} - BUST!</em>
+          </div>`,
+                flavor: `${userName} rolled ${d20} + ${wisMod} = ${rollTotal} vs DC ${HUNCH_DC} — Failed!`,
+                whisper: [userId],
+                rolls: [roll],
+            });
+
+            // Trigger bust fanfare for everyone
+            try {
+                const { tavernSocket } = await import("../../socket.js");
+                await tavernSocket.executeForEveryone("showBustFanfare", userId);
+            } catch (e) { console.warn("Could not show bust fanfare:", e); }
+        } else {
+
+            await ChatMessage.create({
+                content: `<div class="tavern-skill-result failure">
+        <strong>Bad Read</strong><br>
+        Your instincts betray you - you commit to a blind gamble!
+        <br><em>A d${blindDieType} has been rolled... but you can't see the result!</em>
+      </div>`,
+                flavor: `${userName} rolled ${d20} + ${wisMod} = ${rollTotal} vs DC ${HUNCH_DC} — Failed!`,
+                whisper: [userId],
+                blind: true,
+                rolls: [roll],
+            });
+
+            await createChatCard({
+                title: "Foresight",
+                subtitle: `${userName}'s intuition fails`,
+                message: newTotal > 21
+                    ? `A <strong>Blind Die</strong> reveals their doom! d${blindDieType}: ${blindValue} - BUST!`
+                    : `Committed to a <strong>Blind Die</strong>! A d${blindDieType} was rolled but the result is hidden...`,
+                icon: newTotal > 21 ? "fa-solid fa-skull" : "fa-solid fa-question",
+            });
+        }
+
+        // Update tableData after the if/else
         const updatedBusts = { ...tableData.busts };
         if (newTotal > 21) {
             updatedBusts[userId] = true;
         }
-
         tableData = {
             ...tableData,
             rolls: updatedRolls,
@@ -204,38 +248,6 @@ export async function hunch(userId) {
             blindDice: updatedBlindDice,
             busts: updatedBusts,
         };
-
-        // Whisper the actual value to GM only
-        await ChatMessage.create({
-            content: `<div class="tavern-gm-alert">
-        <strong>BLIND DIE</strong><br>
-        ${userName}'s failed Foresight forced a blind d${blindDieType}.<br>
-        <em>Hidden value: <strong>${blindValue}</strong></em>
-        ${newTotal > 21 ? '<br><span style="color: red;">HIDDEN BUST!</span>' : ''}
-      </div>`,
-            whisper: gmIds,
-            speaker: { alias: "Tavern Twenty-One" },
-        });
-
-        await ChatMessage.create({
-            content: `<div class="tavern-skill-result failure">
-        <strong>Bad Read</strong><br>
-        Your instincts betray you - you commit to a blind gamble!
-        <br><em>A d${blindDieType} has been rolled... but you can't see the result!</em>
-      </div>`,
-            flavor: `${userName} rolled ${d20} + ${wisMod} = ${rollTotal} vs DC ${HUNCH_DC} — Failed!`,
-            whisper: [userId],
-            blind: true,
-            rolls: [roll],
-        });
-
-        await createChatCard({
-            title: "Foresight",
-            subtitle: `${userName}'s intuition fails`,
-            message: `Committed to a <strong>Blind Die</strong>! A d${blindDieType} was rolled but the result is hidden...`,
-            icon: "fa-solid fa-question",
-        });
-        await playSound("lose");
     }
 
     await addHistoryEntry({

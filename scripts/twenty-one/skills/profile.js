@@ -11,7 +11,7 @@
 
 import { MODULE_ID } from "../constants.js";
 import { getState, updateState, emptyTableData } from "../../state.js";
-import { getActorForUser, getGMUserIds, notifyUser } from "../utils/actors.js";
+import { getActorForUser, notifyUser } from "../utils/actors.js";
 import { createChatCard, addHistoryEntry } from "../../ui/chat.js";
 
 export async function profile(payload, userId) {
@@ -115,13 +115,13 @@ export async function profile(payload, userId) {
     const targetCheated = !!tableData.cheaters?.[targetId];
     const targetCheatDice = tableData.cheaters?.[targetId]?.cheats?.map(c => c.dieIndex + 1) ?? [];
     const myCheated = !!tableData.cheaters?.[userId];
-    
+
     // Counter-intelligence info (for failure)
     const myRolls = tableData.rolls[userId] ?? [];
     const myHoleDie = myRolls.find(r => !r.public);
     const myHoleValue = myHoleDie?.result ?? "?";
 
-    const gmIds = getGMUserIds();
+
 
     if (isNat20) {
         let message = `<span style="font-size: 1.2em;">Cheated: <strong>${targetCheated ? "YES" : "NO"}</strong></span>`;
@@ -136,7 +136,7 @@ export async function profile(payload, userId) {
         <strong>Perfect Read!</strong><br>${message}
       </div>`,
             flavor: `${userName} rolled ${d20} + ${invMod} = ${attackTotal} vs passive ${defenseTotal} — <strong style="color: gold;">NAT 20!</strong>`,
-            whisper: [userId, ...gmIds],
+            whisper: [userId],
             blind: true, // V3.5.2: Hide from GM-as-NPC
             rolls: [roll],
         });
@@ -158,7 +158,7 @@ export async function profile(payload, userId) {
         <strong>Counter-Read!</strong><br>${message}
       </div>`,
             flavor: `Investigation vs Deception — ${userName} got exposed!`,
-            whisper: [targetId, ...gmIds],
+            whisper: [targetId],
             blind: true, // V3.5.2: Hide from GM-as-NPC
             rolls: [roll],
         });
@@ -169,7 +169,7 @@ export async function profile(payload, userId) {
         Your poker face cracked. ${targetName} read YOU instead!
       </div>`,
             flavor: `${userName} rolled ${d20} + ${invMod} = ${attackTotal} — <strong style="color: #ff4444;">NAT 1!</strong>`,
-            whisper: [userId, ...gmIds],
+            whisper: [userId],
             blind: true, // V3.5.2: Hide from GM-as-NPC
             rolls: [roll],
         });
@@ -183,10 +183,10 @@ export async function profile(payload, userId) {
 
     } else if (success) {
         // Standard Success: Boolean Yes/No only
-        const resultText = targetCheated 
-            ? `<span style="color: #ff6666; font-weight: bold;">YES</span>` 
+        const resultText = targetCheated
+            ? `<span style="color: #ff6666; font-weight: bold;">YES</span>`
             : `<span style="color: #88ff88; font-weight: bold;">NO</span>`;
-            
+
         await ChatMessage.create({
             content: `<div class="tavern-skill-result success">
         <strong>Profile Success</strong><br>
@@ -194,7 +194,7 @@ export async function profile(payload, userId) {
         Answer: ${resultText}
       </div>`,
             flavor: `${userName} rolled ${d20} + ${invMod} = ${attackTotal} vs passive ${defenseTotal} — Success!`,
-            whisper: [userId, ...gmIds],
+            whisper: [userId],
             blind: true, // V3.5.2: Hide from GM-as-NPC
             rolls: [roll],
         });
@@ -213,7 +213,7 @@ export async function profile(payload, userId) {
         You can't get a read on them.
       </div>`,
             flavor: `${userName} rolled ${d20} + ${invMod} = ${attackTotal} vs passive ${defenseTotal} — Failed!`,
-            whisper: [userId, ...gmIds],
+            whisper: [userId],
             blind: true, // V3.5.2: Hide from GM-as-NPC
             rolls: [roll],
         });

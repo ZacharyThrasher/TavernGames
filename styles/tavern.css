@@ -2791,3 +2791,44 @@
     opacity: 0;
   }
 }
+
+/* V4.6: Bust Banner */
+.tavern-bust-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(30, 0, 0, 0.75);
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+  animation: banner-fade-in 0.3s ease-out;
+}
+
+.tavern-bust-banner .banner-content {
+  text-align: center;
+  color: #ff4444;
+  text-shadow: 0 0 20px rgba(255, 50, 50, 0.5);
+  transform: scale(0.5);
+  animation: banner-pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.tavern-bust-banner .banner-title {
+  font-size: 6em;
+  font-weight: 900;
+  font-family: "Modesto Condensed", "Palatino Linotype", serif;
+  background: linear-gradient(to bottom, #fff 0%, #ff4444 50%, #880000 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.8));
+}
+
+.tavern-bust-banner .banner-subtitle {
+  font-size: 2.5em;
+  color: #ffcccc;
+  margin-top: -10px;
+}

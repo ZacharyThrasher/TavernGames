@@ -48,15 +48,14 @@ export async function useCut(userId, reroll = false) {
       icon: "fa-solid fa-scissors",
     });
 
-    // V3.4: Whisper actual values only to the cut player and GM
-    const gmIds = state.turnOrder.filter(id => game.users.get(id)?.isGM);
+    // V4.6: Whisper actual values only to the cut player (no GM privilege)
     await ChatMessage.create({
       content: `<div class="tavern-skill-result success">
         <strong>The Cut</strong><br>
         Your hole die: ${oldValue} → <strong>${roll.total}</strong><br>
         <em>New Total: ${tableData.totals[userId]}</em>
       </div>`,
-      whisper: [userId, ...gmIds],
+      whisper: [userId],
       speaker: { alias: "Tavern Twenty-One" },
     });
 
@@ -190,7 +189,7 @@ async function resolveDuel() {
 
   if (winners.length > 1) {
     const tiedNames = winners.map(w => w.playerName).join(" vs ");
-    
+
     await createChatCard({
       title: "Sudden Death!",
       subtitle: "The duel continues...",

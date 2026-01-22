@@ -87,11 +87,11 @@ Hooks.once("ready", async () => {
 export function showVictoryFanfare(winnerId) {
   const winnerName = game.users.get(winnerId)?.name ?? "Winner";
 
-  // 1. Screenshake
-  const appElement = document.getElementById("tavern-dice-master-app");
-  if (appElement) {
-    appElement.classList.add("tavern-shake");
-    setTimeout(() => appElement.classList.remove("tavern-shake"), 500);
+  // 1. Screenshake - target the app window element
+  const appWindow = document.querySelector(".tavern-dice-master.application");
+  if (appWindow) {
+    appWindow.classList.add("tavern-shake");
+    setTimeout(() => appWindow.classList.remove("tavern-shake"), 500);
   }
 
   // 2. Victory Banner Overlay
@@ -108,15 +108,40 @@ export function showVictoryFanfare(winnerId) {
   }, 4000); // Show for 4s then fade
 }
 
+/* V4.6: Visual Bust Fanfare */
+export function showBustFanfare(userId) {
+  const userName = game.users.get(userId)?.name ?? "Player";
+
+  // 1. Screenshake
+  const appWindow = document.querySelector(".tavern-dice-master.application");
+  if (appWindow) {
+    appWindow.classList.add("tavern-shake");
+    setTimeout(() => appWindow.classList.remove("tavern-shake"), 500);
+  }
+
+  // 2. Bust Banner Overlay
+  const banner = $(`<div class="tavern-bust-banner">
+    <div class="banner-content">
+      <div class="banner-title">BUST!</div>
+      <div class="banner-subtitle">${userName} went over 21!</div>
+    </div>
+  </div>`);
+
+  $("body").append(banner);
+  setTimeout(() => {
+    banner.fadeOut(1000, () => banner.remove());
+  }, 3000); // Show for 3s then fade
+}
+
 /* V4.2: Bump Impact Effect */
 export function playBumpEffect(targetId) {
   if (!game.tavernDiceMaster?.app?.rendered) return;
 
-  // Find the seat using the data attribute we added
-  const appElement = document.getElementById("tavern-dice-master-app");
-  if (!appElement) return;
+  // Find the app window using correct selector
+  const appWindow = document.querySelector(".tavern-dice-master.application");
+  if (!appWindow) return;
 
-  const seat = appElement.querySelector(`.player-seat[data-user-id="${targetId}"]`);
+  const seat = appWindow.querySelector(`.player-seat[data-user-id="${targetId}"]`);
   if (seat) {
     seat.classList.add("tavern-shake-heavy");
 
@@ -129,18 +154,18 @@ export function playBumpEffect(targetId) {
   }
 
   // Also shake the main window slightly for everyone to feel it
-  appElement.classList.add("tavern-shake");
-  setTimeout(() => appElement.classList.remove("tavern-shake"), 300);
+  appWindow.classList.add("tavern-shake");
+  setTimeout(() => appWindow.classList.remove("tavern-shake"), 300);
 }
 
 /* V4.2: Floating Gold Text */
 export function showFloatingText(userId, amount) {
   if (!game.tavernDiceMaster?.app?.rendered) return;
 
-  const appElement = document.getElementById("tavern-dice-master-app");
-  if (!appElement) return;
+  const appWindow = document.querySelector(".tavern-dice-master.application");
+  if (!appWindow) return;
 
-  const seat = appElement.querySelector(`.player-seat[data-user-id="${userId}"]`);
+  const seat = appWindow.querySelector(`.player-seat[data-user-id="${userId}"]`);
   if (!seat) return;
 
   // Format text: +10gp or -10gp
