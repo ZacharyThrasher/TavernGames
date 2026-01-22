@@ -12,7 +12,7 @@
  */
 
 import { MODULE_ID, getState, updateState, addHistoryEntry } from "../../state.js";
-import { deductFromActor, getActorForUser, getGMUserIds, notifyUser } from "../utils/actors.js";
+import { deductFromActor, getActorForUser, notifyUser } from "../utils/actors.js";
 import { createChatCard } from "../../ui/chat.js";
 import { emptyTableData } from "../constants.js";
 
@@ -153,16 +153,25 @@ export async function cheat(payload, userId) {
         flavorText += ` <span style='color: #888;'>Success (${dcType}: ${rollTotal})</span>`;
     }
 
-    // Whisper to player AND GM - use rolls array to trigger 3D dice (Dice So Nice)
-    const gmIds = getGMUserIds();
-    
-    // V4: No chat message for the roll itself (per user request to "remove cheat chat entirely")
-    // Just notify the player via UI so they know if they succeeded or failed
-    if (!fumbled) {
-        const resultMsg = success ? "Cheat Successful" : "Cheat Failed (Heat increased)";
-        // Using notifyUser helper would be better if imported, but ui.notifications is safe here
-        ui.notifications.info(`${skillName}: ${resultMsg}`);
-    }
+    // V4.4: Send proper feedback to the cheating player via whispered chat
+    const userName = game.users.get(userId)?.name ?? "Unknown";
+    const characterName = actor?.name ?? userName;
+
+    const cheatResultCard = `<div class="tavern-cheat-result ${success ? 'tavern-cheat-success' : 'tavern-cheat-fail'}">
+      <strong>${cheatTypeLabel} Cheat</strong><br>
+      <em>${skillName}:</em> ${d20Raw}${isSloppy ? ' (Disadvantage)' : ''} + ${modifier} = <strong>${rollTotal}</strong> vs Heat DC ${heatDC}<br>
+      ${isNat20 ? '<span style="color: gold; font-weight: bold;">★ NAT 20 - INVISIBLE CHEAT! ★</span>' : ''}
+      ${isNat1 ? '<span style="color: red; font-weight: bold;">✖ NAT 1 - FUMBLED & CAUGHT!</span>' : ''}
+      ${!isNat20 && !isNat1 && success ? '<span style="color: #4ade80;">✓ Success! Cheat undetected.</span>' : ''}
+      ${!isNat20 && !isNat1 && !success ? '<span style="color: #fbbf24;">⚠ Failed Heat check - Heat increased.</span>' : ''}
+      <br><small>d${targetDie.die}: ${oldValue} → ${newValue}</small>
+    </div>`;
+
+    await ChatMessage.create({
+        content: cheatResultCard,
+        whisper: [userId],
+        speaker: { alias: "Tavern Twenty-One" },
+    });
 
     // Update the die value
     const updatedRolls = { ...tableData.rolls };
@@ -197,7 +206,6 @@ export async function cheat(payload, userId) {
         updatedBusts[userId] = true;
         await deductFromActor(userId, ante);
         newPot = state.pot + ante;
-
     }
 
     if (updatedTotals[userId] > 21) {
@@ -253,27 +261,6 @@ export async function cheat(payload, userId) {
         heatDC: newHeatDC,
         cheatsThisRound: newCheatsThisRound,
     };
-
-    const userName = game.users.get(userId)?.name ?? "Unknown";
-    const characterName = actor?.name ?? userName;
-
-    // V4: Notify the GM with cheat details (now the ONLY detection method for non-fumbles)
-    if (gmIds.length > 0) {
-        const fumbleStatus = fumbled ? " <span style='color: red;'>(NAT 1 - AUTO-CAUGHT!)</span>" : "";
-        const invisibleStatus = isNat20 ? " <span style='color: gold;'>(NAT 20 - INVISIBLE!)</span>" : "";
-        const dieLocation = isHoleDie ? " (Hole Die)" : " (Visible)";
-        const successStatus = (!fumbled && success) ? " <span style='color: #88ff88;'>✓ Successful Cheat</span>" : "";
-        await ChatMessage.create({
-            content: `<div class="tavern-gm-alert tavern-gm-cheat">
-        <strong>${cheatTypeLabel.toUpperCase()} CHEAT${fumbled ? " - FUMBLED!" : (success ? " - SUCCESS" : " - FAILED")}</strong><br>
-        <em>${characterName}</em> changed their d${targetDie.die}${dieLocation} from <strong>${oldValue}</strong> to <strong>${newValue}</strong><br>
-        ${skillName}: <strong>${rollTotal}</strong> vs Heat DC ${heatDC}${fumbleStatus}${invisibleStatus}${successStatus}<br>
-        <small>${fumbled ? "They fumbled and were caught!" : (success ? "Cheat undetected. Only Accuse or Profile can catch them." : "Failed the Heat check, but not auto-caught.")}</small>
-      </div>`,
-            whisper: gmIds,
-            speaker: { alias: "Tavern Twenty-One" },
-        });
-    }
 
     // If fumbled, announce it publicly
     if (fumbled) {
