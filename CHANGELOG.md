@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.8.12] - 2026-01-22
+### Hotfix 12
+- **Critical Crash Fix**: Fixed a severe application crash caused by the missing `formatMod` Handlebars helper in dialog templates. Registered the helper globally in `main.js`. This resolves the "black screen/reload" issue when attempting to use skills like Cheat, Bump, or Goad.
+
 ## [4.8.11] - 2026-01-22
 ### Hotfix 11
 - **Syntax Error**: Fixed `Identifier 'rolls' has already been declared` in `cheat.js` caused by the previous refactor to auto-select dice.

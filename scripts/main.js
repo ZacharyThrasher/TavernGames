@@ -59,6 +59,11 @@ Hooks.once("init", async () => {
     args.pop(); // Remove Handlebars options
     return args.every(v => !!v);
   });
+  Handlebars.registerHelper("formatMod", function (mod) {
+    const val = Number(mod);
+    if (isNaN(val)) return mod;
+    return val >= 0 ? `+${val}` : val;
+  });
 });
 
 Hooks.once("socketlib.ready", () => {
