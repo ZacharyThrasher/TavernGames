@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.8.57] - 2026-01-22
+- **UI Interaction Lock (Anti-Spam):**
+  - Implemented comprehensive UI locking mechanism (`TavernApp.uiLocked`) for all player actions.
+  - Wrapped `onRoll`, `onHold`, `onFold`, and all skill/dialog actions (`onCheat`, `onProfile`, etc.) to prevent double-clicks and race conditions.
+  - Fixes "Infinite Roll" exploit where users could spam click before the server processed the previous request.
+  - Fixes bypasses where users could ignore cheat dialogs by spamming other buttons.
+
 ## [4.8.56] - 2026-01-22
 ### Hotfix 56
 - **Immediate UI Locking**: Addressed critical race conditions where players could double-click buttons or interact with the board while an action was processing suitable for the speed of the "Twenty-One" game loop. The interface now immediately locks (grays out + no clicks) when you perform an action like Rolling, Holding, or using a Skill, unlocking only when the action completes. This explicitly fixes the "Infinite Roll / Cheat Bypass" exploit.

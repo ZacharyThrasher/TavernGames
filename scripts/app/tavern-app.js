@@ -622,86 +622,102 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       return;
     }
 
-    // Payment Logic (Iron Liver)
-    const liquidMode = game.settings.get(MODULE_ID, "liquidMode");
-    // const state = getState(); // Reuse existing state variable from above
-    const ante = game.settings.get(MODULE_ID, "fixedAnte");
-    const isBettingPhase = state.tableData?.phase === "betting";
-    const isHouse = isActingAsHouse(game.user.id, state); // Helpers imported? No, need to verify imports or use static
-    // Actually tavern-app.js imports these.
+    if (TavernApp.uiLocked) return;
+    TavernApp.uiLocked = true;
+    if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
 
-    // V4 NPC Wallet Fix: Use centralized wallet helper
-    // We need to import getPlayerGold or duplicate logic because imports might be tricky in this class scope if not top-level
-    // Assuming getPlayerGold is available or we check isPlayingAsNpc
+    try {
 
-    const isPlayingAsNpc = state.players?.[game.user.id]?.playingAsNpc;
-    const isNpc = isPlayingAsNpc;
+      // Payment Logic (Iron Liver)
+      const liquidMode = game.settings.get(MODULE_ID, "liquidMode");
+      // const state = getState(); // Reuse existing state variable from above
+      const ante = game.settings.get(MODULE_ID, "fixedAnte");
+      const isBettingPhase = state.tableData?.phase === "betting";
+      const isHouse = isActingAsHouse(game.user.id, state); // Helpers imported? No, need to verify imports or use static
+      // Actually tavern-app.js imports these.
 
-    const cost = (isBettingPhase && !isHouse) ? getDieCost(parseInt(die), ante) : 0;
-    let payWithDrink = false;
+      // V4 NPC Wallet Fix: Use centralized wallet helper
+      // We need to import getPlayerGold or duplicate logic because imports might be tricky in this class scope if not top-level
+      // Assuming getPlayerGold is available or we check isPlayingAsNpc
 
-    if (liquidMode) {
-      payWithDrink = true;
-    } else {
-      let currentGold = 0;
-      if (isNpc) {
-        currentGold = state.npcWallets?.[game.user.id] ?? 0;
-      } else {
-        currentGold = game.user.character?.system?.currency?.gp ?? 0;
-      }
+      const isPlayingAsNpc = state.players?.[game.user.id]?.playingAsNpc;
+      const isNpc = isPlayingAsNpc;
 
-      if (cost > 0 && currentGold < cost) {
-        // Should we allow NPC to put on tab? Maybe.
-        const confirm = await Dialog.confirm({
-          title: "Insufficient Gold",
-          content: `<p>You don't have enough gold (${cost}gp).</p><p><strong>Put it on the Tab?</strong></p>`
-        });
-        if (!confirm) return;
+      const cost = (isBettingPhase && !isHouse) ? getDieCost(parseInt(die), ante) : 0;
+      let payWithDrink = false;
+
+      if (liquidMode) {
         payWithDrink = true;
-      }
-    }
-
-    const updatedState = await tavernSocket.executeAsGM("playerAction", "roll", { die, payWithDrink }, game.user.id);
-
-    // Quick Cheat Opportunity
-    await new Promise(resolve => setTimeout(resolve, 1500)); // Animation delay
-
-    const myRolls = updatedState.tableData?.rolls?.[game.user.id] ?? [];
-    const lastDieIndex = myRolls.length - 1;
-    const cheatPlayerData = updatedState.players?.[game.user.id];
-    // Check using helper for house status (GM-as-NPC support)
-    const cheatIsHouse = isActingAsHouse(game.user.id, updatedState);
-    const canCheat = lastDieIndex >= 0 && !cheatIsHouse;
-
-    if (canCheat) {
-      const lastDie = myRolls[lastDieIndex];
-      const heatDC = updatedState.tableData?.heatDC ?? 10;
-
-      console.log("Tavern | Triggering Cheat Dialog", { lastDie, heatDC, actor: game.user.character });
-
-      try {
-        const result = await CheatDialog.show({
-          myRolls,
-          actor: game.user.character,
-          heatDC
-        });
-
-        if (result) {
-          await tavernSocket.executeAsGM("playerAction", "cheat", result, game.user.id);
-        } else if (updatedState.tableData?.phase === "betting") {
-          await tavernSocket.executeAsGM("playerAction", "finishTurn", {}, game.user.id);
+      } else {
+        let currentGold = 0;
+        if (isNpc) {
+          currentGold = state.npcWallets?.[game.user.id] ?? 0;
+        } else {
+          currentGold = game.user.character?.system?.currency?.gp ?? 0;
         }
-      } catch (err) {
-        console.error("Tavern | Cheat Dialog Failed:", err);
-        // Ensure turn finishes if dialog crashes to prevent lock
+
+        if (cost > 0 && currentGold < cost) {
+          // Should we allow NPC to put on tab? Maybe.
+          const confirm = await Dialog.confirm({
+            title: "Insufficient Gold",
+            content: `<p>You don't have enough gold (${cost}gp).</p><p><strong>Put it on the Tab?</strong></p>`
+          });
+          if (!confirm) return; // Wait, handle unlock!
+          // No, I need to unlock here manually
+          if (!confirm) {
+            TavernApp.uiLocked = false; // Early unlock if cancelled
+            if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
+            return;
+          }
+          payWithDrink = true;
+        }
+      }
+
+      const updatedState = await tavernSocket.executeAsGM("playerAction", "roll", { die, payWithDrink }, game.user.id);
+
+      // Quick Cheat Opportunity
+      await new Promise(resolve => setTimeout(resolve, 1500)); // Animation delay
+
+      const myRolls = updatedState.tableData?.rolls?.[game.user.id] ?? [];
+      const lastDieIndex = myRolls.length - 1;
+      const cheatPlayerData = updatedState.players?.[game.user.id];
+      // Check using helper for house status (GM-as-NPC support)
+      const cheatIsHouse = isActingAsHouse(game.user.id, updatedState);
+      const canCheat = lastDieIndex >= 0 && !cheatIsHouse;
+
+      if (canCheat) {
+        const lastDie = myRolls[lastDieIndex];
+        const heatDC = updatedState.tableData?.heatDC ?? 10;
+
+        console.log("Tavern | Triggering Cheat Dialog", { lastDie, heatDC, actor: game.user.character });
+
+        try {
+          const result = await CheatDialog.show({
+            myRolls,
+            actor: game.user.character,
+            heatDC
+          });
+
+          if (result) {
+            await tavernSocket.executeAsGM("playerAction", "cheat", result, game.user.id);
+          } else if (updatedState.tableData?.phase === "betting") {
+            await tavernSocket.executeAsGM("playerAction", "finishTurn", {}, game.user.id);
+          }
+        } catch (err) {
+          console.error("Tavern | Cheat Dialog Failed:", err);
+          // Ensure turn finishes if dialog crashes to prevent lock
+          if (updatedState.tableData?.phase === "betting") {
+            await tavernSocket.executeAsGM("playerAction", "finishTurn", {}, game.user.id);
+          }
+        }
+      } else {
         if (updatedState.tableData?.phase === "betting") {
           await tavernSocket.executeAsGM("playerAction", "finishTurn", {}, game.user.id);
         }
       }
-    } else {
-      if (updatedState.tableData?.phase === "betting") {
-        await tavernSocket.executeAsGM("playerAction", "finishTurn", {}, game.user.id);
-      }
+    } finally {
+      TavernApp.uiLocked = false;
+      if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
     }
   }
 
@@ -712,20 +728,52 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   static async onHold() {
-    await tavernSocket.executeAsGM("playerAction", "hold", {}, game.user.id);
+    if (TavernApp.uiLocked) return;
+    TavernApp.uiLocked = true;
+    if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
+    try {
+      await tavernSocket.executeAsGM("playerAction", "hold", {}, game.user.id);
+    } finally {
+      TavernApp.uiLocked = false;
+      if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
+    }
   }
 
   static async onFold() {
-    await tavernSocket.executeAsGM("playerAction", "fold", {}, game.user.id);
+    if (TavernApp.uiLocked) return;
+    TavernApp.uiLocked = true;
+    if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
+    try {
+      await tavernSocket.executeAsGM("playerAction", "fold", {}, game.user.id);
+    } finally {
+      TavernApp.uiLocked = false;
+      if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
+    }
   }
 
   static async onUseCut(event, target) {
-    const reroll = target?.dataset?.reroll === "true";
-    await tavernSocket.executeAsGM("playerAction", "useCut", { reroll }, game.user.id);
+    if (TavernApp.uiLocked) return;
+    TavernApp.uiLocked = true;
+    if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
+    try {
+      const reroll = target?.dataset?.reroll === "true";
+      await tavernSocket.executeAsGM("playerAction", "useCut", { reroll }, game.user.id);
+    } finally {
+      TavernApp.uiLocked = false;
+      if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
+    }
   }
 
   static async onHunch() {
-    await tavernSocket.executeAsGM("playerAction", "hunch", {}, game.user.id);
+    if (TavernApp.uiLocked) return;
+    TavernApp.uiLocked = true;
+    if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
+    try {
+      await tavernSocket.executeAsGM("playerAction", "hunch", {}, game.user.id);
+    } finally {
+      TavernApp.uiLocked = false;
+      if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
+    }
   }
 
   static async onProfile() {
@@ -735,14 +783,23 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
     if (targets.length === 0) return ui.notifications.warn("No valid targets to profile.");
 
-    const result = await ProfileDialog.show({
-      targets,
-      actor: game.user.character,
-      invMod: game.user.character?.system?.skills?.inv?.total ?? 0
-    });
+    if (TavernApp.uiLocked) return;
+    TavernApp.uiLocked = true;
+    if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
 
-    if (result) {
-      await tavernSocket.executeAsGM("playerAction", "profile", result, game.user.id);
+    try {
+      const result = await ProfileDialog.show({
+        targets,
+        actor: game.user.character,
+        invMod: game.user.character?.system?.skills?.inv?.total ?? 0
+      });
+
+      if (result) {
+        await tavernSocket.executeAsGM("playerAction", "profile", result, game.user.id);
+      }
+    } finally {
+      TavernApp.uiLocked = false;
+      if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
     }
   }
 
@@ -753,14 +810,23 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
     if (myRolls.length === 0) return ui.notifications.warn("You have no dice to cheat with!");
 
-    const result = await CheatDialog.show({
-      myRolls,
-      actor: game.user.character,
-      heatDC: state.tableData?.heatDC ?? 10
-    });
+    if (TavernApp.uiLocked) return;
+    TavernApp.uiLocked = true;
+    if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
 
-    if (result) {
-      await tavernSocket.executeAsGM("playerAction", "cheat", result, game.user.id);
+    try {
+      const result = await CheatDialog.show({
+        myRolls,
+        actor: game.user.character,
+        heatDC: state.tableData?.heatDC ?? 10
+      });
+
+      if (result) {
+        await tavernSocket.executeAsGM("playerAction", "cheat", result, game.user.id);
+      }
+    } finally {
+      TavernApp.uiLocked = false;
+      if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
     }
   }
 
@@ -780,16 +846,25 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
     if (targetRolls.length === 0) return ui.notifications.warn("That player has no dice to accuse.");
 
-    const result = await AccuseDialog.show({
-      targetName,
-      targetId,
-      rolls: targetRolls,
-      ante,
-      cost: getAccusationCost(ante)
-    });
+    if (TavernApp.uiLocked) return;
+    TavernApp.uiLocked = true;
+    if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
 
-    if (result) {
-      await tavernSocket.executeAsGM("playerAction", "accuse", result, game.user.id);
+    try {
+      const result = await AccuseDialog.show({
+        targetName,
+        targetId,
+        rolls: targetRolls,
+        ante,
+        cost: getAccusationCost(ante)
+      });
+
+      if (result) {
+        await tavernSocket.executeAsGM("playerAction", "accuse", result, game.user.id);
+      }
+    } finally {
+      TavernApp.uiLocked = false;
+      if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
     }
   }
 
@@ -800,16 +875,25 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
     if (targets.length === 0) return ui.notifications.warn("No valid targets to goad.");
 
-    const actor = game.user.character;
-    const result = await GoadDialog.show({
-      targets,
-      actor,
-      itmMod: actor?.system?.skills?.itm?.total ?? 0,
-      perMod: actor?.system?.skills?.per?.total ?? 0
-    });
+    if (TavernApp.uiLocked) return;
+    TavernApp.uiLocked = true;
+    if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
 
-    if (result) {
-      await tavernSocket.executeAsGM("playerAction", "goad", result, game.user.id);
+    try {
+      const actor = game.user.character;
+      const result = await GoadDialog.show({
+        targets,
+        actor,
+        itmMod: actor?.system?.skills?.itm?.total ?? 0,
+        perMod: actor?.system?.skills?.per?.total ?? 0
+      });
+
+      if (result) {
+        await tavernSocket.executeAsGM("playerAction", "goad", result, game.user.id);
+      }
+    } finally {
+      TavernApp.uiLocked = false;
+      if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
     }
   }
 
@@ -820,65 +904,134 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
     if (targets.length === 0) return ui.notifications.warn("No valid targets to bump.");
 
-    const result = await BumpDialog.show({
-      targets,
-      actor: game.user.character,
-      athMod: game.user.character?.system?.skills?.ath?.total ?? 0
-    });
+    if (TavernApp.uiLocked) return;
+    TavernApp.uiLocked = true;
+    if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
 
-    if (result) {
-      await tavernSocket.executeAsGM("playerAction", "bumpTable", result, game.user.id);
+    try {
+      const result = await BumpDialog.show({
+        targets,
+        actor: game.user.character,
+        athMod: game.user.character?.system?.skills?.ath?.total ?? 0
+      });
+
+      if (result) {
+        await tavernSocket.executeAsGM("playerAction", "bumpTable", result, game.user.id);
+      }
+    } finally {
+      TavernApp.uiLocked = false;
+      if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
     }
   }
 
   static async onBumpRetaliation(event, target) {
     const dieIndex = parseInt(target?.dataset?.dieIndex);
     if (isNaN(dieIndex)) return ui.notifications.warn("Invalid die selection.");
-    await tavernSocket.executeAsGM("playerAction", "bumpRetaliation", { dieIndex }, game.user.id);
+
+    if (TavernApp.uiLocked) return;
+    TavernApp.uiLocked = true;
+    if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
+
+    try {
+      await tavernSocket.executeAsGM("playerAction", "bumpRetaliation", { dieIndex }, game.user.id);
+    } finally {
+      TavernApp.uiLocked = false;
+      if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
+    }
   }
 
   static async onInspect() {
-    const state = getState();
-    const inspectionCost = getInspectionCost(state.pot);
-    const confirm = await Dialog.confirm({
-      title: "Call for Inspection",
-      content: `
+    if (TavernApp.uiLocked) return;
+    TavernApp.uiLocked = true;
+    if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
+
+    try {
+      const state = getState();
+      const inspectionCost = getInspectionCost(state.pot);
+      const confirm = await Dialog.confirm({
+        title: "Call for Inspection",
+        content: `
         <p><strong>Cost:</strong> ${inspectionCost}gp (half the pot)</p>
         <p>Roll Perception to try to catch cheaters.</p>
         <hr>
         <p style="color: #c44; font-weight: bold;">WARNING: If you find no cheaters, you forfeit your winnings!</p>
         <p class="hint" style="font-size: 0.9em; color: #666;">Only call if you're confident someone cheated.</p>
       `,
-    });
-    if (confirm) {
-      await tavernSocket.executeAsGM("playerAction", "inspect", {}, game.user.id);
+      });
+      if (confirm) {
+        await tavernSocket.executeAsGM("playerAction", "inspect", {}, game.user.id);
+      }
+    } finally {
+      TavernApp.uiLocked = false;
+      if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
     }
   }
 
   static async onSkipInspection() {
-    await tavernSocket.executeAsGM("playerAction", "skipInspection", {}, game.user.id);
+    if (TavernApp.uiLocked) return;
+    TavernApp.uiLocked = true;
+    if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
+    try {
+      await tavernSocket.executeAsGM("playerAction", "skipInspection", {}, game.user.id);
+    } finally {
+      TavernApp.uiLocked = false;
+      if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
+    }
   }
 
   static async onReveal() {
-    await tavernSocket.executeAsGM("playerAction", "reveal", {}, game.user.id);
+    if (TavernApp.uiLocked) return;
+    TavernApp.uiLocked = true;
+    if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
+    try {
+      await tavernSocket.executeAsGM("playerAction", "reveal", {}, game.user.id);
+    } finally {
+      TavernApp.uiLocked = false;
+      if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
+    }
   }
 
   static async onNewRound() {
-    await tavernSocket.executeAsGM("playerAction", "newRound", {}, game.user.id);
+    if (TavernApp.uiLocked) return;
+    TavernApp.uiLocked = true;
+    if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
+    try {
+      await tavernSocket.executeAsGM("playerAction", "newRound", {}, game.user.id);
+    } finally {
+      TavernApp.uiLocked = false;
+      if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
+    }
   }
 
   static async onReset() {
-    const confirm = await Dialog.confirm({
-      title: "Reset Table",
-      content: "<p>Clear all players and reset the table?</p>",
-    });
-    if (confirm) {
-      await tavernSocket.executeAsGM("resetTable");
+    if (TavernApp.uiLocked) return;
+    TavernApp.uiLocked = true;
+    if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
+
+    try {
+      const confirm = await Dialog.confirm({
+        title: "Reset Table",
+        content: "<p>Clear all players and reset the table?</p>",
+      });
+      if (confirm) {
+        await tavernSocket.executeAsGM("resetTable");
+      }
+    } finally {
+      TavernApp.uiLocked = false;
+      if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
     }
   }
 
   static async onDuelRoll() {
-    await tavernSocket.executeAsGM("playerAction", "duelRoll", {}, game.user.id);
+    if (TavernApp.uiLocked) return;
+    TavernApp.uiLocked = true;
+    if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
+    try {
+      await tavernSocket.executeAsGM("playerAction", "duelRoll", {}, game.user.id);
+    } finally {
+      TavernApp.uiLocked = false;
+      if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
+    }
   }
 
   static async promptPayment(cost, ante, purpose) {
@@ -919,10 +1072,19 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
     if (champions.length === 0) return ui.notifications.warn("No valid players to bet on.");
 
-    const result = await SideBetDialog.show({ champions, ante });
+    if (TavernApp.uiLocked) return;
+    TavernApp.uiLocked = true;
+    if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
 
-    if (result) {
-      await tavernSocket.executeAsGM("playerAction", "sideBet", result, game.user.id);
+    try {
+      const result = await SideBetDialog.show({ champions, ante });
+
+      if (result) {
+        await tavernSocket.executeAsGM("playerAction", "sideBet", result, game.user.id);
+      }
+    } finally {
+      TavernApp.uiLocked = false;
+      if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
     }
   }
 }

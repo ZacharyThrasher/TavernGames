@@ -93,6 +93,14 @@
   overflow: hidden;
 }
 
+/* V4.8.56: UI Lock State */
+.tavern-controls.locked {
+  pointer-events: none !important;
+  opacity: 0.6;
+  filter: grayscale(0.8);
+  cursor: wait;
+}
+
 /* ============================================
    Header
    ============================================ */
