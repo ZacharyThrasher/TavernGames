@@ -251,3 +251,43 @@ export function getStateMacro() {
   return null;
 }
 
+
+/**
+ * V5.8: Add a log entry to ALL users (Public Event)
+ * @param {object} entry - Log entry
+ * @param {string[]} excludeIds - Array of user IDs to exclude
+ */
+export async function addLogToAll(entry, excludeIds = []) {
+  const state = getState();
+  const allUsers = Object.keys(state.players || {});
+  // If no players array, fallback to active users? No, players map should exist.
+  // If empty players map (fresh game), we can try game.users
+  const targets = allUsers.length > 0 ? allUsers : game.users.map(u => u.id);
+
+  // Filter exclusions
+  const recipientIds = targets.filter(id => !excludeIds.includes(id));
+
+  const timestamp = Date.now();
+  const idBase = foundry.utils.randomID();
+
+  let updatedPrivateLogs = { ...state.privateLogs };
+  let hasChanges = false;
+
+  for (const userId of recipientIds) {
+    const currentLogs = updatedPrivateLogs[userId] ?? [];
+    const newEntry = {
+      ...entry,
+      timestamp,
+      id: idBase + "-" + userId,
+      seen: false
+    };
+    const newLogs = [...currentLogs, newEntry];
+    if (newLogs.length > 20) newLogs.shift();
+    updatedPrivateLogs[userId] = newLogs;
+    hasChanges = true;
+  }
+
+  if (!hasChanges) return state;
+
+  return updateState({ privateLogs: updatedPrivateLogs });
+}

@@ -1,5 +1,9 @@
 # Changelog
 
+## [5.8.2] - 2026-01-23
+### Hotfix: Missing Module Export (Game Log)
+- **Fix**: Resolved `does not provide an export named 'addLogToAll'` error in `state.js`.
+
 ## [5.8.1] - 2026-01-23
 ### Hotfix: Syntax Error (Game Log)
 - **Fix**: Resolved `Identifier 'orderNames' has already been declared` in `turn.js`.
