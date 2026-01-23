@@ -1,6 +1,6 @@
-import { MODULE_ID, getState, updateState } from "../../state.js";
-import { getActorForUser } from "./actors.js";
-import { createChatCard } from "../../ui/chat.js";
+import { MODULE_ID, getState, updateState, addLogToAll } from "../../state.js"; // V5.8
+import { getActorForUser, getActorName } from "./actors.js"; // V5.9
+// import { createChatCard } from "../../ui/chat.js"; // Removed
 import { tavernSocket } from "../../socket.js";
 import { getDieCost } from "../constants.js";
 
@@ -174,15 +174,15 @@ export async function notifyUser(userId, message, type = "warn") {
  * Iron Liver: Liquid Currency - Attempt to pay a cost by drinking instead of paying gold.
  */
 export async function drinkForPayment(userId, drinksNeeded, tableData) {
-    const actor = getActorForUser(userId);
-    const playerName = actor?.name ?? game.users.get(userId)?.name ?? "Unknown";
+    // V5.9: Use getActorName
+    const playerName = getActorName(userId);
 
     // Calculate DC: 10 + (2 per drink this round)
     const currentDrinks = tableData.drinkCount?.[userId] ?? 0;
     const newDrinkTotal = currentDrinks + drinksNeeded;
     const dc = 10 + (2 * newDrinkTotal);
 
-    // Roll CON save
+    const actor = getActorForUser(userId);
     const conMod = actor?.system?.abilities?.con?.mod ?? 0;
     const roll = await new Roll("1d20").evaluate();
     const d20 = roll.total;
@@ -202,14 +202,17 @@ export async function drinkForPayment(userId, drinksNeeded, tableData) {
         // Critical failure - pass out = bust
         bust = true;
         updatedBusts[userId] = true;
-        await createChatCard({
+
+        await addLogToAll({
             title: "Passed Out!",
-            subtitle: `${playerName} had one too many...`,
-            message: `<strong>${playerName}</strong> tried to drink ${drinksNeeded} ${drinksNeeded === 1 ? 'drink' : 'drinks'} (DC ${dc})<br>
-        <span style="color: #ff6666;">Rolled: ${d20} + ${conMod} = ${total}</span><br>
-        <strong style="color: #ff4444;">NAT 1! They pass out cold!</strong>`,
+            message: `<strong>${playerName}</strong> drank too much...<br>
+                Attempt: ${drinksNeeded} ${drinksNeeded === 1 ? 'drink' : 'drinks'} (DC ${dc})<br>
+                Rolled: <strong>${d20}</strong> + ${conMod} = ${total}<br>
+                <strong style="color: #ff4444;">NAT 1! They pass out cold! (BUST)</strong>`,
             icon: "fa-solid fa-skull",
-        });
+            type: "system",
+            cssClass: "failure"
+        }, [], userId);
 
     } else if (!success) {
         // Failed save - gain Sloppy condition
@@ -238,28 +241,30 @@ export async function drinkForPayment(userId, drinksNeeded, tableData) {
             // Note: We need to make sure we return this in the object below
             tableData = { ...tableData, rolls: updatedRolls, visibleTotals: updatedVisibleTotals };
 
-            holeDieRevealedMsg = `<br><strong style="color: #ffaa66;">HOLE DIE REVEALED!</strong> (Clumsy!)`;
+            holeDieRevealedMsg = `<br><span style="color: #ffaa66;">HOLE DIE REVEALED! (Clumsy!)</span>`;
         }
 
-        await createChatCard({
+        await addLogToAll({
             title: "Getting Sloppy...",
-            subtitle: `${playerName} can't hold their liquor!`,
-            message: `<strong>${playerName}</strong> tried to drink ${drinksNeeded} ${drinksNeeded === 1 ? 'drink' : 'drinks'} (DC ${dc})<br>
-        <span style="color: #ffaa66;">Rolled: ${d20} + ${conMod} = ${total}</span><br>
-        <em style="color: #ffaa66;">SLOPPY: Disadvantage on INT/WIS/CHA/DEX checks!</em>${holeDieRevealedMsg}`,
+            message: `<strong>${playerName}</strong> is stumbling around!<br>
+                Attempt: ${drinksNeeded} drinks (DC ${dc})<br>
+                Rolled: ${d20} + ${conMod} = ${total} (Fail)<br>
+                <em>SLOPPY! Disadvantage on checks!</em>${holeDieRevealedMsg}`,
             icon: "fa-solid fa-wine-glass",
-        });
+            type: "system",
+            cssClass: "warning"
+        }, [], userId);
 
     } else {
         // Success - handled it like a champ
-        await createChatCard({
+        await addLogToAll({
             title: "Iron Liver!",
-            subtitle: `${playerName} takes a drink...`,
-            message: `<strong>${playerName}</strong> downed ${drinksNeeded} ${drinksNeeded === 1 ? 'drink' : 'drinks'} (DC ${dc})<br>
-        <span style="color: #88ff88;">Rolled: ${d20} + ${conMod} = ${total}</span><br>
-        <em>"Put it on my tab!"</em>`,
+            message: `<strong>${playerName}</strong> downs ${drinksNeeded} ${drinksNeeded === 1 ? 'drink' : 'drinks'} like water!<br>
+                <em>"Put it on my tab!"</em> (DC ${dc} Success)`,
             icon: "fa-solid fa-beer-mug-empty",
-        });
+            type: "system",
+            cssClass: "success"
+        }, [], userId);
 
     }
 

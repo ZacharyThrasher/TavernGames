@@ -86,12 +86,24 @@ export async function payOutWinners(payouts) {
 }
 
 /**
- * Notify a specific user with a whispered message
+ * Notify a specific user with a private log entry
+ * V5.9: Replaced ChatMessage with addPrivateLog
  */
+import { addPrivateLog } from "../../state.js"; // Helper import
+
 export async function notifyUser(userId, message) {
-    await ChatMessage.create({
-        content: `<div class="tavern-notification">${message}</div>`,
-        whisper: [userId],
-        speaker: { alias: "Tavern Twenty-One" },
+    await addPrivateLog(userId, {
+        title: "Notification",
+        message: message,
+        icon: "fa-solid fa-bell",
+        type: "system"
     });
+}
+
+/**
+ * V5.9: Get Actor Name (or User Name fallback)
+ */
+export function getActorName(userId) {
+    const actor = getActorForUser(userId);
+    return actor?.name ?? game.users.get(userId)?.name ?? "Unknown";
 }

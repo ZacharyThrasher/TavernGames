@@ -10,9 +10,9 @@
  */
 
 import { MODULE_ID } from "../constants.js";
-import { getState, updateState, emptyTableData, addPrivateLog } from "../../state.js"; // V5.8
-import { getActorForUser, notifyUser } from "../utils/actors.js";
-import { createChatCard, addHistoryEntry } from "../../ui/chat.js";
+import { getState, updateState, emptyTableData, addPrivateLog, addLogToAll, addHistoryEntry } from "../../state.js"; // V5.8
+import { getActorForUser, notifyUser, getActorName } from "../utils/actors.js"; // V5.9
+// import { createChatCard, addHistoryEntry } from "../../ui/chat.js"; // Removed
 import { tavernSocket } from "../../socket.js";
 import { showPublicRoll } from "../../dice.js";
 
@@ -105,8 +105,9 @@ export async function profile(payload, userId) {
 
     const actor = getActorForUser(userId);
     const targetActor = getActorForUser(targetId);
-    const userName = actor?.name ?? game.users.get(userId)?.name ?? "Unknown";
-    const targetName = targetActor?.name ?? game.users.get(targetId)?.name ?? "Unknown";
+    // V5.9: Use getActorName
+    const userName = getActorName(userId);
+    const targetName = getActorName(targetId);
 
     // Roll Investigation (Sloppy = disadvantage)
     const isSloppy = tableData.sloppy?.[userId] ?? false;
@@ -140,8 +141,6 @@ export async function profile(payload, userId) {
     const myHoleValue = myHoleDie?.result ?? "?";
 
 
-
-
     // V4.7.6: Result Overlay Logic
     let outcomeText = "FAILED";
     let outcomeClass = "failure";
@@ -159,109 +158,95 @@ export async function profile(payload, userId) {
             : `${targetName}'s poker face is unreadable!`
     });
 
-
     if (isNat20) {
-        let message = `<span style="font-size: 1.2em;">Cheated: <strong>${targetCheated ? "YES" : "NO"}</strong></span>`;
-        if (targetCheated) {
-            message += `<br><span style="color: #ff6666;">Specifically: Die ${targetCheatDice.join(", ")}</span>`;
-        } else {
-            message += `<br><span style="color: #88ff88;">They are playing clean.</span>`;
-        }
-
-        const feedbackContent = `<div class="tavern-skill-result success">
-        <strong>Perfect Read!</strong><br>${message}
-      </div>`;
-
-        // V4.9: Secret Feedback
-        await tavernSocket.executeForUsers("showPrivateFeedback", [userId], userId, "Profile: Perfect Read", feedbackContent);
-
-        // V5.8: Log to Profiler
+        // V5.8: Log to Profiler (Success)
         await addPrivateLog(userId, {
             title: "Profile: Perfect (Nat 20)",
             message: targetCheated
                 ? `CHEATER: YES (Die ${targetCheatDice.join(", ")})`
                 : `CHEATER: NO (Clean)`,
             icon: "fa-solid fa-user-secret",
-            type: "profile"
+            type: "profile",
+            cssClass: "success"
         });
 
+        // Public Log
+        await addLogToAll({
+            title: "Perfect Profile",
+            message: `<strong>${userName}</strong> sees right through <strong>${targetName}</strong>!<br><em>(Result is hidden)</em>`,
+            icon: "fa-solid fa-user-secret",
+            type: "profile",
+            cssClass: "success"
+        }, [], userId);
+
     } else if (isNat1) {
-        let message = `${userName}'s hole die: <strong>${myHoleValue}</strong>`;
-        if (myCheated) {
-            message += `<br><span style="color: #ff6666;">They've CHEATED!</span>`;
-        }
-
-        const targetFeedback = `<div class="tavern-skill-result success">
-        <strong>Counter-Read!</strong><br>${message}
-      </div>`;
-
-        // V4.9: Reveal info to the TARGET (not the user)
-        await tavernSocket.executeForUsers("showPrivateFeedback", [targetId], targetId, "Profile: Counter-Read!", targetFeedback);
-
+        // Nat 1 Backfire - Target learns info
         // V5.8: Log to Target (Target learns Profiler's secrets)
         await addPrivateLog(targetId, {
             title: `Counter-Read on ${userName}`,
             message: `Hole Die: ${myHoleValue} | Cheated: ${myCheated ? "YES" : "NO"}`,
             icon: "fa-solid fa-user-shield",
-            type: "profile"
+            type: "profile",
+            cssClass: "success" // Good for target
         });
-
-        const myFeedback = `<div class="tavern-skill-result failure">
-        <strong>Exposed!</strong><br>
-        Your poker face cracked. ${targetName} read YOU instead!
-      </div>`;
-
-        // Tell user they failed
-        await tavernSocket.executeForUsers("showPrivateFeedback", [userId], userId, "Profile: BACKFIRE", myFeedback);
 
         // Log failure to self
         await addPrivateLog(userId, {
             title: "Profile: BACKFIRE",
             message: `Exposed! ${targetName} read your hole die.`,
             icon: "fa-solid fa-user-injured",
-            type: "profile"
+            type: "profile",
+            cssClass: "failure"
         });
 
+        // Public Log
+        await addLogToAll({
+            title: "Profile Backfire",
+            message: `<strong>${userName}</strong> tried to read <strong>${targetName}</strong> but was EXPOSED!<br><em>Target countered the read!</em>`,
+            icon: "fa-solid fa-user-injured",
+            type: "profile",
+            cssClass: "failure"
+        }, [], userId);
+
     } else if (success) {
-        // Standard Success: Boolean Yes/No only
-        const resultText = targetCheated
-            ? `<span style="color: #ff6666; font-weight: bold;">YES</span>`
-            : `<span style="color: #88ff88; font-weight: bold;">NO</span>`;
-
-        const feedbackContent = `<div class="tavern-skill-result success">
-        <strong>Profile Success</strong><br>
-        Has ${targetName} cheated?<br>
-        Answer: ${resultText}
-      </div>`;
-
-        // V4.9: Secret Feedback
-        await tavernSocket.executeForUsers("showPrivateFeedback", [userId], userId, "Profile: Success", feedbackContent);
-
+        // Standard Success
         // V5.8: Log to Profiler
         await addPrivateLog(userId, {
             title: `Profile: ${targetName}`,
             message: `Cheated: ${targetCheated ? "YES" : "NO"}`,
             icon: "fa-solid fa-user-secret",
-            type: "profile"
+            type: "profile",
+            cssClass: "success"
         });
+
+        // Public Log
+        await addLogToAll({
+            title: "Profile Success",
+            message: `<strong>${userName}</strong> gets a read on <strong>${targetName}</strong>.<br><em>(Result is hidden)</em>`,
+            icon: "fa-solid fa-user-secret",
+            type: "profile",
+            cssClass: "success"
+        }, [], userId);
 
     } else {
         // Failure: No info
-        const feedbackContent = `<div class="tavern-skill-result failure">
-        <strong>Failed Read</strong><br>
-        You can't get a read on them.
-      </div>`;
-
-        // V4.9: Secret Feedback
-        await tavernSocket.executeForUsers("showPrivateFeedback", [userId], userId, "Profile: Failed", feedbackContent);
-
         // V5.8: Log Failure
         await addPrivateLog(userId, {
             title: "Profile Failed",
             message: `No read on ${targetName}.`,
             icon: "fa-solid fa-question",
-            type: "profile"
+            type: "profile",
+            cssClass: "failure"
         });
+
+        // Public Log
+        await addLogToAll({
+            title: "Profile Failed",
+            message: `<strong>${userName}</strong> fails to read <strong>${targetName}</strong>.`,
+            icon: "fa-solid fa-question",
+            type: "profile",
+            cssClass: "failure"
+        }, [], userId);
     }
 
     // Track profile

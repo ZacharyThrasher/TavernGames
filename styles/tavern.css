@@ -4437,3 +4437,14 @@
   padding: 20px;
   font-style: italic;
 }
+
+/* V5.9: Log Avatar */
+.log-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--tavern-gold);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  background: #000;
+}

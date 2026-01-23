@@ -1,8 +1,8 @@
-import { MODULE_ID, getState, updateState, addHistoryEntry } from "../../state.js";
+import { MODULE_ID, getState, updateState, addHistoryEntry, addLogToAll, addPrivateLog } from "../../state.js"; // V5.8
 import { deductFromActor, getPlayerGold } from "../../wallet.js";
-import { createChatCard } from "../../ui/chat.js";
+// import { createChatCard } from "../../ui/chat.js"; // Removed
 
-import { getActorForUser } from "../utils/actors.js";
+import { getActorForUser, getActorName } from "../utils/actors.js"; // V5.9
 import { notifyUser } from "../utils/game-logic.js";
 
 /**
@@ -68,17 +68,16 @@ export async function placeSideBet(payload, userId) {
     }
     sideBets[userId].push({ championId, amount });
 
-    const betterActor = getActorForUser(userId);
-    const betterName = betterActor?.name ?? game.users.get(userId)?.name ?? "Unknown";
-    const championActor = getActorForUser(championId);
-    const championName = championActor?.name ?? game.users.get(championId)?.name ?? "Unknown";
+    // V5.9: Use getActorName
+    const betterName = getActorName(userId);
+    const championName = getActorName(championId);
 
-    await createChatCard({
+    await addLogToAll({
         title: "Side Bet",
-        subtitle: `${betterName} backs ${championName}`,
-        message: `<strong>${betterName}</strong> placed a ${amount}gp side bet on <strong>${championName}</strong> to win!`,
+        message: `<strong>${betterName}</strong> placed a side bet of <strong>${amount}gp</strong> on <strong>${championName}</strong>!`,
         icon: "fa-solid fa-sack-dollar",
-    });
+        type: "system"
+    }, [], userId);
 
     await addHistoryEntry({
         type: "side_bet",
@@ -105,12 +104,12 @@ export async function processSideBetPayouts(winnerId) {
 
     for (const [betterId, bets] of Object.entries(sideBets)) {
         for (const bet of bets) {
-            const betterActor = getActorForUser(betterId);
-            const betterName = betterActor?.name ?? game.users.get(betterId)?.name ?? "Unknown";
+            const betterName = getActorName(betterId); // V5.9
 
             if (bet.championId === winnerId) {
-                // Winner! 2:1 payout (original bet + winnings)
-                const payout = bet.amount * 2;
+                // Winner! Configurable payout (Default 2:1)
+                const multiplier = game.settings.get(MODULE_ID, "sideBetPayout");
+                const payout = Math.floor(bet.amount * multiplier);
                 await deductFromActor(betterId, -payout); // Negative deduction = add
                 payouts.push({ name: betterName, amount: payout, bet: bet.amount });
             } else {
@@ -124,11 +123,12 @@ export async function processSideBetPayouts(winnerId) {
         const payoutMsg = payouts.map(p => `${p.name}: +${p.payout}gp (bet ${p.bet}gp)`).join("<br>");
         const lossMsg = losses.map(l => `${l.name}: -${l.amount}gp`).join("<br>");
 
-        await createChatCard({
+        await addLogToAll({
             title: "Side Bet Results",
-            subtitle: winnerId ? "The bets are settled!" : "No winner - bets lost!",
-            message: `${payouts.length > 0 ? `<strong>Winners:</strong><br>${payoutMsg}<br>` : ""}${losses.length > 0 ? `<strong>Losses:</strong><br>${lossMsg}` : ""}`,
+            message: `${payouts.length > 0 ? `<strong>Big Winners:</strong><br>${payoutMsg}<br>` : ""}${losses.length > 0 ? `<strong>Losses:</strong><br>${lossMsg}` : ""}`,
             icon: "fa-solid fa-coins",
+            type: "system",
+            cssClass: payouts.length > 0 ? "success" : "failure"
         });
     }
 }

@@ -1,8 +1,8 @@
-import { MODULE_ID, getState, updateState, addHistoryEntry } from "../../state.js";
+import { MODULE_ID, getState, updateState, addHistoryEntry, addLogToAll, addPrivateLog } from "../../state.js"; // V5.8
 import { deductFromActor, payOutWinners } from "../../wallet.js";
-import { createChatCard } from "../../ui/chat.js";
+// import { createChatCard } from "../../ui/chat.js"; // Removed
 import { tavernSocket } from "../../socket.js";
-import { getActorForUser } from "../utils/actors.js";
+import { getActorForUser, getActorName } from "../utils/actors.js"; // V5.9
 import { notifyUser } from "../utils/game-logic.js";
 import { emptyTableData, OPENING_ROLLS_REQUIRED } from "../constants.js";
 import { finishRound } from "./core.js";
@@ -28,8 +28,8 @@ export async function useCut(userId, reroll = false) {
     // Proceeding anyway but logging to debug why they don't match.
   }
 
-  const actor = getActorForUser(userId);
-  const userName = actor?.name ?? game.users.get(userId)?.name ?? "Unknown";
+  // V5.9: Use getActorName
+  const userName = getActorName(userId);
 
   if (reroll) {
     const roll = await new Roll("1d10").evaluate();
@@ -47,35 +47,37 @@ export async function useCut(userId, reroll = false) {
       console.warn("Tavern Twenty-One | Could not show dice to player:", e);
     }
 
-    // V3.4: Public chat does NOT reveal the new value
-    await createChatCard({
-      title: "The Cut",
-      subtitle: `${userName} takes the cut!`,
-      message: `Re-rolled their hole die. <em>The new value remains hidden...</em>`,
-      icon: "fa-solid fa-scissors",
-    });
-
     // V4.6: Whisper actual values only to the cut player (no GM privilege)
     // V4.9: Secret Private Feedback (Hidden from GM)
-    const cutFeedback = `<div class="tavern-skill-result success">
-        <strong>The Cut</strong><br>
-        Your hole die: ${oldValue} → <strong>${roll.total}</strong><br>
-        <em>New Total: ${tableData.totals[userId]}</em>
-      </div>`;
-    await tavernSocket.executeForUsers("showPrivateFeedback", [userId], userId, "The Cut Result", cutFeedback);
+    await addPrivateLog(userId, {
+      title: "The Cut Result",
+      message: `Hole Die: ${oldValue} → <strong>${roll.total}</strong><br>New Total: ${tableData.totals[userId]}`,
+      icon: "fa-solid fa-scissors",
+      type: "phase",
+      cssClass: "success"
+    });
 
     await addHistoryEntry({
       type: "cut",
       player: userName,
       message: `${userName} used The Cut (hole die re-rolled).`,
     });
-  } else {
-    await createChatCard({
+
+    // Public Log (Hidden Value)
+    await addLogToAll({
       title: "The Cut",
-      subtitle: `${userName} passes`,
-      message: `Kept their original hole die`,
-      icon: "fa-solid fa-hand",
-    });
+      message: `<strong>${userName}</strong> re-rolled their Hole Die!<br><em>(Value remains hidden)</em>`,
+      icon: "fa-solid fa-scissors",
+      type: "phase"
+    }, [], userId);
+
+  } else {
+    await addLogToAll({
+      title: "The Cut",
+      message: `<strong>${userName}</strong> passes the cut.<br><em>(Original hole die kept)</em>`,
+      icon: "fa-solid fa-hand-point-right",
+      type: "phase"
+    }, [], userId);
   }
 
   tableData.phase = "betting";
@@ -88,17 +90,17 @@ export async function useCut(userId, reroll = false) {
   const orderNames = tableData.bettingOrder
     .filter(id => !tableData.busts[id])
     .map(id => {
-      const name = game.users.get(id)?.name ?? "Unknown";
+      const name = getActorName(id); // V5.9
       const vt = tableData.visibleTotals[id] ?? 0;
       return `${name} (${vt})`;
     })
     .join(" → ");
 
-  await createChatCard({
+  await addLogToAll({
     title: "Betting Round",
-    subtitle: "The game begins!",
-    message: `<strong>Turn order (by visible total):</strong> ${orderNames}<br><em>d20: FREE | d10: ${Math.floor(ante / 2)}gp | d6/d8: ${ante}gp | d4: ${ante * 2}gp</em>`,
+    message: `<strong>Turn order:</strong> ${orderNames}<br><em>d20: FREE | d10: 1/2 Ante | d6/d8: Ante | d4: 2x Ante</em>`,
     icon: "fa-solid fa-hand-holding-dollar",
+    type: "phase"
   });
 
   return updateState({ tableData });
@@ -129,8 +131,7 @@ export async function submitDuelRoll(userId) {
     return state;
   }
 
-  const actor = getActorForUser(userId);
-  const userName = actor?.name ?? game.users.get(userId)?.name ?? "Unknown";
+  const userName = getActorName(userId); // V5.9
 
   const playerRolls = tableData.rolls[userId] ?? [];
   const hitsTaken = Math.max(0, playerRolls.length - OPENING_ROLLS_REQUIRED);
@@ -143,12 +144,20 @@ export async function submitDuelRoll(userId) {
   const d4Total = d4Count > 0 ? (roll.dice[1]?.total ?? 0) : 0;
   const total = roll.total;
 
-  await ChatMessage.create({
-    speaker: { alias: userName },
-    flavor: `<em>${userName} rolls for the duel...</em><br>Duel Roll${hitsTaken > 0 ? ` (+${hitsTaken}d4 for Hits taken)` : ""}`,
-    content: `<div class="dice-roll"><div class="dice-result"><div class="dice-formula">${formula}</div><div class="dice-tooltip"><section class="tooltip-part"><div class="dice"><ol class="dice-rolls"><li class="roll die d20">${d20Result}</li></ol></div></section>${d4Count > 0 ? `<section class="tooltip-part"><div class="dice"><ol class="dice-rolls">${d4Total}</ol></div></section>` : ""}</div><h4 class="dice-total">${total}</h4></div></div>`,
-    rolls: [roll],
-  });
+  // Show 3D Dice safely
+  try {
+    if (game.dice3d) {
+      await game.dice3d.showForRoll(roll, game.users.get(userId), true);
+    }
+  } catch (e) { }
+
+  // Log the Duel Roll
+  await addLogToAll({
+    title: `${userName} Duel Roll`,
+    message: `Rolled <strong>${formula}</strong><br>Result: <strong>${total}</strong>`,
+    icon: "fa-solid fa-dice-d20",
+    type: "roll"
+  }, [], userId);
 
   const updatedDuel = {
     ...duel,
@@ -183,7 +192,7 @@ async function resolveDuel() {
   const results = [];
 
   for (const [playerId, rollData] of Object.entries(duel.rolls)) {
-    const playerName = getActorForUser(playerId)?.name ?? game.users.get(playerId)?.name ?? "Unknown";
+    const playerName = getActorName(playerId); // V5.9
     results.push({ playerId, playerName, ...rollData });
     if (rollData.total > highestTotal) {
       highestTotal = rollData.total;
@@ -195,16 +204,12 @@ async function resolveDuel() {
   if (winners.length > 1) {
     const tiedNames = winners.map(w => w.playerName).join(" vs ");
 
-    await createChatCard({
+    await addLogToAll({
       title: "Sudden Death!",
-      subtitle: "The duel continues...",
-      message: `<strong>${tiedNames}</strong> are still tied at <strong>${highestTotal}</strong>!<br>
-        <em>Neither side yields! They clash again with renewed intensity!</em><br>
-        <strong>Next Roll: d20 + d4s (Same Hits)</strong>`,
+      message: `<strong>${tiedNames}</strong> TIED at <strong>${highestTotal}</strong>!<br><em>The duel continues...</em>`,
       icon: "fa-solid fa-swords",
+      type: "phase"
     });
-
-
 
     const updatedDuel = {
       ...duel,
@@ -236,13 +241,13 @@ async function resolveDuel() {
     .map(r => `${r.playerName}: ${r.total}`)
     .join(" | ");
 
-  await createChatCard({
+  await addLogToAll({
     title: "Duel Victory!",
-    subtitle: `${winner.playerName} wins the duel!`,
-    message: `<strong>${winner.playerName}</strong> claims the pot of <strong>${potAmount}gp</strong>!<br>
-      <div class="tavern-results">${resultsMsg}</div>`,
+    message: `<strong>${winner.playerName}</strong> wins the pot (<strong>${potAmount}gp</strong>)!<br>${resultsMsg}`,
     icon: "fa-solid fa-trophy",
-  });
+    type: "phase",
+    cssClass: "success"
+  }, [], winner.playerId);
 
   await addHistoryEntry({
     type: "duel_end",
@@ -335,9 +340,9 @@ export async function accuse(payload, userId) {
   // Dramatic Pause
   await new Promise(r => setTimeout(r, 2500));
 
-  const accuserActor = getActorForUser(userId);
-  const accuserName = accuserActor?.name ?? game.users.get(userId)?.name ?? "Unknown";
-  const targetName = getActorForUser(targetId)?.name ?? game.users.get(targetId)?.name ?? "Unknown";
+  // V5.9: Use getActorName
+  const accuserName = getActorName(userId);
+  const targetName = getActorName(targetId);
 
   // V4: Check if THIS SPECIFIC DIE was cheated
   const targetCheaterData = tableData.cheaters?.[targetId];
@@ -373,17 +378,16 @@ export async function accuse(payload, userId) {
     const totalReward = accusationCost + actualBounty;
     await payOutWinners({ [userId]: totalReward });
 
-    const bountyMsg = actualBounty > 0 ? `${actualBounty}gp bounty` : "no bounty (they're broke!)";
+    const bountyMsg = actualBounty > 0 ? `${actualBounty}gp bounty` : "no bounty";
 
-    await createChatCard({
+    await addLogToAll({
       title: "Cheater Caught!",
-      subtitle: `${accuserName} nailed it!`,
-      message: `<strong>${accuserName}</strong> accused <strong>${targetName}</strong>'s <strong>${dieLabel}</strong>!<br>
-        <strong>That die WAS cheated!</strong> ${targetName} forfeits the round.<br>
-        <em>${accuserName} receives ${accusationCost}gp refund + ${bountyMsg} = <strong>${totalReward}gp</strong>!</em>`,
+      message: `<strong>${accuserName}</strong> exposed <strong>${targetName}</strong>!<br>
+        <em>${accuserName} earns ${totalReward}gp (${bountyMsg})</em>`,
       icon: "fa-solid fa-gavel",
-    });
-
+      type: "cheat",
+      cssClass: "success"
+    }, [], userId);
 
     await addHistoryEntry({
       type: "cheat_caught",
@@ -398,15 +402,14 @@ export async function accuse(payload, userId) {
     // V4: Wrong accusation - even if they cheated on ANOTHER die, this specific one was clean
     newPot += accusationCost;
 
-    await createChatCard({
+    await addLogToAll({
       title: "False Accusation!",
-      subtitle: `That die was clean.`,
-      message: `<strong>${accuserName}</strong> accused <strong>${targetName}</strong>'s <strong>${dieLabel}</strong>!<br>
-        <em>That specific die was NOT cheated.</em><br>
-        ${accuserName} loses their ${accusationCost}gp accusation fee.`,
+      message: `<strong>${accuserName}</strong> accused <strong>${targetName}</strong> but was wrong about that die.<br>
+        <em>${accuserName} loses their ${accusationCost}gp fee.</em>`,
       icon: "fa-solid fa-face-frown",
-    });
-
+      type: "cheat",
+      cssClass: "failure"
+    }, [], userId);
 
     await addHistoryEntry({
       type: "accusation_failed",

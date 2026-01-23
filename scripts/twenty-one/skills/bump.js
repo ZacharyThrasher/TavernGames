@@ -13,8 +13,8 @@
  */
 
 import { MODULE_ID, getState, updateState, addHistoryEntry, addLogToAll, addPrivateLog } from "../../state.js"; // V5.8
-import { deductFromActor, getActorForUser, notifyUser } from "../utils/actors.js";
-import { createChatCard } from "../../ui/chat.js";
+import { deductFromActor, getActorForUser, notifyUser, getActorName } from "../utils/actors.js"; // V5.9
+// import { createChatCard } from "../../ui/chat.js"; // Removed
 import { emptyTableData } from "../constants.js";
 import { tavernSocket } from "../../socket.js";
 import { showPublicRoll } from "../../dice.js";

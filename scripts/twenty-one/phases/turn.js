@@ -1,6 +1,20 @@
-import { MODULE_ID, getState, updateState, addHistoryEntry, addLogToAll } from "../../state.js"; // V5.8
-import { deductFromActor } from "../../wallet.js";
-import { createChatCard } from "../../ui/chat.js";
+import { deductFromActor, getActorName } from "../../wallet.js"; // Wait, wallet doesn't have it. `actors.js` has it.
+// Actually `deductFromActor` is in `wallet.js`?
+// Let me check imports.
+// Original: `import { deductFromActor } from "../../wallet.js";`
+// I need `getActorName` from `../utils/actors.js`. 
+// Wait, `turn.js` usually imports from local utils?
+// `turn.js` imports:
+// `import { deductFromActor } from "../../wallet.js";`
+// `import { createChatCard } from "../../ui/chat.js";` -> I removed this.
+// `import { MODULE_ID, ... } from "../../state.js";`
+// Let's check where `deductFromActor` is actually imported from in `turn.js`.
+// Based on grep previously: `turn.js` doesn't seem to import from `actors.js` directly?
+// Ah, `wallet.js` likely re-exports or is separate.
+// I will just add the import: `import { getActorName } from "../utils/actors.js";`
+// Wait, path is `scripts/twenty-one/phases/turn.js`. `actors.js` is `scripts/twenty-one/utils/actors.js`.
+// So path is `../utils/actors.js`.
+// import { createChatCard } from "../../ui/chat.js"; // Removed
 
 import { tavernSocket } from "../../socket.js";
 import { getActorForUser } from "../utils/actors.js";

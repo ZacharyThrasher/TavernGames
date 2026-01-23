@@ -13,6 +13,17 @@ export function registerSettings() {
     range: { min: 1, max: 100, step: 1 },
   });
 
+  // V5.8.3: Configurable Side Bet Payout
+  game.settings.register(MODULE_ID, "sideBetPayout", {
+    name: "Side Bet Payout Multiplier",
+    hint: "Multiplier for side bet winnings (e.g. 2.0 = 2x payout). Default is 2.0 (2:1).",
+    scope: "world",
+    config: true,
+    type: Number,
+    default: 2.0,
+    range: { min: 1.1, max: 10.0, step: 0.1 },
+  });
+
 
 
   // V2.0.2: Liquid Mode Toggle (Client setting, UI controlled)
@@ -227,9 +238,18 @@ export async function addPrivateLog(userId, entry) {
   const state = getState();
   const currentLogs = state.privateLogs?.[userId] ?? [];
 
+  // V5.9: Resolve Actor Image if not provided
+  let actorImg = entry.actorImg;
+  if (!actorImg && userId) {
+    const user = game.users.get(userId);
+    const actor = user?.character; // Simple resolution
+    actorImg = actor?.img ?? user?.avatar ?? "icons/svg/mystery-man.svg";
+  }
+
   // Add timestamp
   const newEntry = {
     ...entry,
+    actorImg,
     timestamp: Date.now(),
     id: foundry.utils.randomID(), // Unique ID for DOM keys
     seen: false // For future unread badge logic

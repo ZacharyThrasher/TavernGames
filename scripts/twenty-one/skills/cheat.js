@@ -13,8 +13,8 @@
 
 import { MODULE_ID, getState, updateState, addHistoryEntry, addLogToAll, addPrivateLog } from "../../state.js"; // V5.8
 import { tavernSocket } from "../../socket.js";
-import { deductFromActor, getActorForUser, notifyUser } from "../utils/actors.js";
-import { createChatCard } from "../../ui/chat.js";
+import { deductFromActor, getActorForUser, notifyUser, getActorName } from "../utils/actors.js"; // V5.9
+// import { createChatCard } from "../../ui/chat.js"; // Removed
 import { emptyTableData } from "../constants.js";
 
 /**
@@ -172,7 +172,7 @@ export async function cheat(payload, userId) {
             icon: "fa-solid fa-hand-fist",
             type: "cheat",
             cssClass: "failure"
-        });
+        }, [], userId); // V5.9: Pass UserID for image logic
     } else {
         // Private Log for Cheater
         await addPrivateLog(userId, {

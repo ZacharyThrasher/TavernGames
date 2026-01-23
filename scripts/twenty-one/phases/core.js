@@ -1,10 +1,10 @@
-import { MODULE_ID, getState, updateState, addHistoryEntry } from "../../state.js";
+import { MODULE_ID, getState, updateState, addHistoryEntry, addLogToAll, addPrivateLog } from "../../state.js"; // V5.8
 import { canAffordAnte, deductAnteFromActors, deductFromActor, payOutWinners } from "../../wallet.js";
-import { createChatCard } from "../../ui/chat.js";
+// import { createChatCard } from "../../ui/chat.js"; // Removed
 import { showPublicRoll } from "../../dice.js";
 
 import { tavernSocket } from "../../socket.js";
-import { getActorForUser } from "../utils/actors.js";
+import { getActorForUser, getActorName } from "../utils/actors.js"; // V5.9
 import { calculateBettingOrder, getGMUserIds } from "../utils/game-logic.js";
 import { emptyTableData } from "../constants.js";
 import { processSideBetPayouts } from "./side-bets.js";
@@ -118,7 +118,7 @@ export async function startRound(startingHeat = 10) {
     turnIndex: 0,
   });
 
-  const playerNames = state.turnOrder.map(id => game.users.get(id)?.name).join(", ");
+  const playerNames = state.turnOrder.map(id => getActorName(id)).join(", "); // V5.9
   await addHistoryEntry({
     type: "round_start",
     message: `New round started. Ante: ${ante}gp each. Pot: ${pot}gp.`,
@@ -126,7 +126,7 @@ export async function startRound(startingHeat = 10) {
   });
 
   // V3: Updated message for auto-roll opening
-  const cutPlayerName = cutPlayerId ? (getActorForUser(cutPlayerId)?.name ?? game.users.get(cutPlayerId)?.name ?? "Unknown") : null;
+  const cutPlayerName = cutPlayerId ? getActorName(cutPlayerId) : null;
   let chatMessage = `Each player antes ${ante}gp. The house matches. Pot: <strong>${pot}gp</strong><br>` +
     `<em>All hands dealt (2d10 each: 1 visible, 1 hole)</em>`;
 
@@ -134,12 +134,14 @@ export async function startRound(startingHeat = 10) {
     chatMessage += `<br><strong>${cutPlayerName}</strong> has The Cut (lowest visible: ${lowestVisible})`;
   }
 
-  await createChatCard({
-    title: "Twenty-One",
-    subtitle: "A new round begins!",
+  // V5.8: Log to All
+  await addLogToAll({
+    title: "New Round!",
     message: chatMessage,
     icon: "fa-solid fa-coins",
-  });
+    type: "phase"
+  }, [], cutPlayerId); // Pass cut player ID for image if relevant, or null. Maybe GM image or icon default?
+  // Let's rely on default icon/image if cutPlayerId is null.
 
   return next;
 }
@@ -179,13 +181,13 @@ export async function revealDice() {
   // Now transition to The Staredown
   const accusationCost = Math.floor(state.pot / 2);
 
-  await createChatCard({
+  await addLogToAll({
     title: "The Staredown",
-    subtitle: "All dice revealed. But can you trust what you see?",
-    message: `<strong>Make an Accusation?</strong> (Costs <strong>${accusationCost}gp</strong> - half the pot)<br>` +
-      `Point your finger at someone you suspect. If they cheated and you beat their skill, they're caught!<br>` +
-      `<em>But accuse an innocent... and you forfeit your winnings.</em>`,
+    message: `All dice revealed... but can you trust them?<br>
+      <strong>Make an Accusation?</strong> (Cost: <strong>${accusationCost}gp</strong>)<br>
+      <em>Make a false accusation and forfeit your winnings.</em>`,
     icon: "fa-solid fa-eye",
+    type: "phase"
   });
 
   return updateState({ status: "INSPECTION" });
@@ -206,7 +208,7 @@ export async function finishRound() {
     for (const cheatRecord of cheats) {
       if (cheatRecord.fumbled) {
         caught[cheaterId] = true;
-        const cheaterName = getActorForUser(cheaterId)?.name ?? game.users.get(cheaterId)?.name ?? "Unknown";
+        const cheaterName = getActorName(cheaterId); // V5.9
         fumbledCheaterNames.push(cheaterName);
         break;
       }
@@ -214,19 +216,20 @@ export async function finishRound() {
   }
 
   if (fumbledCheaterNames.length > 0) {
-    await createChatCard({
+    await addLogToAll({
       title: "Fumbled!",
-      subtitle: "A clumsy cheater exposed!",
-      message: `<strong>${fumbledCheaterNames.join(", ")}</strong> fumbled their sleight of hand and got caught red-handed!`,
+      message: `<strong>${fumbledCheaterNames.join(", ")}</strong> fumbled their cheat and got caught red-handed!`,
       icon: "fa-solid fa-hand-fist",
+      type: "cheat",
+      cssClass: "failure"
     });
   }
 
   // V2.0: If an accusation was made, reveal the outcome and handle bounty
   if (tableData.accusation) {
     const { accuserId, targetId, success, cost, bounty } = tableData.accusation;
-    const accuserName = getActorForUser(accuserId)?.name ?? game.users.get(accuserId)?.name ?? "Unknown";
-    const targetName = getActorForUser(targetId)?.name ?? game.users.get(targetId)?.name ?? "Unknown";
+    const accuserName = getActorName(accuserId);
+    const targetName = getActorName(targetId);
 
     await new Promise(r => setTimeout(r, 1000));
 
@@ -247,15 +250,16 @@ export async function finishRound() {
         await payOutWinners({ [accuserId]: totalReward });
       }
 
-      const bountyMsg = actualBounty > 0 ? `${actualBounty}gp bounty` : "no bounty (they're broke!)";
+      const bountyMsg = actualBounty > 0 ? `${actualBounty}gp bounty` : "no bounty";
 
-      await createChatCard({
+      await addLogToAll({
         title: "Cheater Caught!",
-        subtitle: `${accuserName} was right!`,
-        message: `<strong>${targetName}</strong> was caught cheating and forfeits the round.<br>
-          <em>${accuserName} receives ${refund}gp refund + ${bountyMsg} = <strong>${totalReward}gp</strong>!</em>`,
+        message: `<strong>${accuserName}</strong> exposed <strong>${targetName}</strong>!<br>
+          <em>${accuserName} earns ${totalReward}gp (${refund} refund + ${bountyMsg})</em>`,
         icon: "fa-solid fa-gavel",
-      });
+        type: "cheat",
+        cssClass: "success"
+      }, [], accuserId);
 
       await addHistoryEntry({
         type: "cheat_caught",
@@ -267,12 +271,14 @@ export async function finishRound() {
     } else {
 
 
-      await createChatCard({
+      await addLogToAll({
         title: "False Accusation!",
-        subtitle: `${targetName} is innocent.`,
-        message: `<strong>${accuserName}</strong> was wrong and loses their ${cost ?? 0}gp accusation fee.`,
+        message: `<strong>${accuserName}</strong> accused <strong>${targetName}</strong> but was WRONG!<br>
+          <em>${accuserName} loses their ${cost ?? 0}gp fee.</em>`,
         icon: "fa-solid fa-face-frown",
-      });
+        type: "cheat",
+        cssClass: "failure"
+      }, [], accuserId);
 
       await addHistoryEntry({
         type: "accusation_failed",
@@ -301,17 +307,15 @@ export async function finishRound() {
   });
 
   if (winners.length > 1) {
-    const duelParticipantNames = winners.map(id =>
-      getActorForUser(id)?.name ?? game.users.get(id)?.name ?? "Unknown"
-    ).join(" vs ");
+    const duelParticipantNames = winners.map(id => getActorName(id)).join(" vs "); // V5.9
 
-    await createChatCard({
+    await addLogToAll({
       title: "The Duel!",
-      subtitle: "Highest total wins!",
-      message: `<strong>${duelParticipantNames}</strong> are tied for the win!<br>
-        <em>The stakes are high. One final clash to settle the pot!</em><br>
-        <span style="font-size: 0.9em; color: #888;">Roll 1d20 + 1d4 per Hit taken this round.</span>`,
+      message: `<strong>${duelParticipantNames}</strong> are TIED!<br>
+        <em>One final clash to settle the pot!</em><br>
+        <span style="font-size: 0.9em; opacity: 0.8;">Roll 1d20 + 1d4 per Hit taken.</span>`,
       icon: "fa-solid fa-swords",
+      type: "phase"
     });
 
     // V4.8.50: Duel Cinematic (Fixed)
@@ -348,7 +352,7 @@ export async function finishRound() {
     if (fee > 0) {
       await deductFromActor(odId, fee);
       totalCleaningFees += fee;
-      const userName = game.users.get(odId)?.name ?? "Unknown";
+      const userName = getActorName(odId); // V5.9
       cleaningFeeMessages.push(`${userName}: ${fee}gp`);
     }
   }
@@ -357,11 +361,11 @@ export async function finishRound() {
   const finalPot = state.pot + totalCleaningFees;
 
   if (cleaningFeeMessages.length > 0) {
-    await createChatCard({
+    await addLogToAll({
       title: "Cleaning Fees",
-      subtitle: "Spilled Drinks → Added to Pot",
-      message: `Cleaning fees collected (${totalCleaningFees}gp added to pot):<br>${cleaningFeeMessages.join("<br>")}`,
+      message: `Use a coaster next time!<br>${cleaningFeeMessages.join("<br>")}`,
       icon: "fa-solid fa-broom",
+      type: "system"
     });
   }
 

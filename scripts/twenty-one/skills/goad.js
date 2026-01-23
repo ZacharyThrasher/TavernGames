@@ -14,8 +14,8 @@
  */
 
 import { MODULE_ID, getState, updateState, addHistoryEntry, addLogToAll, addPrivateLog } from "../../state.js"; // V5.8
-import { deductFromActor, getActorForUser, notifyUser } from "../utils/actors.js";
-import { createChatCard } from "../../ui/chat.js";
+import { deductFromActor, getActorForUser, notifyUser, getActorName } from "../utils/actors.js"; // V5.9
+// import { createChatCard } from "../../ui/chat.js"; // Removed
 import { emptyTableData } from "../constants.js";
 import { tavernSocket } from "../../socket.js";
 import { showPublicRoll } from "../../dice.js";
@@ -128,10 +128,9 @@ export async function goad(payload, userId) {
     // await new Promise(resolve => setTimeout(resolve, 3500));
 
     // Get actors
-    const attackerActor = getActorForUser(userId);
-    const defenderActor = getActorForUser(targetId);
-    const attackerName = attackerActor?.name ?? game.users.get(userId)?.name ?? "Unknown";
-    const defenderName = defenderActor?.name ?? game.users.get(targetId)?.name ?? "Unknown";
+    // V5.9: Use getActorName
+    const attackerName = getActorName(userId);
+    const defenderName = getActorName(targetId);
 
     // Attacker skill names
     const attackerSkillNames = {

@@ -9,13 +9,17 @@
  * - Nat 1: Locked into d20 Hit
  */
 
-import { MODULE_ID, getState, updateState, addPrivateLog } from "../../state.js"; // V5.8: Import addPrivateLog
+import { MODULE_ID, getState, updateState, addPrivateLog, addLogToAll } from "../../state.js"; // V5.8: Import addPrivateLog
 import { tavernSocket } from "../../socket.js";
 import { showPublicRoll } from "../../dice.js";
 import { HUNCH_DC, HUNCH_THRESHOLDS, VALID_DICE, emptyTableData } from "../constants.js";
-import { createChatCard, addHistoryEntry } from "../../ui/chat.js";
+// import { createChatCard, addHistoryEntry } from "../../ui/chat.js"; // Removed
+import { addHistoryEntry } from "../../state.js"; // History moved to state long ago? CHECK IMPORTS. 
+// state.js DOES export addHistoryEntry.
+// The file was importing it from `ui/chat.js` which was likely a re-export or legacy location?
+// Let's standardise to state.js imports.
 
-import { getActorForUser, notifyUser } from "../utils/actors.js";
+import { getActorForUser, notifyUser, getActorName } from "../utils/actors.js"; // V5.9
 import { finishTurn } from "../phases/turn.js";
 
 
@@ -76,8 +80,8 @@ export async function hunch(userId) {
     // V4.7.7: Foresight Pause (Moved down)
     // await new Promise(resolve => setTimeout(resolve, 3000));
 
-    const actor = getActorForUser(userId);
-    const userName = actor?.name ?? game.users.get(userId)?.name ?? "Unknown";
+    // V5.9: Use getActorName
+    const userName = getActorName(userId);
     const wisMod = actor?.system?.abilities?.wis?.mod ?? 0;
 
     // Roll Wisdom check (Sloppy = disadvantage)
@@ -95,7 +99,17 @@ export async function hunch(userId) {
     const rollTotal = d20 + wisMod;
     const success = !isNat1 && rollTotal >= HUNCH_DC;
 
+    // Log the attempt Publicly?
+    // "X used Foresight to predict the dice..."
+    // Since we are replacing chat cards, we probably want a public log that they USED the skill.
+    // The previous chat card was "Foresight: A perfect read!" etc. which revealed success/fail publicly?
+    // Old Chat Cards:
+    // "Foresight: A perfect read!" (Public)
+    // "Foresight: Something tells them..." (Public)
+    // "Foresight: Terrible intuition! Locked!" (Public)
+    // So Success/Fail WAS public information. The *data* was private.
 
+    // We will replicate this with addLogToAll.
 
     if (isNat20) {
         // Nat 20 = Learn exact value for each die type
@@ -109,50 +123,45 @@ export async function hunch(userId) {
         tableData.hunchExact = { ...tableData.hunchExact, [userId]: predictions };
         tableData.hunchRolls = { ...tableData.hunchRolls, [userId]: exactRolls };
 
-        const feedbackContent = `<div class="tavern-skill-result success">
-        <strong>Perfect Foresight!</strong><br>
-        Your senses sharpen completely. You know exactly what each die will show:<br>
-        <em>d4: ${predictions[4]}, d6: ${predictions[6]}, d8: ${predictions[8]}, 
-        d10: ${predictions[10]}, d20: ${predictions[20]}</em>
-      </div>`;
-
-        // V4.9: Private Feedback (Hidden from GM)
-        await tavernSocket.executeForUsers("showPrivateFeedback", [userId], userId, "Foresight Result", feedbackContent);
-
-        // V5.8: Add to Private Log
+        // Private Log for details (replacing socket feedback AND keeping persistent record)
         await addPrivateLog(userId, {
             title: "Foresight (Nat 20)",
-            message: `Exact Values: ${Object.entries(predictions).map(([d, v]) => `d${d}:${v}`).join(", ")}`,
+            message: `Exact Values: ${Object.entries(predictions).map(([d, v]) => `d${d}: <strong>${v}</strong>`).join(", ")}`,
             icon: "fa-solid fa-eye",
-            type: "hunch"
+            type: "hunch",
+            cssClass: "success"
         });
 
-        await createChatCard({
+        // Public Log for Effect
+        await addLogToAll({
             title: "Foresight",
-            subtitle: `${userName}'s eyes close...`,
-            message: `A perfect read! They know exactly what's coming.`,
+            message: `<strong>${userName}</strong> gets a perfect read on the future!<br><em>They know exactly what is coming.</em>`,
             icon: "fa-solid fa-eye",
-        });
+            type: "hunch",
+            cssClass: "success"
+        }, [], userId);
+
     } else if (isNat1) {
         // Nat 1 = Locked into Hit with d20
         tableData.hunchLocked = { ...tableData.hunchLocked, [userId]: true };
         tableData.hunchLockedDie = { ...tableData.hunchLockedDie, [userId]: 20 };
 
-        const feedbackContent = `<div class="tavern-skill-result failure">
-        <strong>Tunnel Vision!</strong><br>
-        Your instincts betray you. You're compelled to take a risky gamble!
-        <br><em>You MUST roll a d20 before your turn ends.</em>
-      </div>`;
-
-        // V4.9: Private Feedback (Hidden from GM)
-        await tavernSocket.executeForUsers("showPrivateFeedback", [userId], userId, "Foresight Result", feedbackContent);
-
-        await createChatCard({
-            title: "Foresight",
-            subtitle: `${userName} spirals into doubt`,
-            message: `Terrible intuition! Locked into rolling a <strong>d20</strong>!`,
-            icon: "fa-solid fa-dice-d20",
+        await addPrivateLog(userId, {
+            title: "Foresight (Nat 1)",
+            message: "Locked into a BLIND d20 roll!",
+            icon: "fa-solid fa-eye-slash",
+            type: "hunch",
+            cssClass: "failure"
         });
+
+        await addLogToAll({
+            title: "Foresight Backfire",
+            message: `<strong>${userName}</strong> spirals into doubt!<br>Locked into a <strong>Blind d20</strong>!`,
+            icon: "fa-solid fa-eye-slash",
+            type: "hunch",
+            cssClass: "failure"
+        }, [], userId);
+
     } else if (success) {
         // Success = Learn high/low for each die type
         const predictions = {};
@@ -166,64 +175,45 @@ export async function hunch(userId) {
         tableData.hunchPrediction = { ...tableData.hunchPrediction, [userId]: predictions };
         tableData.hunchRolls = { ...tableData.hunchRolls, [userId]: exactRolls };
 
-        const feedbackContent = `<div class="tavern-skill-result success">
-        <strong>Foresight</strong><br>
-        A feeling washes over you...<br>
-        <em>d4: ${predictions[4]}, d6: ${predictions[6]}, d8: ${predictions[8]}, 
-        d10: ${predictions[10]}, d20: ${predictions[20]}</em>
-      </div>`;
-
-        // V4.9: Private Feedback (Hidden from GM)
-        await tavernSocket.executeForUsers("showPrivateFeedback", [userId], userId, "Foresight Result", feedbackContent);
-
-        await createChatCard({
-            title: "Foresight",
-            subtitle: `${userName} gets a feeling...`,
-            message: `Something tells them what's coming. Choose wisely!`,
+        await addPrivateLog(userId, {
+            title: "Foresight Success",
+            message: `Predictions: ${Object.entries(predictions).map(([d, v]) => `d${d}: ${v}`).join(", ")}`,
             icon: "fa-solid fa-eye",
+            type: "hunch",
+            cssClass: "success"
         });
+
+        await addLogToAll({
+            title: "Foresight",
+            message: `<strong>${userName}</strong> senses the flow of probability.<br><em>They have a hunch...</em>`,
+            icon: "fa-solid fa-eye",
+            type: "hunch",
+            cssClass: "success"
+        }, [], userId);
+
     } else {
-        // V5.7: Failure = Enters "Blind State"
-        // Player must choose their own die (paying costs), but result is hidden
-        // Nat 1 = Locked into d20 (also blind)
+        // Failure = Blind State
+        const isLocked = isNat1; // Redundant but checked above logic flow separation
+        // Wait, logic above handles Nat1 separately. This block is ONLY !Nat1 && !Success.
+        // So just normal failure.
 
-        const isLocked = isNat1;
-
-        // Update state to mark next roll as blind
         tableData.blindNextRoll = { ...tableData.blindNextRoll, [userId]: true };
 
-        if (isLocked) {
-            tableData.hunchLocked = { ...tableData.hunchLocked, [userId]: true };
-            tableData.hunchLockedDie = { ...tableData.hunchLockedDie, [userId]: 20 };
-        }
-
-        const feedbackContent = `<div class="tavern-skill-result failure">
-        <strong>${isLocked ? 'Tunnel Vision (Nat 1)' : 'Bad Read'}</strong><br>
-        Your instincts fail you. The fog of probability descends.<br>
-        <em>Your next roll will be BLIND (Hidden).${isLocked ? ' And you are locked into a d20!' : ''}</em>
-        </div>`;
-
-        // V4.9: Private Feedback
-        await tavernSocket.executeForUsers("showPrivateFeedback", [userId], userId, "Foresight Failed", feedbackContent);
-
-        // V5.8: Add to Private Log
         await addPrivateLog(userId, {
-            title: isLocked ? "Foresight (Nat 1)" : "Foresight Failed",
-            message: isLocked
-                ? "Locked into a BLIND d20 roll!"
-                : "Next roll will be BLIND (Hidden).",
+            title: "Foresight Failed",
+            message: "Next roll will be BLIND (Hidden).",
             icon: "fa-solid fa-eye-slash",
-            type: "hunch"
+            type: "hunch",
+            cssClass: "failure"
         });
 
-        await createChatCard({
-            title: "Foresight",
-            subtitle: `${userName}'s intuition fails`,
-            message: isLocked
-                ? `Terrible read! They are <strong>Locked into a Blind d20</strong>!`
-                : `The future is cloudy. Their next roll will be <strong>Blind</strong>!`,
+        await addLogToAll({
+            title: "Foresight Failed",
+            message: `<strong>${userName}'s</strong> intuition fails them.<br>Next roll is <strong>Blind</strong>!`,
             icon: "fa-solid fa-eye-slash",
-        });
+            type: "hunch",
+            cssClass: "failure"
+        }, [], userId);
     }
 
     await addHistoryEntry({
