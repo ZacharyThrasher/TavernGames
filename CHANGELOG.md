@@ -1,5 +1,11 @@
 # Changelog
 
+## [5.1.2] - 2026-01-23
+### Hotfix: Readability
+- **Contrast**: Fixed "Put it on the tab" button text being illegible (dark-on-dark). It is now light parchment.
+- **Headers**: Updated window header and subtitle text to be light Gold/Parchment to contrast against the dark wood texture.
+- **Eye Strain**: Slightly darkened the main parchment background to reduce harsh brightness.
+
 ## [5.1.1] - 2026-01-23
 ### Hotfix: Visual Fidelity
 - **Textures**: Restored depth and texture to the UI using procedural SVG noise filters (parchment grain) and wood fiber patterns.

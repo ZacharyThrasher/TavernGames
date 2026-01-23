@@ -8,7 +8,7 @@
 /* CSS Custom Properties */
 :root {
   /* --- 2.1 The Parchment Foundation --- */
-  --color-sc-bg-primary: #FCF5E5;
+  --color-sc-bg-primary: #f2e8c9;
   /* Base Parchment */
   --color-sc-bg-secondary: #E6D1A1;
   /* Sidebars/Inactive */
@@ -228,7 +228,7 @@
 .tavern-logo i {
   font-size: 28px;
   color: var(--color-sc-border-dark);
-  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.3));
+  filter: drop-shadow(0 1px 1px rgba(255, 255, 255, 0.4));
 }
 
 .tavern-title-text h1 {
@@ -237,8 +237,9 @@
   font-size: 32px;
   font-weight: 700;
   font-variant: small-caps;
-  color: var(--color-sc-text-header);
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.2);
+  color: var(--tavern-gold);
+  /* Gold text on Dark Wood */
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
   letter-spacing: 0.05em;
   line-height: 1;
 }
@@ -247,9 +248,11 @@
   display: block;
   font-family: var(--font-sc-body);
   font-size: 13px;
-  color: var(--color-sc-text-faded);
+  color: var(--tavern-parchment-dark);
+  /* Lighter texture color */
   font-style: italic;
   margin-top: 4px;
+  opacity: 0.9;
 }
 
 .tavern-info {
@@ -2532,7 +2535,8 @@
   padding: 10px;
   background: var(--tavern-wood-medium);
   border: 1px solid var(--tavern-wood-highlight);
-  color: var(--tavern-parchment-dark);
+  color: var(--tavern-parchment);
+  /* Light text for readability */
   border-radius: var(--tavern-radius-md);
   font-family: inherit;
   font-weight: 600;
