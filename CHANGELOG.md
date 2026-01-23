@@ -1,5 +1,10 @@
 # Changelog
 
+## [5.2.1] - 2026-01-23
+### Hotfix: Readability
+- **Header Contrast**: Ante and Pot labels ("Ante:", "in the pot") are now light parchment color to read clearly against the dark wood header.
+- **Turn Hint**: The "Betting Round: Choose your action!" hint text is now dark ink to read clearly against the light parchment alert box.
+
 ## [5.2.0] - 2026-01-23
 ### Feature Update: Polish & Persistence
 - **Starting Heat Persist**: The "Starting Heat DC" is now a persistent House Rule setting in the sidebar, removing the need for a dialog popup every round.

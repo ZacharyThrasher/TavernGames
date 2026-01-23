@@ -284,7 +284,8 @@
 .pot-label,
 .ante-label {
   font-size: 11px;
-  color: var(--tavern-parchment-dark);
+  color: #d4c4a1;
+  /* Light parchment for contrast on dark wood */
   text-transform: uppercase;
   letter-spacing: 1px;
 }
@@ -802,7 +803,8 @@
   border: 1px solid var(--tavern-gold-dim);
   border-radius: var(--tavern-radius-sm);
   padding: 8px;
-  color: var(--tavern-parchment);
+  color: var(--tavern-ink);
+  /* Dark ink for contrast */
 }
 
 .phase-label {
