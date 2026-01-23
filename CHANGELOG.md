@@ -1,5 +1,11 @@
 # Changelog
 
+## [5.1.1] - 2026-01-23
+### Hotfix: Visual Fidelity
+- **Textures**: Restored depth and texture to the UI using procedural SVG noise filters (parchment grain) and wood fiber patterns.
+- **Lighting**: Enhanced "Candle Glow" effect to be more visible against the textured background.
+- **Polish**: Darkened header wood tones and added stronger drop-shadows for better element separation.
+
 ## [5.1.0] - 2026-01-23
 ### Style Overhaul: Sword Coast Tavern
 - **Diegetic UI**: Implemented "Sword Coast Tavern" design system (Style Guide V2) with diegetic parchment UI, iron gall ink typography, and premium wood/metal aesthetics.
