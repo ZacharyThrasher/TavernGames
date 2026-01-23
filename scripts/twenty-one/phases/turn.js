@@ -6,6 +6,7 @@ import { getActorForUser, getActorName } from "../utils/actors.js";
 import { getNextActivePlayer, getNextOpeningPlayer, allPlayersCompletedOpening, allPlayersFinished, calculateBettingOrder, drinkForPayment, notifyUser } from "../utils/game-logic.js";
 import { emptyTableData, VALID_DICE, OPENING_ROLLS_REQUIRED, getDieCost } from "../constants.js";
 import { revealDice } from "./core.js";
+import { showPublicRollFromData } from "../../dice.js";
 
 export async function submitRoll(payload, userId) {
   const state = getState();
@@ -428,6 +429,13 @@ export async function finishTurn(userId) {
       total: tableData.totals[userId],
       message: `${userName} rolled a d${lastRoll.die}${rollCostMsg}...${specialMsg}`,
     });
+
+    // V5.9: Show Public Roll (DSN) for the reveal
+    // This runs on the client effectively (triggered by state update usually, but here likely GM/Actor owner)
+    // If triggered by GM, DSN sync handles it.
+    try {
+      await showPublicRollFromData(Number(lastRoll.die), Number(lastRoll.result), userId);
+    } catch (e) { console.warn("Tavern | DSN Error:", e); }
   }
 
   const updatedTable = { ...tableData, pendingAction: null };
