@@ -1,50 +1,84 @@
 /* ============================================
-   TAVERN TWENTY-ONE - Premium Module Styles
-   V13 Architecture: CSS Layers & Variables
+   SWORD COAST TAVERN - Design System
+   Based on Style Guide V2 (Diegetic UI)
    ============================================ */
 
 @layer components, utilities, animations;
 
 /* CSS Custom Properties */
 :root {
-  /* Core integration (V13/dnd5e 5.2+) */
-  --tavern-font-primary: var(--dnd5e-font-modesto, "Modesto Condensed", "Palatino Linotype", serif);
-  --tavern-font-body: var(--dnd5e-font-roboto, "Signika", "Palatino Linotype", serif);
+  /* --- 2.1 The Parchment Foundation --- */
+  --color-sc-bg-primary: #FCF5E5;
+  /* Base Parchment */
+  --color-sc-bg-secondary: #E6D1A1;
+  /* Sidebars/Inactive */
+  --color-sc-bg-highlight: #FEFCAF;
+  /* Warm Vellum */
+  --color-sc-bg-dark: #F1E2BE;
+  /* Aged Papyrus */
 
-  /* Core palette - warm tavern tones */
-  --tavern-wood-dark: #2a1810;
-  --tavern-wood-medium: #4a2c1a;
+  /* --- 2.2 The Ink Palette --- */
+  --color-sc-text-body: #2A1A0A;
+  /* Primary Ink */
+  --color-sc-text-faded: #55433A;
+  /* Faded/Secondary */
+  --color-sc-text-header: #383135;
+  /* Iron Gall Ink (Headers) */
+
+  /* --- 2.3 Structural Materials --- */
+  --color-sc-border-dark: #3E2723;
+  /* Old Oak */
+  --color-sc-border-main: #5D4037;
+  /* Polished Mahogany */
+  --color-sc-accent-gold: #C37E3F;
+  /* Brass/Gold */
+  --color-sc-accent-silver: #B0A2AB;
+  /* Tarnished Silver */
+
+  /* --- 2.4 Faction Accents --- */
+  --color-sc-faction-alliance: #A4311A;
+  /* Lords' Alliance (Red) */
+  --color-sc-faction-harpers: #1A237E;
+  /* Harpers (Blue) */
+  --color-sc-faction-zhentarim: #212121;
+  /* Zhentarim (Black) */
+  --color-sc-faction-zhent-gold: #FFD700;
+  --color-sc-faction-emerald: #2E7D32;
+  /* Emerald Enclave (Green) */
+
+  /* --- Typography (Solbera Fallbacks) --- */
+  --font-sc-header: "Mr Eaves Small Caps", "Modesto Condensed", "Palatino Linotype", serif;
+  --font-sc-body: "Bookinsanity", "Signika", "Georgia", serif;
+  --font-sc-data: "Scaly Sans", "Arial", sans-serif;
+
+  /* --- LEGACY MAPPINGS (Preserving existing layout logic) --- */
+  --tavern-font-primary: var(--font-sc-header);
+  --tavern-font-body: var(--font-sc-body);
+
+  --tavern-wood-dark: var(--color-sc-border-dark);
+  --tavern-wood-medium: var(--color-sc-border-main);
   --tavern-wood-light: #6b422a;
   --tavern-wood-highlight: #8b5a3c;
 
-  /* Premium Metals */
-  --tavern-gold: #d4a04a;
+  --tavern-gold: var(--color-sc-accent-gold);
   --tavern-gold-bright: #f0c060;
   --tavern-gold-dim: #a67c32;
   --tavern-brass: #b5854a;
-  --tavern-silver: #b0c4de;
-  --tavern-platinum: #e5e4e2;
+  --tavern-silver: var(--color-sc-accent-silver);
 
-  /* Parchment tones */
-  --tavern-parchment: #f5e6c8;
-  --tavern-parchment-dark: #dbc9a0;
-  --tavern-ink: #1a0f08;
+  --tavern-parchment: var(--color-sc-bg-primary);
+  --tavern-parchment-dark: var(--color-sc-text-faded);
+  --tavern-ink: var(--color-sc-text-body);
 
-  /* Status colors */
-  --tavern-success: #4a7c4e;
-  --tavern-danger: #8b3a3a;
-  --tavern-warning: #a67c32;
-  --tavern-info: #4a6b8b;
+  --tavern-success: var(--color-sc-faction-emerald);
+  --tavern-danger: #8B0000;
+  --tavern-warning: var(--color-sc-accent-gold);
+  --tavern-info: var(--color-sc-faction-harpers);
 
-  /* Premium Effects ("Sauce") */
-  --tavern-glow: rgba(212, 160, 74, 0.4);
-  --tavern-glow-strong: rgba(212, 160, 74, 0.8);
-  --tavern-shadow: rgba(10, 5, 2, 0.8);
-  --tavern-candle-glow: radial-gradient(ellipse at center, rgba(255, 180, 80, 0.2) 0%, transparent 70%);
-  --tavern-glass-bg: rgba(26, 15, 8, 0.65);
-  --tavern-glass-border: rgba(212, 160, 74, 0.3);
-  --tavern-glass-blur: blur(8px);
-  --tavern-overlay-gradient: linear-gradient(135deg, rgba(42, 24, 16, 0.95), rgba(10, 5, 2, 0.98));
+  /* --- Effects --- */
+  --tavern-glow: rgba(195, 126, 63, 0.4);
+  --tavern-candle-glow: radial-gradient(ellipse at center, rgba(255, 160, 0, 0.15) 0%, transparent 70%);
+  --tavern-shadow-inset: inset 2px 2px 5px rgba(0, 0, 0, 0.3), inset -1px -1px 2px rgba(255, 255, 255, 0.2);
 
   /* Spacing */
   --tavern-gap-sm: 8px;
@@ -63,27 +97,62 @@
    ============================================ */
 
 .tavern-dice-master {
-  --window-header-bg: var(--tavern-wood-dark);
-  --window-border-color: var(--tavern-gold-dim);
+  --window-header-bg: var(--color-sc-border-dark);
+  --window-border-color: var(--color-sc-border-main);
+  font-family: var(--font-sc-body);
 }
 
 .tavern-dice-master .window-header {
-  background: linear-gradient(180deg, var(--tavern-wood-medium) 0%, var(--tavern-wood-dark) 100%);
-  border-bottom: 2px solid var(--tavern-gold-dim);
+  background: linear-gradient(180deg, var(--color-sc-border-main) 0%, var(--color-sc-border-dark) 100%);
+  border-bottom: 2px solid var(--color-sc-accent-gold);
+  font-family: var(--font-sc-header);
+  font-variant: small-caps;
+  letter-spacing: 0.05em;
 }
 
 .tavern-dice-master .window-title {
-  color: var(--tavern-gold);
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  color: var(--color-sc-accent-gold);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.8);
+  font-size: 1.2em;
 }
 
+/* 4.1 Texture Compositing - Parchment Overlay */
 .tavern-dice-master .window-content {
   padding: 0;
-  background:
-    var(--tavern-candle-glow),
-    linear-gradient(180deg, var(--tavern-wood-medium) 0%, var(--tavern-wood-dark) 100%);
-  color: var(--tavern-parchment);
-  font-family: var(--tavern-font-body);
+  background-color: var(--color-sc-bg-primary);
+  /* Simulate parchment noise if image fails */
+  background-image: var(--tavern-candle-glow),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.05));
+  background-blend-mode: multiply;
+  color: var(--color-sc-text-body);
+  font-family: var(--font-sc-body);
+}
+
+.window-app.active.tavern-dice-master {
+  animation: candle-flicker 4s infinite alternate ease-in-out;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes candle-flicker {
+  0% {
+    box-shadow: 0 0 40px 10px rgba(255, 160, 0, 0.1);
+  }
+
+  25% {
+    box-shadow: 0 0 42px 12px rgba(255, 160, 0, 0.15);
+  }
+
+  50% {
+    box-shadow: 0 0 38px 9px rgba(255, 160, 0, 0.1);
+  }
+
+  75% {
+    box-shadow: 0 0 41px 11px rgba(255, 160, 0, 0.12);
+  }
+
+  100% {
+    box-shadow: 0 0 40px 10px rgba(255, 160, 0, 0.1);
+  }
 }
 
 .tavern-container {
@@ -97,9 +166,13 @@
 .tavern-controls.locked {
   pointer-events: none !important;
   opacity: 0.6;
-  filter: grayscale(0.8);
+  filter: grayscale(0.8) blur(1px);
   cursor: wait;
 }
+
+/* ============================================
+   Header
+   ============================================ */
 
 /* ============================================
    Header
@@ -110,8 +183,8 @@
   justify-content: space-between;
   align-items: center;
   padding: var(--tavern-gap-md) var(--tavern-gap-lg);
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.3) 0%, transparent 100%);
-  border-bottom: 1px solid var(--tavern-gold-dim);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.4) 0%, transparent 100%);
+  border-bottom: 2px solid var(--color-sc-accent-gold);
 }
 
 .tavern-title {
@@ -121,42 +194,49 @@
 }
 
 .tavern-logo {
-  width: 48px;
-  height: 48px;
+  width: 54px;
+  height: 54px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(circle, var(--tavern-gold) 0%, var(--tavern-gold-dim) 100%);
+  background: radial-gradient(circle, var(--color-sc-accent-gold) 0%, var(--color-sc-border-main) 100%);
   border-radius: 50%;
+  border: 2px solid var(--color-sc-border-dark);
   box-shadow:
     0 0 20px var(--tavern-glow),
-    inset 0 2px 4px rgba(255, 255, 255, 0.2);
+    inset 0 2px 4px rgba(255, 255, 255, 0.3);
 }
 
 .tavern-logo i {
-  font-size: 24px;
-  color: var(--tavern-wood-dark);
+  font-size: 28px;
+  color: var(--color-sc-border-dark);
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.3));
 }
 
 .tavern-title-text h1 {
   margin: 0;
-  font-size: 28px;
+  font-family: var(--font-sc-header);
+  font-size: 32px;
   font-weight: 700;
-  color: var(--tavern-gold);
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-  letter-spacing: 1px;
+  font-variant: small-caps;
+  color: var(--color-sc-text-header);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.2);
+  letter-spacing: 0.05em;
+  line-height: 1;
 }
 
 .tavern-subtitle {
   display: block;
-  font-size: 12px;
-  color: var(--tavern-parchment-dark);
+  font-family: var(--font-sc-body);
+  font-size: 13px;
+  color: var(--color-sc-text-faded);
   font-style: italic;
-  opacity: 0.8;
+  margin-top: 4px;
 }
 
 .tavern-info {
   text-align: right;
+  font-family: var(--font-sc-data);
 }
 
 .pot-display,
@@ -1000,6 +1080,10 @@
    Buttons
    ============================================ */
 
+/* ============================================
+   Buttons
+   ============================================ */
+
 .btn {
   display: inline-flex;
   align-items: center;
@@ -1008,10 +1092,13 @@
   padding: 10px 16px;
   border-radius: var(--tavern-radius-md);
   font-weight: 600;
+  font-family: var(--font-sc-header);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   cursor: pointer;
   transition: all 0.2s ease;
-  border: 2px solid transparent;
-  font-family: inherit;
+  border: 1px solid transparent;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
 }
 
 .btn-large {
@@ -1026,25 +1113,33 @@
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--tavern-gold), var(--tavern-gold-dim));
-  color: var(--tavern-wood-dark);
-  border-color: var(--tavern-gold-bright);
+  background: linear-gradient(180deg, var(--color-sc-accent-gold) 0%, var(--color-sc-border-main) 100%);
+  color: #fff;
+  border-color: var(--color-sc-border-dark);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, var(--tavern-gold-bright), var(--tavern-gold));
+  background: linear-gradient(180deg, var(--color-sc-accent-gold) 0%, var(--tavern-gold-bright) 100%);
   box-shadow: 0 0 15px var(--tavern-glow);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  transform: translateY(1px);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 
 .btn-secondary {
-  background: var(--tavern-wood-light);
-  color: var(--tavern-parchment);
-  border-color: var(--tavern-wood-highlight);
+  background: linear-gradient(180deg, var(--color-sc-bg-secondary) 0%, var(--color-sc-bg-dark) 100%);
+  color: var(--color-sc-text-body);
+  border-color: var(--color-sc-border-main);
 }
 
 .btn-secondary:hover {
-  background: var(--tavern-wood-highlight);
-  border-color: var(--tavern-gold-dim);
+  background: var(--color-sc-bg-highlight);
+  border-color: var(--color-sc-accent-gold);
+  color: var(--color-sc-border-dark);
 }
 
 .btn-success {
@@ -3502,11 +3597,13 @@
 }
 
 .versus-outcome.success {
-  color: var(--tavern-success);
+  color: #ffffff;
+  text-shadow: 0 0 10px var(--tavern-success), 0 0 20px var(--tavern-success), 2px 2px 0 #000;
 }
 
 .versus-outcome.failure {
-  color: var(--tavern-danger);
+  color: #ffffff;
+  text-shadow: 0 0 10px var(--tavern-danger), 0 0 20px var(--tavern-danger), 2px 2px 0 #000;
 }
 
 @keyframes fadeUp {
@@ -3923,25 +4020,30 @@
     box-shadow: 0 0 5px rgba(255, 68, 68, 0.2);
   }
 }
+
 /* V5: Semantic Result Colors (High Contrast) */
 .tavern-result-success {
-  color: #4ade80; /* Bright Green */
+  color: #4ade80;
+  /* Bright Green */
   font-weight: bold;
 }
 
 .tavern-result-fail {
-  color: #fbbf24; /* Bright Amber */
+  color: #fbbf24;
+  /* Bright Amber */
   font-weight: bold;
 }
 
 .tavern-result-crit-success {
-  color: #fcd34d; /* Bright Gold */
+  color: #fcd34d;
+  /* Bright Gold */
   font-weight: bold;
   text-shadow: 0 0 5px rgba(251, 191, 36, 0.5);
 }
 
 .tavern-result-crit-fail {
-  color: #ef4444; /* Bright Red */
+  color: #ef4444;
+  /* Bright Red */
   font-weight: bold;
   text-shadow: 0 0 5px rgba(239, 68, 68, 0.5);
 }
@@ -3952,7 +4054,8 @@
   border-radius: 4px;
   padding: 8px;
   margin-top: 4px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  color: var(--tavern-parchment);
 }
 
 .tavern-cheat-result.tavern-cheat-success {
