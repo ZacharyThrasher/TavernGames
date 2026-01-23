@@ -6,6 +6,7 @@
 - **Starting Heat Control**: The GM is now prompted to set the **Starting Heat DC** (Default 10) when starting a round.
 - **UI Cleanup**: Removed the Game Log/History sidebar from the main window for a cleaner look.
 - **Accessibility**: Improved color contrast for skill result popups (Red/Green/Gold on dark backgrounds).
+- **Style Overhaul**: Implemented "Sword Coast Tavern" design system (Style Guide V2) with diegetic parchment UI, iron gall ink typography, and premium wood/metal aesthetics.
 
 ## [4.8.61] - 2026-01-22
 ### Hotfix 61
