@@ -229,6 +229,10 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         status,
         statusLabel,
         canAct: isCurrent && isMe && state.status === "PLAYING" && !isHolding && !isBusted && !tableData.pendingAction,
+        // Status Badges (V5.3.0)
+        isDared: tableData.dared?.[player.id] ?? false,
+        isBumpLocked: tableData.pendingBumpRetaliation?.attackerId === player.id,
+        isProfiled: (tableData.profiledBy?.[player.id] ?? []).length > 0,
         // For cheating: can cheat if it's playing, you're in the game, have at least 1 die, and haven't busted
       };
     });

@@ -30,23 +30,31 @@
         </div>
         {{else}}
         {{!-- Classic Single Mode --}}
-        {{#if img}}
-        <div class="portrait-container single">
-            <img src="{{img}}" alt="{{name}}" class="portrait-img" />
-            <div class="portrait-flash"></div>
-        </div>
-        {{/if}}
-
-        <div class="text-container">
-            {{#if resultData}}
-            {{!-- Reuse Versus Outcome Style for impactful result text --}}
-            <div class="versus-outcome {{resultData.outcomeClass}}">{{resultData.outcome}}</div>
-            {{else}}
-            <h1 class="cinematic-title">{{text}}</h1>
+        <div class="single-mode-container">
+            {{#if img}}
+            <div class="portrait-container single initiator">
+                <img src="{{img}}" alt="{{name}}" class="portrait-img" />
+                <div class="portrait-name">{{name}}</div>
+            </div>
             {{/if}}
 
-            {{#if img}}
-            <h2 class="cinematic-subtitle">{{name}}</h2>
+            <div class="text-container">
+                {{#if resultData}}
+                {{!-- Impactful Result Text --}}
+                <div class="main-result {{resultData.outcomeClass}}">{{resultData.outcome}}</div>
+                {{#if resultData.detail}}
+                <div class="result-detail">{{resultData.detail}}</div>
+                {{/if}}
+                {{else}}
+                <h1 class="cinematic-title">{{text}}</h1>
+                {{/if}}
+            </div>
+
+            {{#if targetImg}}
+            <div class="portrait-container single target">
+                <img src="{{targetImg}}" alt="{{targetName}}" class="portrait-img" />
+                <div class="portrait-name">{{targetName}}</div>
+            </div>
             {{/if}}
         </div>
         {{/if}}

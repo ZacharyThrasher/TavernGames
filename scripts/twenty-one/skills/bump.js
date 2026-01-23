@@ -177,11 +177,15 @@ export async function bumpTable(payload, userId) {
     }
 
     // V4.7.6: Result Overlay
+    // V4.7.6: Result Overlay
     const resultData = {
         attackerRoll: attackerTotal,
         defenderRoll: defenderTotal,
         outcome: success ? "SUCCESS" : "FAIL",
-        outcomeClass: success ? "success" : "failure"
+        outcomeClass: success ? "success" : "failure",
+        detail: success
+            ? `Bumping ${targetName}'s die...`
+            : `${targetName} caught you! RETALIATION incoming!`
     };
     tavernSocket.executeForEveryone("showSkillResult", "BUMP", userId, targetId, resultData);
 

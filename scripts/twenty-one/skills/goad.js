@@ -183,12 +183,18 @@ export async function goad(payload, userId) {
     }
 
     // V4.7.6: Result Overlay
+    // V4.7.6: Result Overlay
     const resultData = {
         attackerRoll: attackTotal,
         defenderRoll: defendTotal,
         outcome: attackerWins ? "SUCCESS" : "RESISTED",
-        outcomeClass: attackerWins ? "success" : "failure"
+        outcomeClass: attackerWins ? "success" : "failure",
+        // Detail for 5.3.0
+        detail: attackerWins
+            ? `${defenderName} is DARED! Must Hit or Fold!`
+            : `${defenderName} shrugged off the goad!`
     };
+    // Include target info manually if needed, but overlay resolves it via targetId
     tavernSocket.executeForEveryone("showSkillResult", "GOAD", userId, targetId, resultData);
 
     // Post the premium goad card

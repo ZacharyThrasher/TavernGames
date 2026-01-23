@@ -3812,16 +3812,74 @@
 }
 
 /* Status Badges on Portraits */
-.status-badge {
+/* Status Badges on Portraits */
+.status-badges {
   position: absolute;
   top: 4px;
   right: 4px;
-  font-size: 0.7em;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-weight: bold;
-  text-transform: uppercase;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
+
+.status-badge {
+  font-size: 10px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  z-index: 5;
+}
+
+/* Original Holding Badge was text-based, converting to match icon style? 
+   Wait, original was text pill. Keeping logic separate or overriding? 
+   Original CSS at 3801 was: padding: 2px 6px; border-radius: 4px; text-transform: uppercase; 
+   If I use icon badges, I should stick to icons for uniformity or keep holding distinct.
+   The 'holding' class is applied to .player-seat, so that's different.
+   Ah, lines 3801-3810 define .status-badge generally.
+   I will override for the icon versions.
+*/
+
+.status-badge.dared {
+  background: #e67e22;
+  /* Orange */
+  animation: pulse-red 2s infinite;
+}
+
+.status-badge.locked {
+  background: #7f8c8d;
+  /* Grey */
+}
+
+.status-badge.profiled {
+  background: #1abc9c;
+  /* Cyan */
+}
+
+/* Helper for single-mode cinematic overlay */
+.single-mode-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 20px;
+}
+
+.single-mode-container .portrait-container.initiator {
+  transform: scale(1.1);
+}
+
+.single-mode-container .portrait-container.target {
+  transform: scale(0.8);
+  opacity: 0.8;
+}
+
 
 .status-badge.holding {
   background: var(--tavern-success);

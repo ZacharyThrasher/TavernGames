@@ -153,7 +153,10 @@ export async function profile(payload, userId) {
         attackerRoll: attackTotal,
         defenderRoll: defenseTotal,
         outcome: outcomeText,
-        outcomeClass: outcomeClass
+        outcomeClass: outcomeClass,
+        detail: success
+            ? `${userName} is reading ${targetName}'s poker face...`
+            : `${targetName}'s poker face is unreadable!`
     });
 
 
