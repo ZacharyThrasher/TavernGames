@@ -79,13 +79,13 @@ export function getValidProfileTargets(state, userId) {
     const players = Object.values(state.players ?? {});
 
     return players
-      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !isActingAsHouse(p.id, state) && !tableData.folded?.[p.id])
-      .map(p => {
-        const user = game.users.get(p.id);
-        const actor = user?.character;
-        const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
-        return { id: p.id, name: p.name, img };
-      });
+        .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !isActingAsHouse(p.id, state) && !tableData.folded?.[p.id])
+        .map(p => {
+            const user = game.users.get(p.id);
+            const actor = user?.character;
+            const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
+            return { id: p.id, name: p.name, img };
+        });
 }
 
 /**
@@ -96,15 +96,15 @@ export function getValidGoadTargets(state, userId) {
     const players = Object.values(state.players ?? {});
 
     return players
-      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !isActingAsHouse(p.id, state))
-      .filter(p => !tableData.sloppy?.[p.id] && !tableData.folded?.[p.id]) // V3: Can't goad Sloppy or Folded
-      .map(p => {
-        const user = game.users.get(p.id);
-        const actor = user?.character;
-        const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
-        const isHolding = tableData.holds?.[p.id] ?? false;
-        return { id: p.id, name: p.name, img, isHolding };
-      });
+        .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !isActingAsHouse(p.id, state))
+        .filter(p => !tableData.sloppy?.[p.id] && !tableData.folded?.[p.id]) // V3: Can't goad Sloppy or Folded
+        .map(p => {
+            const user = game.users.get(p.id);
+            const actor = user?.character;
+            const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
+            const isHolding = tableData.holds?.[p.id] ?? false;
+            return { id: p.id, name: p.name, img, isHolding };
+        });
 }
 
 /**
@@ -115,28 +115,28 @@ export function getValidBumpTargets(state, userId) {
     const players = Object.values(state.players ?? {});
 
     return players
-      .filter(p => {
-        const isNotSelf = p.id !== userId;
-        const isNotBusted = !tableData.busts?.[p.id];
-        const isNotHouse = !isActingAsHouse(p.id, state);
-        const isNotHeld = !tableData.holds?.[p.id];
-        const isNotFolded = !tableData.folded?.[p.id];
-        const hasRolls = (tableData.rolls?.[p.id]?.length ?? 0) > 0;
-        return isNotSelf && isNotBusted && isNotHouse && isNotHeld && isNotFolded && hasRolls;
-      })
-      .map(p => {
-        const user = game.users.get(p.id);
-        const actor = user?.character;
-        const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
-        const dice = (tableData.rolls?.[p.id] ?? []).map((r, idx) => ({ 
-            index: idx, 
-            die: r.die, 
-            result: r.result,
-            isPublic: r.public ?? true 
-        }));
-        const isHolding = tableData.holds?.[p.id] ?? false;
-        return { id: p.id, name: p.name, img, dice, isHolding };
-      });
+        .filter(p => {
+            const isNotSelf = p.id !== userId;
+            const isNotBusted = !tableData.busts?.[p.id];
+            const isNotHouse = !isActingAsHouse(p.id, state);
+            const isNotHeld = !tableData.holds?.[p.id];
+            const isNotFolded = !tableData.folded?.[p.id];
+            const hasRolls = (tableData.rolls?.[p.id]?.length ?? 0) > 0;
+            return isNotSelf && isNotBusted && isNotHouse && isNotHeld && isNotFolded && hasRolls;
+        })
+        .map(p => {
+            const user = game.users.get(p.id);
+            const actor = user?.character;
+            const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
+            const dice = (tableData.rolls?.[p.id] ?? []).map((r, idx) => ({
+                index: idx,
+                die: r.die,
+                result: r.result,
+                isPublic: r.public ?? true
+            }));
+            const isHolding = tableData.holds?.[p.id] ?? false;
+            return { id: p.id, name: p.name, img, dice, isHolding };
+        });
 }
 
 /**
@@ -145,17 +145,17 @@ export function getValidBumpTargets(state, userId) {
 export function getValidAccuseTargets(state, userId, accusedThisRound) {
     const tableData = state.tableData ?? {};
     const players = Object.values(state.players ?? {});
-    
+
     if (accusedThisRound) return [];
 
     return players
-      .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !isActingAsHouse(p.id, state))
-      .map(p => {
-        const user = game.users.get(p.id);
-        const actor = user?.character;
-        const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
-        return { id: p.id, name: p.name, img };
-      });
+        .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !isActingAsHouse(p.id, state))
+        .map(p => {
+            const user = game.users.get(p.id);
+            const actor = user?.character;
+            const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
+            return { id: p.id, name: p.name, img };
+        });
 }
 
 /**
@@ -215,15 +215,41 @@ export async function drinkForPayment(userId, drinksNeeded, tableData) {
         // Failed save - gain Sloppy condition
         sloppy = true;
         updatedSloppy[userId] = true;
+
+        // V5.7: Sloppy reveals Hole Die!
+        const playerRolls = tableData.rolls?.[userId] ?? [];
+        const holeDieIndex = playerRolls.findIndex(r => !r.public && !r.blind);
+        let holeDieRevealedMsg = "";
+
+        // Modify the rolls in tableData (we return tableData override)
+        let updatedRolls = { ...tableData.rolls };
+
+        if (holeDieIndex !== -1) {
+            const newRolls = [...playerRolls];
+            newRolls[holeDieIndex] = { ...newRolls[holeDieIndex], public: true };
+            updatedRolls[userId] = newRolls;
+
+            // Also update visible total
+            const result = newRolls[holeDieIndex].result;
+            const updatedVisibleTotals = { ...tableData.visibleTotals };
+            updatedVisibleTotals[userId] = (updatedVisibleTotals[userId] ?? 0) + result;
+
+            // Apply these changes to the tableData we are building
+            // Note: We need to make sure we return this in the object below
+            tableData = { ...tableData, rolls: updatedRolls, visibleTotals: updatedVisibleTotals };
+
+            holeDieRevealedMsg = `<br><strong style="color: #ffaa66;">HOLE DIE REVEALED!</strong> (Clumsy!)`;
+        }
+
         await createChatCard({
             title: "Getting Sloppy...",
             subtitle: `${playerName} can't hold their liquor!`,
             message: `<strong>${playerName}</strong> tried to drink ${drinksNeeded} ${drinksNeeded === 1 ? 'drink' : 'drinks'} (DC ${dc})<br>
         <span style="color: #ffaa66;">Rolled: ${d20} + ${conMod} = ${total}</span><br>
-        <em style="color: #ffaa66;">SLOPPY: Disadvantage on INT/WIS/CHA/DEX checks!</em>`,
+        <em style="color: #ffaa66;">SLOPPY: Disadvantage on INT/WIS/CHA/DEX checks!</em>${holeDieRevealedMsg}`,
             icon: "fa-solid fa-wine-glass",
         });
-    
+
     } else {
         // Success - handled it like a champ
         await createChatCard({
@@ -234,7 +260,7 @@ export async function drinkForPayment(userId, drinksNeeded, tableData) {
         <em>"Put it on my tab!"</em>`,
             icon: "fa-solid fa-beer-mug-empty",
         });
-    
+
     }
 
     return {

@@ -66,10 +66,9 @@ If players tie for the highest score:
 *Force a timid opponent to act.*
 - **Check**: **Intimidation** or **Persuasion** vs Target's **Insight**.
 - **Success**: Target **MUST Hit** (any die) or **Fold** next turn. (Cannot Hold).
-- **Backfire**: You pay **1× Ante** + become **DARED**.
-  - **DARED**: You MUST Hit a **d8 (Free)** or Fold.
-- **Nat 20**: Irresistible Goad.
-- **Nat 1**: Backfire + Become Dared.
+- **Backfire**: **Symmetrical**. You **MUST Hit** (any die) or **Fold**.
+- **Nat 20**: Target **Locked** (Must Hit **d20**).
+- **Nat 1**: You are **Locked** (Must Hit **d20**).
 
 ### Bump the Table (STR)
 *Physically disrupt a roll.*
@@ -81,7 +80,7 @@ If players tie for the highest score:
 ### Cheat (DEX)
 *Secretly fudge the numbers.*
 - **Check**: **Sleight of Hand** vs **Heat DC**.
-- **Heat DC**: Starts at **10**. Increases by **+2** per attempt (Personal).
+- **Heat DC**: Starts at **10**. Increases by **+2** on Success, **+4** on Failure.
 - **Effect**: Modify die by **±1, ±2, or ±3**.
 - **Nat 20**: **Invisible Cheat**. Heat does not increase.
 - **Nat 1**: **FUMBLED!** Auto-caught. Pay **2× Ante**. Immediate Bust.
@@ -90,9 +89,9 @@ If players tie for the highest score:
 *Predict the flow of luck.*
 - **Check**: **Wisdom** vs **DC 12**.
 - **Success**: Learn if next roll of *each* die type will be **High** or **Low**.
-- **Failure**: **Blind Hit**. Forced to roll a **d4** (Value Hidden).
+- **Failure**: **Blind State**. Your next roll result is **Hidden**.
 - **Nat 20**: Learn **Exact Values** of next rolls.
-- **Nat 1**: **Locked**. Forced to roll a **d20**.
+- **Nat 1**: **Locked**. Forced to roll a **Blind d20**.
 
 ### Profile (INT)
 *Read an opponent's tells.*
@@ -107,9 +106,8 @@ If players tie for the highest score:
 - **Trigger**: "Put it on the Tab".
 - **Check**: **CON Save** vs **DC 10 + (2 × Drinks Taken)**.
 - **Success**: Action is Free. Drink Count +1.
-- **Failure**: **SLOPPY**. Disadvantage on INT/WIS/CHA/DEX checks.
+- **Failure**: **SLOPPY**. Disadvantage on checks. **Hole Die Revealed**.
 - **Nat 1**: **Pass Out**. Instant **BUST**.
-
 
 ---
 
@@ -117,12 +115,12 @@ If players tie for the highest score:
 
 | Skill | Success Effect | Failure / Backfire | Nat 20 (Crit Success) | Nat 1 (Crit Fail) |
 | :--- | :--- | :--- | :--- | :--- |
-| **Goad** (CHA) | Target **MUST Hit** or **Fold**. | You pay **1× Ante** + become **DARED** (Must Hit d8/Fold). | Target cannot resist. | Backfire + **DARED** confirmed. |
+| **Goad** (CHA) | Target **MUST Hit**. | **Symmetrical**. You **MUST Hit**. | Target **Locked (d20)**. | You **Locked (d20)**. |
 | **Bump** (STR) | Target re-rolls specific die. | **Retaliation**: Target re-rolls *your* die. | Re-roll theirs + **Free re-roll** for you. | Retaliation + Pay **1× Ante**. |
-| **Cheat** (DEX) | Die value changes (±1 to ±3). | Cheat fails (Value unchanged). Heat +2. | **Invisible Cheat** (No Heat increase). | **CAUGHT!** Pay **2× Ante**. **BUST**. |
-| **Foresight** (WIS) | Predict **High/Low** for next roll. | **Blind Hit** (Roll d4, value hidden). | Predict **Exact Value**. | **Locked** into **d20** Hit. |
-| **Profile** (INT) | Reveal **Cheat Status** (Yes/No). | No information. | Reveal **Specific Die** cheated. | **Counter-Read** (Target learns your Hole Die + Cheat Status). |
-| **Iron Liver** (CON) | Free Action. Drink count +1. | **SLOPPY** (Disadvantage on mental/dex checks). | **Chain Drink** (Free drink + another action). | **Pass Out** (**BUST**). |
+| **Cheat** (DEX) | Die modded. Heat **+2**. | Cheat fails. Heat **+4**. | **Invisible Cheat** (No Heat). | **CAUGHT!** Pay **2× Ante**. **BUST**. |
+| **Foresight** (WIS) | Predict **High/Low**. | **Blind State** (Next roll hidden). | Predict **Exact Value**. | **Locked** into **Blind d20**. |
+| **Profile** (INT) | Reveal **Cheat Status**. | No information. | Reveal **Specific Die**. | **Counter-Read** (Target learns Hole Die). |
+| **Iron Liver** (CON) | Free Action. | **SLOPPY** (Disadv + Reveal Hole Die). | **Chain Drink** (Free drink + Action). | **Pass Out** (**BUST**). |
 
 ---
 

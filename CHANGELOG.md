@@ -1,5 +1,19 @@
 # Changelog
 
+## [5.7.0] - 2026-01-23
+### Mechanics: High Stakes Overhaul
+- **Foresight (Hunch)**:
+    - **Backfire**: Now puts you in **Blind State** (Next roll hidden), but lets you *choose* your die (paying standard costs).
+    - **Nat 1**: Locked into **Blind d20** (High risk, hidden result).
+- **Goad**:
+    - **Symmetry**: Backfire now forces **YOU** to Hit or Fold (Same as target). Removed Ante cost.
+    - **Nat 20**: Target locked into **d20**.
+    - **Nat 1**: You locked into **d20**.
+- **Iron Liver**:
+    - **Sloppy**: Gaining the condition now **Reveals your Hole Die**.
+- **Cheat**:
+    - **Failure**: Heat increases by **+4** (Punitive) instead of +2.
+
 ## [5.6.0] - 2026-01-23
 ### Documentation: Skill Reference Table
 - **Quick Reference**: Added a comprehensive table to `RULES.md` summarizing every skill's effect, failure state, Nat 20 bonus, and Nat 1 penalty.

@@ -218,18 +218,18 @@ export async function goad(payload, userId) {
     const updatedGoadBackfire = { ...tableData.goadBackfire };
 
     if (attackerWins) {
-        // Target must roll - remove their hold status if they were holding
-        const updatedHolds = { ...tableData.holds };
-        if (updatedHolds[targetId]) {
-            delete updatedHolds[targetId];
-        }
-
         // Target must roll
+        const updatedHolds = { ...tableData.holds };
+        if (updatedHolds[targetId]) delete updatedHolds[targetId];
+
+        // V5.7: Nat 20 = Force d20
+        const isForceD20 = isNat20;
+
         updatedGoadBackfire[targetId] = {
             mustRoll: true,
             goadedBy: userId,
+            forceD20: isForceD20 // V5.7
         };
-
 
         const updatedTableData = {
             ...tableData,
@@ -239,6 +239,10 @@ export async function goad(payload, userId) {
             goadBackfire: updatedGoadBackfire,
             skillUsedThisTurn: true,
         };
+
+        // V5.7: Update Dared for target if Nat 20 (Forces d20)
+        // Re-using "dared" state but with d20 constraint maybe? 
+        // Actually, let's use the goadBackfire.forceD20 property in submitRoll directly.
 
         await addHistoryEntry({
             type: "goad",
@@ -250,32 +254,45 @@ export async function goad(payload, userId) {
             success: true,
             nat20: isNat20,
             message: isNat20
-                ? `${attackerName} CRITICALLY goaded ${defenderName}! No escape!`
-                : `${attackerName} goaded ${defenderName}!`,
+                ? `${attackerName} CRITICALLY goaded ${defenderName}! They MUST roll a d20!`
+                : `${attackerName} goaded ${defenderName}! they must roll!`,
         });
 
         return updateState({ tableData: updatedTableData });
+
     } else {
-        // V3: Backfire = attacker pays 1x ante to pot
-        const newPot = state.pot + ante;
-        await deductFromActor(userId, ante);
+        // BACKFIRE
+        // V5.7: Symmetrical Backfire - User must Roll or Fold
+        // NO Ante Penalty anymore
 
-        // V4: "Dared" condition - attacker can ONLY buy d8 (Free) or Fold
-        // This applies immediately and overrides mustRoll
-        const updatedDared = { ...tableData.dared, [userId]: true };
+        // Remove hold if present
+        const updatedHolds = { ...tableData.holds };
+        if (updatedHolds[userId]) delete updatedHolds[userId];
 
-        // V3: Nat 1 = also forced to roll (d8 only due to Dared)
-        if (isNat1) {
-            updatedGoadBackfire[userId] = { mustRoll: true, goadedBy: targetId };
-        }
+        // V5.7: Nat 1 = User Forced to roll d20
+        const isForceD20 = isNat1;
 
+        // Apply "Goaded" state to self (using goadBackfire structure for consistency)
+        // Or we can keep using "dared", but let's align it.
+        // The request says "make the effect ... the same".
+        // Use goadBackfire on SELF.
+        updatedGoadBackfire[userId] = {
+            mustRoll: true,
+            goadedBy: targetId, // "Goaded by target's resistance"
+            forceD20: isForceD20
+        };
+
+        // Clear legacy Dared if it exists
+        const updatedDared = { ...tableData.dared };
+        if (updatedDared[userId]) delete updatedDared[userId];
 
         const updatedTableData = {
             ...tableData,
+            holds: updatedHolds,
             goadedThisRound: updatedGoadedThisRound,
             usedSkills: updatedUsedSkills,
             goadBackfire: updatedGoadBackfire,
-            dared: updatedDared, // V4: Add dared state
+            dared: updatedDared,
             skillUsedThisTurn: true,
         };
 
@@ -289,11 +306,11 @@ export async function goad(payload, userId) {
             success: false,
             nat1: isNat1,
             message: isNat1
-                ? `${attackerName}'s goad CRITICALLY backfired! Pays ${ante}gp AND must roll!`
-                : `${attackerName}'s goad backfired! Pays ${ante}gp to the pot.`,
+                ? `${attackerName}'s goad CRITICALLY backfired! They MUST roll a d20!`
+                : `${attackerName}'s goad backfired! They are forced to roll!`,
         });
 
-        return updateState({ tableData: updatedTableData, pot: newPot });
+        return updateState({ tableData: updatedTableData }); // No pot change
     }
 }
 

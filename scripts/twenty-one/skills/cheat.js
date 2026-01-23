@@ -210,10 +210,15 @@ export async function cheat(payload, userId) {
         }
     }
 
-    // V5: Update Personal Heat DC (increases by 2 per cheat attempt)
+    // V5.7: Heat increases by 2 on success, 4 on failure (unless Nat 20)
     // Always increases unless Nat 20 (Invisible)
     const currentHeat = tableData.playerHeat[userId] ?? 10;
-    const newHeat = isNat20 ? currentHeat : (currentHeat + 2);
+
+    let heatIncrease = 2;
+    if (isNat20) heatIncrease = 0;
+    else if (!success) heatIncrease = 4; // Punitive increment for failure
+
+    const newHeat = currentHeat + heatIncrease;
 
     // Update playerHeat map
     const updatedPlayerHeat = { ...tableData.playerHeat, [userId]: newHeat };

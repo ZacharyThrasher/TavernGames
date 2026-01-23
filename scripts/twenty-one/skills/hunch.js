@@ -175,92 +175,37 @@ export async function hunch(userId) {
             icon: "fa-solid fa-eye",
         });
     } else {
-        // V4: Failure = Forced "Blind Hit" - roll a d4
-        const blindDieType = 4;
-        const blindRoll = await new Roll(`1d${blindDieType}`).evaluate();
-        const blindValue = blindRoll.total;
+        // V5.7: Failure = Enters "Blind State"
+        // Player must choose their own die (paying costs), but result is hidden
+        // Nat 1 = Locked into d20 (also blind)
 
-        // Update totals (internally tracked, but not shown to player)
-        const currentTotal = tableData.totals?.[userId] ?? 0;
-        const newTotal = currentTotal + blindValue;
-        const updatedTotals = { ...tableData.totals, [userId]: newTotal };
+        const isLocked = isNat1;
 
-        // Track blind dice for reveal phase
-        const currentRolls = tableData.rolls?.[userId] ?? [];
-        const currentBlindDice = tableData.blindDice?.[userId] ?? [];
+        // Update state to mark next roll as blind
+        tableData.blindNextRoll = { ...tableData.blindNextRoll, [userId]: true };
 
-        // V4.6.1: Check if bust BEFORE creating the roll entry
-        const isBust = newTotal > 21;
-
-        // Create the die entry - if bust, NOT blind; if not bust, IS blind
-        const newDie = {
-            die: blindDieType,
-            result: blindValue,
-            public: true, // It's visible, but the VALUE may be hidden
-            blind: !isBust,  // V4.6.1: If bust, reveal immediately; otherwise hide
-        };
-        const updatedRolls = { ...tableData.rolls, [userId]: [...currentRolls, newDie] };
-
-        // Only track as blind dice if NOT busting
-        const updatedBlindDice = isBust
-            ? tableData.blindDice
-            : { ...tableData.blindDice, [userId]: [...currentBlindDice, currentRolls.length] };
-
-        // Update busts
-        const updatedBusts = { ...tableData.busts };
-        if (isBust) {
-            updatedBusts[userId] = true;
+        if (isLocked) {
+            tableData.hunchLocked = { ...tableData.hunchLocked, [userId]: true };
+            tableData.hunchLockedDie = { ...tableData.hunchLockedDie, [userId]: 20 };
         }
 
-        // Update tableData now
-        tableData = {
-            ...tableData,
-            rolls: updatedRolls,
-            totals: updatedTotals,
-            blindDice: updatedBlindDice,
-            busts: updatedBusts,
-        };
+        const feedbackContent = `<div class="tavern-skill-result failure">
+        <strong>${isLocked ? 'Tunnel Vision (Nat 1)' : 'Bad Read'}</strong><br>
+        Your instincts fail you. The fog of probability descends.<br>
+        <em>Your next roll will be BLIND (Hidden).${isLocked ? ' And you are locked into a d20!' : ''}</em>
+        </div>`;
 
-        // V4.6: If blind die causes bust, reveal it immediately and trigger bust fanfare
-        if (isBust) {
-            const feedbackContent = `<div class="tavern-skill-result failure">
-            <strong>Bad Read - BUST!</strong><br>
-            Your instincts betray you - you rolled a <strong>d${blindDieType}: ${blindValue}</strong>!<br>
-            <em>Total: ${newTotal} - BUST!</em>
-          </div>`;
+        // V4.9: Private Feedback
+        await tavernSocket.executeForUsers("showPrivateFeedback", [userId], userId, "Foresight Failed", feedbackContent);
 
-            // V4.9: Private Feedback (Hidden from GM)
-            await tavernSocket.executeForUsers("showPrivateFeedback", [userId], userId, "Foresight BUST", feedbackContent);
-
-            await createChatCard({
-                title: "Foresight",
-                subtitle: `${userName}'s intuition fails`,
-                message: `A <strong>Blind Die</strong> reveals their doom! d${blindDieType}: ${blindValue} - BUST!`,
-                icon: "fa-solid fa-skull",
-            });
-
-            // Trigger bust fanfare for everyone
-            try {
-                // tavernSocket is now imported statically
-                await tavernSocket.executeForEveryone("showBustFanfare", userId);
-            } catch (e) { console.warn("Could not show bust fanfare:", e); }
-        } else {
-            const feedbackContent = `<div class="tavern-skill-result failure">
-        <strong>Bad Read</strong><br>
-        Your instincts betray you - you commit to a blind gamble!
-        <br><em>A d${blindDieType} has been rolled... but you can't see the result!</em>
-      </div>`;
-
-            // V4.9: Private Feedback (Hidden from GM)
-            await tavernSocket.executeForUsers("showPrivateFeedback", [userId], userId, "Foresight Failed", feedbackContent);
-
-            await createChatCard({
-                title: "Foresight",
-                subtitle: `${userName}'s intuition fails`,
-                message: `Committed to a <strong>Blind Die</strong>! A d${blindDieType} was rolled but the result is hidden...`,
-                icon: "fa-solid fa-question",
-            });
-        }
+        await createChatCard({
+            title: "Foresight",
+            subtitle: `${userName}'s intuition fails`,
+            message: isLocked
+                ? `Terrible read! They are <strong>Locked into a Blind d20</strong>!`
+                : `The future is cloudy. Their next roll will be <strong>Blind</strong>!`,
+            icon: "fa-solid fa-eye-slash",
+        });
     }
 
     await addHistoryEntry({
@@ -289,11 +234,7 @@ export async function hunch(userId) {
 
     await updateState({ tableData });
 
-    // V4.7.9: Auto-end turn on Failure (Blind Hit)
-    // Note: Success/Nat20/Nat1 (Lock) keeps turn active
-    if (!success && !isNat20 && !isNat1) {
-        return finishTurn(userId);
-    }
+
 
     return getState();
 }
