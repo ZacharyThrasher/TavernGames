@@ -113,14 +113,15 @@ If players tie for the highest score:
 
 ## 4. Skill Mechanics Summary
 
-| Skill | Success Effect | Failure / Backfire | Nat 20 (Crit Success) | Nat 1 (Crit Fail) |
+
+| Skill | Standard Success | Failure / Backfire | Critical Success (Nat 20) | Critical Fail (Nat 1) |
 | :--- | :--- | :--- | :--- | :--- |
-| **Goad** (CHA) | Target **MUST Hit**. | **Symmetrical**. You **MUST Hit**. | Target **Locked (d20)**. | You **Locked (d20)**. |
-| **Bump** (STR) | Target re-rolls specific die. | **Retaliation**: Target re-rolls *your* die. | Re-roll theirs + **Free re-roll** for you. | Retaliation + Pay **1× Ante**. |
-| **Cheat** (DEX) | Die modded. Heat **+2**. | Cheat fails. Heat **+4**. | **Invisible Cheat** (No Heat). | **CAUGHT!** Pay **2× Ante**. **BUST**. |
-| **Foresight** (WIS) | Predict **High/Low**. | **Blind State** (Next roll hidden). | Predict **Exact Value**. | **Locked** into **Blind d20**. |
-| **Profile** (INT) | Reveal **Cheat Status**. | No information. | Reveal **Specific Die**. | **Counter-Read** (Target learns Hole Die). |
-| **Iron Liver** (CON) | Free Action. | **SLOPPY** (Disadv + Reveal Hole Die). | **Chain Drink** (Free drink + Action). | **Pass Out** (**BUST**). |
+| **Goad** (CHA) | Target must **Hit** or **Fold**. | **Backfire**: YOU must **Hit** or **Fold**. | Target is **Locked** into **d20**. | YOU are **Locked** into **d20**. |
+| **Bump** (STR) | Target re-rolls specific die. | **Retaliation**: Target re-rolls *your* die. | Standard Effect + **Free Self Re-roll**. | Retaliation + Pay **1× Ante**. |
+| **Cheat** (DEX) | Die Value Changes.<br>Heat **+2**. | No Change.<br>Heat **+4** (Punishment). | **Invisible Cheat**.<br>Heat **+0**. | **CAUGHT!**<br>Pay **2× Ante** + **BUST**. |
+| **Foresight** (WIS) | Predict **High/Low**. | **Blind State**: Next roll is hidden. | Predict **Exact Value**. | **Locked** into **Blind d20**. |
+| **Profile** (INT) | Reveal **Cheat Status** (Yes/No). | No Information. | Reveal **Specific Die**. | **Counter-Read**: Target sees your Hole Die. |
+| **Iron Liver** (CON) | Action is Free.<br>+1 Drink Count. | **SLOPPY**: Disadvantage.<br>**Hole Die Revealed**. | **Chain Drink**: Free Drink + Another Action. | **Pass Out**<br>**Instant BUST**. |
 
 ---
 

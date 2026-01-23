@@ -1,12 +1,2 @@
-### Mechanics: High Stakes Overhaul
-- **Foresight (Hunch)**:
-    - **Backfire**: Now puts you in **Blind State** (Next roll hidden), but lets you *choose* your die (paying standard costs).
-    - **Nat 1**: Locked into **Blind d20** (High risk, hidden result).
-- **Goad**:
-    - **Symmetry**: Backfire now forces **YOU** to Hit or Fold (Same as target). Removed Ante cost.
-    - **Nat 20**: Target locked into **d20**.
-    - **Nat 1**: You locked into **d20**.
-- **Iron Liver**:
-    - **Sloppy**: Gaining the condition now **Reveals your Hole Die**.
-- **Cheat**:
-    - **Failure**: Heat increases by **+4** (Punitive) instead of +2.
+### Documentation: Polish
+- **Skill Summary**: Refined the summary table in `RULES.md` for better readability, using line breaks and clearer terminology for success/failure states.

@@ -1,5 +1,9 @@
 # Changelog
 
+## [5.7.1] - 2026-01-23
+### Documentation: Polish
+- **Skill Summary**: Refined the summary table in `RULES.md` for better readability, using line breaks and clearer terminology for success/failure states.
+
 ## [5.7.0] - 2026-01-23
 ### Mechanics: High Stakes Overhaul
 - **Foresight (Hunch)**:
