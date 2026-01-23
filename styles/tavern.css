@@ -289,6 +289,25 @@
   letter-spacing: 1px;
 }
 
+.npc-wallet-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 6px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--tavern-wood-highlight);
+  margin-top: 4px;
+}
+
+.npc-wallet-display .wallet-amount {
+  color: var(--tavern-gold-bright);
+  font-weight: 700;
+  font-family: var(--font-sc-data);
+  font-size: 14px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
 /* ============================================
    Main Layout
    ============================================ */
@@ -1117,16 +1136,34 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 10px 16px;
+  padding: 8px 16px;
   border-radius: var(--tavern-radius-md);
-  font-weight: 600;
+  font-weight: 700;
   font-family: var(--font-sc-header);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   cursor: pointer;
-  transition: all 0.2s ease;
-  border: 1px solid transparent;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 2px solid transparent;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(rgba(255, 255, 255, 0.1), transparent);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.btn:hover::after {
+  opacity: 1;
 }
 
 .btn-large {
@@ -1141,10 +1178,11 @@
 }
 
 .btn-primary {
-  background: linear-gradient(180deg, var(--color-sc-accent-gold) 0%, var(--color-sc-border-main) 100%);
+  background: linear-gradient(180deg, var(--color-sc-accent-gold) 0%, var(--tavern-gold-dim) 100%);
   color: #fff;
   border-color: var(--color-sc-border-dark);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  border-bottom-width: 3px;
 }
 
 .btn-primary:hover {
@@ -1159,9 +1197,10 @@
 }
 
 .btn-secondary {
-  background: linear-gradient(180deg, var(--color-sc-bg-secondary) 0%, var(--color-sc-bg-dark) 100%);
+  background: linear-gradient(180deg, var(--color-sc-bg-secondary) 0%, #d4c4a1 100%);
   color: var(--color-sc-text-body);
   border-color: var(--color-sc-border-main);
+  border-bottom-width: 3px;
 }
 
 .btn-secondary:hover {
@@ -2532,22 +2571,23 @@
 
 .btn-toggle-liquid {
   width: 100%;
-  padding: 10px;
-  background: var(--tavern-wood-medium);
-  border: 1px solid var(--tavern-wood-highlight);
+  padding: 12px;
+  background: linear-gradient(135deg, var(--tavern-wood-medium) 0%, var(--tavern-wood-dark) 100%);
+  border: 2px solid var(--tavern-wood-highlight);
   color: var(--tavern-parchment);
-  /* Light text for readability */
   border-radius: var(--tavern-radius-md);
-  font-family: inherit;
-  font-weight: 600;
+  font-family: var(--font-sc-header);
+  font-weight: 700;
+  font-size: 14px;
   text-transform: uppercase;
   letter-spacing: 1px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 10px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
 }
 
 .btn-toggle-liquid:hover {
@@ -2591,6 +2631,21 @@
   grid-template-columns: repeat(2, 1fr);
   gap: 8px;
   margin-top: 8px;
+}
+
+.control-section.skill-section h4 {
+  color: var(--tavern-border-dark);
+  /* Ensure contrast on light parchment */
+  font-family: var(--font-sc-header);
+  font-size: 13px;
+  margin: 0 0 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--tavern-wood-highlight);
+  padding-bottom: 4px;
 }
 
 .btn-skill {

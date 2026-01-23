@@ -385,7 +385,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       isBettingPhase,
       openingRollsRemaining,
       history,
-      dice: this._buildDiceArray(ante, isBettingPhase || isCutPhase),
+      dice: this._buildDiceArray(ante, isBettingPhase || isCutPhase, tableData.dared?.[userId] ?? false),
       isDuel: state.status === "DUEL",
       duel: tableData.duel ?? null,
       isMyDuel: (tableData.duel?.pendingRolls ?? []).includes(userId),
@@ -408,6 +408,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       canProfile,
       profileTargets,
       isDared: tableData.dared?.[userId] ?? false,
+      startingHeat: tableData.houseRules?.startingHeat ?? 10,
       uiLocked: TavernApp.uiLocked // V4.8.56: UI Lock State
     };
   }
@@ -415,7 +416,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
   // V4.8.56: UI Lock State
   static uiLocked = false;
 
-  _buildDiceArray(ante, isBettingPhase) {
+  _buildDiceArray(ante, isBettingPhase, isDared) {
     const diceConfig = [
       { value: 20, label: "d20", icon: "d20-grey", strategy: "Hail Mary" },
       { value: 10, label: "d10", icon: "d10-grey", strategy: "Builder" },
@@ -424,11 +425,22 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       { value: 4, label: "d4", icon: "d4-grey", strategy: "Precision" },
     ];
 
-    return diceConfig.map(d => ({
-      ...d,
-      cost: getDieCost(d.value, ante),
-      costLabel: this._formatCostLabel(getDieCost(d.value, ante), ante, isBettingPhase),
-    }));
+    return diceConfig.map(d => {
+      let cost = getDieCost(d.value, ante);
+      let costLabel = this._formatCostLabel(cost, ante, isBettingPhase);
+
+      // Dared Mechanic: d8 is free, others are normal (but logic elsewhere prevents rolling them)
+      if (isDared && d.value === 8) {
+        cost = 0;
+        costLabel = "FREE";
+      }
+
+      return {
+        ...d,
+        cost,
+        costLabel
+      };
+    });
   }
 
   _formatCostLabel(cost, ante, isBettingPhase) {
@@ -476,6 +488,28 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         } else {
           e.target.value = game.settings.get(MODULE_ID, "fixedAnte");
           ui.notifications.warn("Ante must be between 1 and 1000 gp");
+        }
+      });
+    }
+
+    // Handle Starting Heat changes (GM only)
+    const heatInput = this.element.querySelector('#starting-heat');
+    if (heatInput) {
+      heatInput.addEventListener('change', async (e) => {
+        const newHeat = parseInt(e.target.value) || 10;
+        if (newHeat >= 5 && newHeat <= 30) {
+          // Direct State Update as GM
+          const state = getState();
+          const houseRules = state.tableData?.houseRules || {};
+          houseRules.startingHeat = newHeat;
+
+          if (!state.tableData) state.tableData = {};
+          state.tableData.houseRules = houseRules;
+
+          await game.settings.set(MODULE_ID, "gameState", state);
+          // ui.notifications.info(`Starting Heat set to DC ${newHeat}`);
+        } else {
+          ui.notifications.warn("Heat must be between 5 and 30");
         }
       });
     }
@@ -601,37 +635,9 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   static async onStart() {
-    // V5: Prompt GM for Starting Heat
-    const startingHeat = await new Promise(resolve => {
-      new Dialog({
-        title: "Start Playing",
-        content: `
-          <div class="tavern-dialog-content">
-            <p>Ready to deal the dice?</p>
-            <div class="form-group">
-              <label>Starting Heat DC</label>
-              <input type="number" name="startingHeat" value="10" min="5" max="30" step="1" style="text-align: center;">
-              <p class="hint">Higher Heat makes cheating harder.</p>
-            </div>
-          </div>
-        `,
-        buttons: {
-          start: {
-            label: "Deal!",
-            icon: '<i class="fa-solid fa-dice"></i>',
-            callback: (html) => {
-              const val = parseInt(html.find('[name="startingHeat"]').val()) || 10;
-              resolve(val);
-            }
-          }
-        },
-        default: "start",
-        close: () => resolve(null)
-      }, { classes: ["tavern-dialog-window"] }).render(true);
-    });
-
-    if (startingHeat === null) return; // Cancelled
-
+    // V5: Use configured Starting Heat
+    const state = getState();
+    const startingHeat = state.tableData?.houseRules?.startingHeat ?? 10;
     await tavernSocket.executeAsGM("startRound", startingHeat);
   }
 
