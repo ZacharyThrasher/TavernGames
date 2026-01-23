@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.8.60] - 2026-01-22
+### Hotfix 60
+- **Foresight Fix**: Restored the "Tunnel Vision" lock mechanic. Rolling a Nat 1 on Foresight now correctly forces the player to roll a d20 (as a penalty) and prevents them from selecting other dice.
+
 ## [4.8.59] - 2026-01-22
 ### Hotfix 59
 - **Crash Fix**: Resolved a `ReferenceError: tavernSocket is not defined` that caused the game to crash when attempting to Cheat. Added the missing import to `cheat.js`.

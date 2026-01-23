@@ -622,6 +622,12 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       return;
     }
 
+    // V4.9: Hunch Lock Client-Side Validation
+    if (state.tableData?.hunchLocked?.[game.user.id] && die !== "20") {
+      ui.notifications.warn("Foresight locked you into rolling a d20!");
+      return;
+    }
+
     if (TavernApp.uiLocked) return;
     TavernApp.uiLocked = true;
     if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
