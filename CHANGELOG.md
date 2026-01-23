@@ -1,5 +1,9 @@
 # Changelog
 
+## [5.2.4] - 2026-01-23
+### Hotfix: Bump Dialog
+- **Bug Fix**: Resolved a "holeClass is not defined" error that prevented the Bump Dialog from rendering correctly.
+
 ## [5.2.3] - 2026-01-23
 ### Polish: Bump Dialog
 - **Readability**: Fixed "dark text on dark background" issues in the Bump the Table dialog.

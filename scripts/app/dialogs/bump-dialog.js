@@ -36,6 +36,8 @@ export class BumpDialog {
             targetData.dice.forEach((d) => {
               const isHole = !d.isPublic;
               const valueDisplay = isHole ? "?" : d.result;
+              const visLabel = isHole ? "HOLE" : "Visible";
+              const holeClass = isHole ? "hole-die" : "";
               const btn = $(`
                 <button type="button" class="die-btn ${holeClass}" data-die-index="${d.index}">
                   <img src="modules/${MODULE_ID}/assets/d${d.die}-grey.svg" onerror="this.src='icons/svg/d${d.die}-grey.svg'" style="width: 24px; height: 24px;" />
