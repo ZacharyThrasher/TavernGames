@@ -183,8 +183,10 @@ If two or more players tie for the winning score:
 ### Accusations
 Any player can accuse another of cheating at any time before the final winner is declared.
 - **Cost**: **2× Ante** (Paid upfront).
-- **Action**: Select a player and a specific die.
+- **Action**: Select a player and a *specific die*.
+- **Mechanism**: Pure deduction. No skill check required.
 - **Correct Accusation**:
+  - IF the selected die was tampered with (even partially):
   - You get your 2× Ante back.
   - You receive a **Bounty** (5× Ante or Cheater's entire wallet).
   - The Cheater **Busts** immediately.

@@ -902,8 +902,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         targetName,
         targetId,
         rolls: targetRolls,
-        ante,
-        cost: getAccusationCost(ante)
+        ante
       });
 
       if (result) {

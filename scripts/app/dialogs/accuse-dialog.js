@@ -11,8 +11,9 @@ const DICE_ICONS = {
 
 export class AccuseDialog {
   static async show(params) {
-    const { targetName, targetId, rolls, ante, cost } = params;
+    const { targetName, targetId, rolls, ante } = params;
     const bounty = ante * 5; // Fixed rule
+    const cost = ante * 2; // Fixed rule
 
     // Prepare dice data
     const dice = rolls.map((roll, idx) => {
