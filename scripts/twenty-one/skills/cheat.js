@@ -12,6 +12,7 @@
  */
 
 import { MODULE_ID, getState, updateState, addHistoryEntry } from "../../state.js";
+import { tavernSocket } from "../../socket.js";
 import { deductFromActor, getActorForUser, notifyUser } from "../utils/actors.js";
 import { createChatCard } from "../../ui/chat.js";
 import { emptyTableData } from "../constants.js";

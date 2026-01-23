@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.8.59] - 2026-01-22
+### Hotfix 59
+- **Crash Fix**: Resolved a `ReferenceError: tavernSocket is not defined` that caused the game to crash when attempting to Cheat. Added the missing import to `cheat.js`.
+
 ## [4.8.58] - 2026-01-22
 ### Changed
 - **Goad Balance**: Backfire now forces the attacker to roll a **d8** (Free) instead of a d20 or d4.
