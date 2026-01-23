@@ -1,4 +1,4 @@
-### Polish: Visual Improvements
-- **Cinematic Overlay**: Corrected layout issues in single-mode cut-ins where portraits were overlapping.
-- **Typography**: Added premium styling to "Goaded", "Occupied", and other result messages for better impact.
-- **CSS**: Fixed syntax errors affecting style rendering.
+### Refactor: Versus Style Overlay
+- **Layout**: Completely redesigned the skill result overlay to use a "Versus Screen" style Diagonal Layout.
+- **Visuals**: Portraits now appear on opposite sides of the diagonal stripe (Attacker Bottom-Left, Target Top-Right).
+- **Juice**: Added a "Stamper" animation to the result text for maximum impact.

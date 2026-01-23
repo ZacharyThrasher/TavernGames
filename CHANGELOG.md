@@ -1,5 +1,11 @@
 # Changelog
 
+## [5.3.2] - 2026-01-23
+### Refactor: Versus Style Overlay
+- **Layout**: Completely redesigned the skill result overlay to use a "Versus Screen" style Diagonal Layout.
+- **Visuals**: Portraits now appear on opposite sides of the diagonal stripe (Attacker Bottom-Left, Target Top-Right).
+- **Juice**: Added a "Stamper" animation to the result text for maximum impact.
+
 ## [5.3.1] - 2026-01-23
 ### Polish: Visual Improvements
 - **Cinematic Overlay**: Corrected layout issues in single-mode cut-ins where portraits were overlapping.

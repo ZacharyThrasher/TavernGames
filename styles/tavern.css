@@ -3862,70 +3862,79 @@
 }
 
 /* Helper for single-mode cinematic overlay */
+/* Helper for single-mode cinematic overlay */
 .single-mode-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
-  gap: 40px;
-  /* Space out elements */
-  position: relative;
+  height: 100%;
+  pointer-events: none;
   z-index: 10;
 }
 
 /* Force elements back into flow */
 .single-mode-container .portrait-container.single {
-  position: relative;
-  /* Override absolute */
-  bottom: auto;
-  right: auto;
-  width: 25vh;
-  /* Smaller portraits for stacking */
-  height: 25vh;
-  opacity: 1;
-  /* Reset opacity logic if needed, or keep animation */
-  /* Keep animation but adjust transform origin if needed */
-  transform: translateX(20%);
-  /* Start offset for animation compatibility? */
+  position: absolute;
+  width: 60vh;
+  height: 80vh;
   margin: 0;
-  mask-image: none;
-  /* Remove fade mask for cleaner look in center */
-  -webkit-mask-image: none;
+  opacity: 0;
+  mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
+  z-index: 1;
+  /* Behind Stripe */
 }
 
+/* Attacker: Bottom Left */
 .single-mode-container .portrait-container.initiator {
-  animation: portrait-slide-center 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
-  transform: translateX(-50px);
-  opacity: 0;
+  left: 0;
+  bottom: -50px;
+  transform: translateX(-100%);
+  animation: portrait-slide-left 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
 }
 
+/* Target: Top Right */
 .single-mode-container .portrait-container.target {
-  animation: portrait-slide-center 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.4s forwards;
-  transform: translateX(50px);
-  /* Different direction? */
-  opacity: 0;
+  right: 0;
+  top: -50px;
+  transform: translateX(100%);
+  animation: portrait-slide-right 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
 }
 
-/* Fix text container to be in flow */
+/* Text Container: Center & Angled */
 .single-mode-container .text-container {
-  position: relative;
-  top: auto;
-  left: auto;
-  transform: rotate(-5deg);
-  /* Slight angle for style */
-  margin: 20px 0;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-15deg);
+  text-align: center;
+  z-index: 20;
+  /* Above stripe */
+  width: 100%;
+  margin: 0;
 }
 
-@keyframes portrait-slide-center {
+@keyframes portrait-slide-left {
   0% {
-    transform: translateX(100px);
+    transform: translateX(-100%);
     opacity: 0;
   }
 
   100% {
-    transform: translateX(0);
+    transform: translateX(-10%);
+    opacity: 1;
+  }
+}
+
+@keyframes portrait-slide-right {
+  0% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+
+  100% {
+    transform: translateX(10%);
     opacity: 1;
   }
 }
@@ -4290,12 +4299,30 @@
 /* Result Text Styling (V5.3.1 Polish) */
 .main-result {
   font-family: "Modesto Condensed", "Palatino Linotype", serif;
-  font-size: 3em;
+  font-size: 4em;
+  /* Increased size */
   font-weight: 700;
   color: #fff;
   text-transform: uppercase;
   text-shadow: 0 0 10px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 0, 0, 0.5);
   margin-bottom: 5px;
+  /* Stamper Animation */
+  opacity: 0;
+  transform: scale(2);
+  animation: result-stamp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.5s forwards;
+}
+
+@keyframes result-stamp {
+  0% {
+    opacity: 0;
+    transform: scale(2) rotate(5deg);
+    /* Slight counter-rotate for chaos */
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
 }
 
 .main-result.success {
