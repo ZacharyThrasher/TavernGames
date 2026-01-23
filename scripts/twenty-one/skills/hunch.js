@@ -82,6 +82,7 @@ export async function hunch(userId) {
 
     // V5.9: Use getActorName
     const userName = getActorName(userId);
+    const actor = getActorForUser(userId); // Definition restored for stat access
     const wisMod = actor?.system?.abilities?.wis?.mod ?? 0;
 
     // Roll Wisdom check (Sloppy = disadvantage)
