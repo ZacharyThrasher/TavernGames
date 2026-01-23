@@ -342,6 +342,13 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       icon: this._getHistoryIcon(entry.type),
     }));
 
+    // V5.8: Private Logs Context
+    // Only show MY logs. GM cannot see others logs here.
+    const myPrivateLogs = (state.privateLogs?.[userId] ?? []).slice().reverse().map(entry => ({
+      ...entry,
+      timeAgo: this._formatTimeAgo(entry.timestamp)
+    }));
+
     return {
       moduleId: MODULE_ID,
       state,
@@ -389,6 +396,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       isBettingPhase,
       openingRollsRemaining,
       history,
+      privateLogs: myPrivateLogs, // V5.8
       dice: this._buildDiceArray(ante, isBettingPhase || isCutPhase, tableData.dared?.[userId] ?? false),
       isDuel: state.status === "DUEL",
       duel: tableData.duel ?? null,
@@ -730,10 +738,13 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       const cheatPlayerData = updatedState.players?.[game.user.id];
       // Check using helper for house status (GM-as-NPC support)
       const cheatIsHouse = isActingAsHouse(game.user.id, updatedState);
-      const canCheat = lastDieIndex >= 0 && !cheatIsHouse;
+      const lastDie = myRolls[lastDieIndex];
+      // V5.8: Anti-Cheat Blindness - Cannot cheat if you can't see the die!
+      const isBlind = lastDie?.blind ?? false;
+
+      const canCheat = lastDieIndex >= 0 && !cheatIsHouse && !isBlind;
 
       if (canCheat) {
-        const lastDie = myRolls[lastDieIndex];
         const heatDC = updatedState.tableData?.heatDC ?? 10;
 
         console.log("Tavern | Triggering Cheat Dialog", { lastDie, heatDC, actor: game.user.character });

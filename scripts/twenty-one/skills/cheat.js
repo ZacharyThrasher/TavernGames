@@ -11,7 +11,7 @@
  * - Nat 1: Auto-caught + pay 1× ante
  */
 
-import { MODULE_ID, getState, updateState, addHistoryEntry } from "../../state.js";
+import { MODULE_ID, getState, updateState, addHistoryEntry, addLogToAll, addPrivateLog } from "../../state.js"; // V5.8
 import { tavernSocket } from "../../socket.js";
 import { deductFromActor, getActorForUser, notifyUser } from "../utils/actors.js";
 import { createChatCard } from "../../ui/chat.js";
@@ -163,134 +163,25 @@ export async function cheat(payload, userId) {
         flavorText += ` <span class="tavern-result-success">Success (${dcType}: ${rollTotal})</span>`;
     }
 
-    // V4.4: Send proper feedback to the cheating player via whispered chat
-    const userName = game.users.get(userId)?.name ?? "Unknown";
-    const characterName = actor?.name ?? userName;
-
-    // V5: Use semantic classes for coloring
-    const cheatResultCard = `<div class="tavern-cheat-result ${success ? 'tavern-cheat-success' : 'tavern-cheat-fail'}">
-      <strong>${cheatTypeLabel} Cheat</strong><br>
-      <em>${skillName}:</em> ${d20Raw}${isSloppy ? ' (Disadvantage)' : ''} + ${modifier} = <strong>${rollTotal}</strong> vs Heat DC ${heatDC}<br>
-      ${isNat20 ? '<span class="tavern-result-crit-success">★ NAT 20 - INVISIBLE CHEAT! ★</span>' : ''}
-      ${isNat1 ? '<span class="tavern-result-crit-fail">✖ NAT 1 - FUMBLED & CAUGHT!</span>' : ''}
-      ${!isNat20 && !isNat1 && success ? '<span class="tavern-result-success">✓ Success! Cheat undetected.</span>' : ''}
-      ${!isNat20 && !isNat1 && !success ? '<span class="tavern-result-fail">⚠ Failed Heat check - Heat increased.</span>' : ''}
-      <br><small>d${targetDie.die}: ${oldValue} → ${newValue}</small>
-    </div>`;
-
-    // V4.9: Send secret feedback via Socket Dialog (Hidden from GM Chat Log)
-    // We target ONLY the user. The GM does not receive this event.
-    await tavernSocket.executeForUsers("showPrivateFeedback", [userId], userId, success ? "Cheat Success" : "Cheat Failed", cheatResultCard);
-
-    // V4.7.1: Only apply changes if success (or Nat 20)
-    // If failed (and not fumbled), nothing happens to the die
-    const updatedRolls = { ...tableData.rolls };
-    const updatedTotals = { ...tableData.totals };
-    const updatedVisibleTotals = { ...tableData.visibleTotals };
-    const updatedBusts = { ...tableData.busts };
-
-    if (success) {
-        // Update the die value
-        updatedRolls[userId] = [...rolls];
-        updatedRolls[userId][dieIndex] = { ...targetDie, result: newValue };
-
-        // Update total
-        updatedTotals[userId] = (updatedTotals[userId] ?? 0) - oldValue + newValue;
-
-        // Update visible total if it was a public die
-        if (targetDie.public) {
-            updatedVisibleTotals[userId] = (updatedVisibleTotals[userId] ?? 0) - oldValue + newValue;
-        }
-
-        // Check for bust/unbust
-        if (updatedTotals[userId] > 21) {
-            updatedBusts[userId] = true;
-        } else if (updatedTotals[userId] <= 21 && tableData.busts[userId]) {
-            updatedBusts[userId] = false;
-        }
-    }
-
-    // V5.7: Heat increases by 2 on success, 4 on failure (unless Nat 20)
-    // Always increases unless Nat 20 (Invisible)
-    const currentHeat = tableData.playerHeat[userId] ?? 10;
-
-    let heatIncrease = 2;
-    if (isNat20) heatIncrease = 0;
-    else if (!success) heatIncrease = 4; // Punitive increment for failure
-
-    const newHeat = currentHeat + heatIncrease;
-
-    // Update playerHeat map
-    const updatedPlayerHeat = { ...tableData.playerHeat, [userId]: newHeat };
-    const newCheatsThisRound = (tableData.cheatsThisRound ?? 0) + 1;
-
-    const updatedCaught = { ...tableData.caught };
-    let newPot = state.pot;
-
+    // V5.8: Logs (Replacing Private Feedback & Chat Cards)
     if (fumbled) {
-        // V3: Nat 1 = auto-caught + pay 2× ante (Rules v3.0)
-        updatedCaught[userId] = true;
-        updatedBusts[userId] = true;
-        await deductFromActor(userId, ante * 2);
-        newPot = state.pot + (ante * 2);
-    }
-
-    // V3: Track cheat with new structure (Nat 20 = no DC recorded, invisible)
-    const cheaters = { ...tableData.cheaters };
-    if (!cheaters[userId]) {
-        cheaters[userId] = { cheats: [] };
-    }
-    // Also maintain backwards-compat deceptionRolls for accusation logic
-    if (!cheaters[userId].deceptionRolls) {
-        cheaters[userId].deceptionRolls = [];
-    }
-
-    const cheatRecord = {
-        dieIndex,
-        oldValue,
-        newValue,
-        adjustment,
-        type: cheatType, // "physical" or "magical"
-        skill,
-        dc: isNat20 ? 0 : rollTotal, // Nat 20 = invisible (DC 0)
-        fumbled,
-        isHoleDie,
-        isNat20,
-        isNat1,
-    };
-
-    cheaters[userId].cheats.push(cheatRecord);
-    // Backwards compat
-    cheaters[userId].deceptionRolls.push({
-        dieIndex,
-        oldValue,
-        newValue,
-        deception: isNat20 ? 0 : rollTotal,
-        isNat1,
-        isNat20,
-    });
-
-    const updatedTable = {
-        ...tableData,
-        rolls: updatedRolls,
-        totals: updatedTotals,
-        visibleTotals: updatedVisibleTotals,
-        busts: updatedBusts,
-        caught: updatedCaught,
-        cheaters,
-        playerHeat: updatedPlayerHeat,
-        cheatsThisRound: newCheatsThisRound,
-    };
-
-    // If fumbled, announce it publicly
-    if (fumbled) {
-        await createChatCard({
+        // Public Caught Log
+        await addLogToAll({
             title: "Clumsy Hands!",
-            subtitle: `${characterName} fumbles`,
-            message: `${characterName} tried to cheat but fumbled badly - everyone saw it!<br><em>They are caught and forfeit the round.</em>`,
+            message: `<strong>${characterName}</strong> fumbled a cheat attempt!<br><em>CAUGHT and forfeited the round.</em>`,
             icon: "fa-solid fa-hand-fist",
+            type: "cheat",
+            cssClass: "failure"
         });
-
+    } else {
+        // Private Log for Cheater
+        await addPrivateLog(userId, {
+            title: success ? "Cheat Success" : "Cheat Failed",
+            message: `${skillName}: <strong>${rollTotal}</strong> vs Heath DC ${heatDC}<br>${isNat20 ? "NAT 20! Invisible!" : ""}`,
+            icon: "fa-solid fa-mask",
+            type: "cheat",
+            cssClass: success ? "success" : "failure"
+        });
     }
 
 

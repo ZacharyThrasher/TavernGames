@@ -12,7 +12,7 @@
  * - Nat 1: Backfire + pay 1× ante
  */
 
-import { MODULE_ID, getState, updateState, addHistoryEntry } from "../../state.js";
+import { MODULE_ID, getState, updateState, addHistoryEntry, addLogToAll, addPrivateLog } from "../../state.js"; // V5.8
 import { deductFromActor, getActorForUser, notifyUser } from "../utils/actors.js";
 import { createChatCard } from "../../ui/chat.js";
 import { emptyTableData } from "../constants.js";
@@ -280,29 +280,51 @@ export async function bumpTable(payload, userId) {
                 : `${attackerName} bumped ${targetName}'s hole die (d${dieSides})! (Value hidden)`, // V4.8.47: Value Masked
         });
 
-        // Create success chat card
-        const oldVisibleTotal = tableData.visibleTotals?.[targetId] ?? 0;
-        const newVisibleTotal = updatedVisibleTotals[targetId] ?? 0;
+        // V5.8: Log Bump Result
+        if (wasPublic) {
+            // Public Die Bumped -> Log to Everyone
+            await addLogToAll({
+                title: "Table Bump!",
+                message: `<strong>${attackerName}</strong> bumped <strong>${targetName}</strong>!<br>d${dieSides}: ${oldValue} → <strong>${newValue}</strong>${targetBusted ? " (BUST!)" : ""}`,
+                icon: "fa-solid fa-hand-fist",
+                type: "bump",
+                cssClass: "success"
+            });
+        } else {
+            // Hole Die Bumped -> Secret Log to Target + Secret Log to Attacker + Vague Log to Others?
+            // Actually, "X bumped Y's hole die!" is public info. The VALUE is private.
 
-        let resultMessage = wasPublic
-            ? `<strong>${targetName}'s</strong> d${dieSides} (was ${oldValue}) → <strong>${newValue}</strong><br>Visible Total: ${oldVisibleTotal} → <strong>${newVisibleTotal}</strong>`
-            : `<strong>${targetName}'s</strong> hole die (d${dieSides}) was bumped!<br><em>New value? Who knows... (Hidden)</em>`; // V4.8.47: Value Masked
+            // Public Log
+            await addLogToAll({
+                title: "Table Bump!",
+                message: `<strong>${attackerName}</strong> bumped <strong>${targetName}'s</strong> Hole Die!<br><em>(Value remains hidden)</em>`,
+                icon: "fa-solid fa-hand-fist",
+                type: "bump",
+                cssClass: "warning"
+            });
 
-        if (targetBusted && wasPublic) {
-            resultMessage += `<br><span style="color: #ff6666; font-weight: bold;">BUST!</span>`;
+            // Target Private Log
+            await addPrivateLog(targetId, {
+                title: "You were Bumped!",
+                message: `Your Hole Die (d${dieSides}) changed: ${oldValue} → <strong>${newValue}</strong>${targetBusted ? " (BUST!)" : ""}`,
+                icon: "fa-solid fa-triangle-exclamation",
+                type: "bump",
+                cssClass: "failure"
+            });
+
+            // Attacker Private Log (They don't see the result either usually... wait, in V3 attacker rolls it, so they see it?)
+            // The code says: const reroll = await new Roll...
+            // If attacker rolled it, they see it.
+            // But is it hidden from attacker? "Attacker wins: target's chosen die is re-rolled".
+            // Logic: "Keep the same visibility status - bumped hole die stays hidden!"
+            // If it's hidden, only the target knows the new value? 
+            // Or does the bumper know? "Attacker wins: TARGET'S chosen die is re-rolled". 
+            // Wait, "target's chosen die" -> target chooses? No, "target's specified die" (payload). Attacker chose.
+            // Attacker chose index.
+            // Let's assume attacker does NOT see the new value of a hidden die to preserve mystery, unless the code explicitly reveals it.
+            // The roll evaluation happens on server (or GM proxy).
+            // Let's safe side: Log value to target only.
         }
-
-        await createChatCard({
-            title: "Table Bump!",
-            subtitle: `${attackerName} vs ${targetName}`,
-            message: `
-        <div style="text-align: center; padding: 8px; background: rgba(74, 124, 78, 0.3); border: 1px solid #4a7c4e; border-radius: 4px; margin-top: 8px;">
-          <div style="color: #aaffaa; font-weight: bold;">SUCCESS!${!wasPublic ? ' (Hole Die)' : ''}</div>
-          <div style="margin-top: 4px;">${resultMessage}</div>
-        </div>
-      `,
-            icon: "fa-solid fa-hand-fist",
-        });
 
 
 
@@ -337,18 +359,22 @@ export async function bumpTable(payload, userId) {
                 : `${attackerName} tried to bump ${targetName}'s dice but was caught!`,
         });
 
-        // Create failure chat card (awaiting retaliation)
-        await createChatCard({
-            title: "Table Bump!",
-            subtitle: `${attackerName} vs ${targetName}`,
-            message: `
-        <div style="text-align: center; padding: 8px; background: rgba(139, 58, 58, 0.3); border: 1px solid #8b3a3a; border-radius: 4px; margin-top: 8px;">
-          <div style="color: #ffaaaa; font-weight: bold;">CAUGHT!</div>
-          <div style="margin-top: 4px;"><strong>${targetName}</strong> catches their dice!</div>
-          <div style="margin-top: 4px; font-style: italic; color: #ffcc88;">Awaiting retaliation...</div>
-        </div>
-      `,
+        // V5.8: Log Bump Failure
+        await addLogToAll({
+            title: "Bump Caught!",
+            message: `<strong>${attackerName}</strong> tried to bump <strong>${targetName}</strong> but was caught!`,
             icon: "fa-solid fa-hand-fist",
+            type: "bump",
+            cssClass: "failure"
+        });
+
+        // Log Retaliation Pending to Target
+        await addPrivateLog(targetId, {
+            title: "Retaliation Ready",
+            message: `You caught ${attackerName}! Select one of their dice to re-roll.`,
+            icon: "fa-solid fa-hand-back-fist",
+            type: "bump",
+            cssClass: "success"
         });
 
         return updateState({ tableData: { ...updatedTableData, skillUsedThisTurn: true }, pot: newPot });
@@ -458,34 +484,34 @@ export async function bumpRetaliation(payload, userId) {
         message: `${targetName} chose ${attackerName}'s d${dieSides}: ${oldValue} → ${newValue}`,
     });
 
-    // Create retaliation result chat card
-    // Don't reveal values if it was a hole die
-    let resultMessage;
+    // V5.8: Log Retaliation
     if (wasPublic) {
-        const oldVisibleTotal = tableData.visibleTotals?.[attackerId] ?? 0;
-        const newVisibleTotal = updatedVisibleTotals[attackerId] ?? 0;
-
-        resultMessage = `<strong>${attackerName}'s</strong> d${dieSides} (was ${oldValue}) → <strong>${newValue}</strong><br>`;
-        resultMessage += `Visible Total: ${oldVisibleTotal} → <strong>${newVisibleTotal}</strong>`;
-        if (attackerBusted) {
-            resultMessage += `<br><span style="color: #ff6666; font-weight: bold;">BUST!</span>`;
-        }
+        await addLogToAll({
+            title: "Retaliation!",
+            message: `<strong>${targetName}</strong> re-rolled <strong>${attackerName}'s</strong> d${dieSides}: ${oldValue} → <strong>${newValue}</strong>${attackerBusted ? " (BUST!)" : ""}`,
+            icon: "fa-solid fa-hand-back-fist",
+            type: "bump",
+            cssClass: "warning"
+        });
     } else {
-        resultMessage = `<strong>${attackerName}'s</strong> hole die (d${dieSides}) was re-rolled!<br>`;
-        resultMessage += `<em>The new value remains hidden...</em>`;
-    }
+        // Public generic
+        await addLogToAll({
+            title: "Retaliation!",
+            message: `<strong>${targetName}</strong> re-rolled <strong>${attackerName}'s</strong> Hole Die!`,
+            icon: "fa-solid fa-hand-back-fist",
+            type: "bump",
+            cssClass: "warning"
+        });
 
-    await createChatCard({
-        title: "Retaliation!",
-        subtitle: `${targetName} strikes back`,
-        message: `
-      <div style="text-align: center; padding: 8px; background: rgba(139, 107, 58, 0.3); border: 1px solid #8b6b3a; border-radius: 4px;">
-        <div style="color: #ffcc88; font-weight: bold;">${targetName} chose ${attackerName}'s d${dieSides}</div>
-        <div style="margin-top: 8px;">${resultMessage}</div>
-      </div>
-    `,
-        icon: "fa-solid fa-hand-back-fist",
-    });
+        // Private to Attacker
+        await addPrivateLog(attackerId, {
+            title: "Retaliation!",
+            message: `Your Hole Die (d${dieSides}) changed: ${oldValue} → <strong>${newValue}</strong>${attackerBusted ? " (BUST!)" : ""}`,
+            icon: "fa-solid fa-triangle-exclamation",
+            type: "bump",
+            cssClass: "failure"
+        });
+    }
 
 
 

@@ -13,7 +13,7 @@
  * - Sloppy/Folded players cannot be goaded
  */
 
-import { MODULE_ID, getState, updateState, addHistoryEntry } from "../../state.js";
+import { MODULE_ID, getState, updateState, addHistoryEntry, addLogToAll, addPrivateLog } from "../../state.js"; // V5.8
 import { deductFromActor, getActorForUser, notifyUser } from "../utils/actors.js";
 import { createChatCard } from "../../ui/chat.js";
 import { emptyTableData } from "../constants.js";
@@ -197,17 +197,13 @@ export async function goad(payload, userId) {
     // Include target info manually if needed, but overlay resolves it via targetId
     tavernSocket.executeForEveryone("showSkillResult", "GOAD", userId, targetId, resultData);
 
-    // Post the premium goad card
-    // V4.7.6: Suppressed in favor of Result Overlay
-    /*
-    await ChatMessage.create({
-        content: `<div class="tavern-goad-card">
-        ... (omitted for brevity) ...
-    </div>`,
-        speaker: { alias: "Tavern Twenty-One" },
-        // rolls: [attackRoll, defendRoll], // V4.7.9: Removed to prevent DSN dupe
-    });
-    */
+    // V5.8: Log Goad Attempt
+    // We log the result (Success/Fail) inside the Outcome blocks below to be specific, 
+    // BUT we can also log a generic "XY used Goad on Z" here if we want?
+    // Let's stick to logging the RESULT, as the prompt implies "What happened".
+    // Wait, Result Overlay shows it ephemerally. The Log should persist it.
+
+    // We'll log in the if/else blocks for Success/Backfire logic to capture the details.
 
     // Track that this player has goaded this round
     const updatedGoadedThisRound = { ...tableData.goadedThisRound, [userId]: true };
@@ -243,6 +239,15 @@ export async function goad(payload, userId) {
         // V5.7: Update Dared for target if Nat 20 (Forces d20)
         // Re-using "dared" state but with d20 constraint maybe? 
         // Actually, let's use the goadBackfire.forceD20 property in submitRoll directly.
+
+        // V5.8: Log Goad Success
+        await addLogToAll({
+            title: "Goad Successful!",
+            message: `<strong>${attackerName}</strong> goaded <strong>${defenderName}</strong>!<br>Target is <strong>${isForceD20 ? "LOCKED into d20" : "DARED"}</strong> (Must Hit or Fold).`,
+            icon: "fa-solid fa-comments",
+            type: "goad",
+            cssClass: "success"
+        });
 
         await addHistoryEntry({
             type: "goad",
@@ -295,6 +300,15 @@ export async function goad(payload, userId) {
             dared: updatedDared,
             skillUsedThisTurn: true,
         };
+
+        // V5.8: Log Goad Backfire
+        await addLogToAll({
+            title: "Goad Backfired!",
+            message: `<strong>${attackerName}</strong> tried to goad <strong>${defenderName}</strong> but failed!<br>Attacker is <strong>${isForceD20 ? "LOCKED into d20" : "forced to Roll"}</strong>!`,
+            icon: "fa-solid fa-comments",
+            type: "goad",
+            cssClass: "failure"
+        });
 
         await addHistoryEntry({
             type: "goad",

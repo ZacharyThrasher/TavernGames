@@ -81,6 +81,8 @@ export function defaultState() {
     history: [],
     // V4: NPC Bank
     npcWallets: {},
+    // V5.8: Private Logs (Client-side secrets)
+    privateLogs: {}, // { [userId]: [{ timestamp, text, type, icon }] }
   };
 }
 
@@ -186,6 +188,10 @@ export async function updateState(patch) {
     npcWallets: patch.npcWallets !== undefined
       ? { ...patch.npcWallets }
       : current.npcWallets,
+    // V5.8: Replace privateLogs entirely if present (deep merge too expensive/complex for this)
+    privateLogs: patch.privateLogs !== undefined
+      ? { ...patch.privateLogs }
+      : current.privateLogs,
   };
 
   console.log("Tavern Twenty-One | Updating state:", { current, patch, next });
@@ -210,6 +216,33 @@ export async function addHistoryEntry(entry) {
 
 export async function clearHistory() {
   return updateState({ history: [] });
+}
+
+/**
+ * V5.8: Add a private log entry for a specific user
+ * @param {string} userId 
+ * @param {object} entry - { title, message, icon, type }
+ */
+export async function addPrivateLog(userId, entry) {
+  const state = getState();
+  const currentLogs = state.privateLogs?.[userId] ?? [];
+
+  // Add timestamp
+  const newEntry = {
+    ...entry,
+    timestamp: Date.now(),
+    id: foundry.utils.randomID(), // Unique ID for DOM keys
+    seen: false // For future unread badge logic
+  };
+
+  const newLogs = [...currentLogs, newEntry];
+
+  // Cap at 20 entries
+  if (newLogs.length > 20) newLogs.shift();
+
+  const updatedPrivateLogs = { ...state.privateLogs, [userId]: newLogs };
+
+  return updateState({ privateLogs: updatedPrivateLogs });
 }
 
 // V4: Legacy aliases for backwards compatibility

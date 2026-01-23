@@ -46,7 +46,32 @@
         {{> "modules/tavern-dice-master/templates/parts/controls.hbs"}}
       </div>
 
-      {{!-- History Panel Removed (User Request V5) --}}
+      {{!-- V5.8: Private Logs Panel --}}
+      <div class="tavern-private-logs">
+        <div class="logs-header">
+          <i class="fa-solid fa-book-secret"></i> Your Private Log
+        </div>
+        <div class="logs-content">
+          {{#if privateLogs}}
+          {{#each privateLogs}}
+          <div class="log-entry {{this.type}}">
+            <div class="log-meta">
+              <span class="log-icon"><i class="{{this.icon}}"></i></span>
+              <span class="log-time">{{this.timeAgo}}</span>
+            </div>
+            <div class="log-details">
+              <div class="log-title">{{this.title}}</div>
+              <div class="log-message">{{{this.message}}}</div>
+            </div>
+          </div>
+          {{/each}}
+          {{else}}
+          <div class="no-logs">
+            <em>No secrets yet...</em>
+          </div>
+          {{/if}}
+        </div>
+      </div>
     </aside>
   </main>
 

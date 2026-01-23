@@ -1,4 +1,4 @@
-import { MODULE_ID, getState, updateState, addHistoryEntry } from "../../state.js";
+import { MODULE_ID, getState, updateState, addHistoryEntry, addLogToAll } from "../../state.js"; // V5.8
 import { deductFromActor } from "../../wallet.js";
 import { createChatCard } from "../../ui/chat.js";
 
@@ -330,11 +330,21 @@ export async function submitRoll(payload, userId) {
           })
           .join(" → ");
 
-        await createChatCard({
+        const orderNames = updatedTable.bettingOrder
+          .filter(id => !updatedTable.busts[id])
+          .map(id => {
+            const name = game.users.get(id)?.name ?? "Unknown";
+            const vt = updatedTable.visibleTotals[id] ?? 0;
+            return `${name} (${vt})`;
+          })
+          .join(" → ");
+
+        // V5.8: Log instead of Chat Card
+        await addLogToAll({
           title: "Betting Round",
-          subtitle: "Opening complete!",
-          message: `All players have their opening hands.<br><strong>Turn order (by visible total):</strong> ${orderNames}<br><em>d20: FREE | d10: ${Math.floor(ante / 2)}gp | d6/d8: ${ante}gp | d4: ${ante * 2}gp</em>`,
+          message: `Opening complete!<br><strong>Turn order:</strong> ${orderNames}<br><em>d20: FREE | d10: 1/2 Ante | d6/d8: Ante | d4: 2x Ante</em>`,
           icon: "fa-solid fa-hand-holding-dollar",
+          type: "phase"
         });
       } else {
         updatedTable.currentPlayer = getNextOpeningPlayer(state, updatedTable);
@@ -381,24 +391,33 @@ export async function finishTurn(userId) {
     tableData.rolls = { ...tableData.rolls, [userId]: updatedRolls };
     tableData.visibleTotals = updatedVisibleTotals;
 
-    // Reconstruct the history log message
+    // V5.8: We don't need to log this revealing action if we already logged the roll privately or we are about to log result
+    // Actually the logic was to log it NOW that it's public.
+    // The player saw "You rolled X" privately (maybe?).
+    // Let's log the "Finalized Roll" to everyone.
+
     const user = game.users.get(userId);
-    const playerData = state.players?.[userId];
-    // V3.5: GM-as-NPC check should match submitRoll logic
-    // Note: We use simpler logic here since we just need the message
-    const isHouse = user?.isGM && !playerData?.playingAsNpc;
+    const userName = user?.name ?? "Unknown";
+
+    // Check cost again for log consistency
     let rollCostMsg = "";
-    if (!isHouse) {
-      const cost = getDieCost(lastRoll.die, ante);
-      if (cost === 0) rollCostMsg = " (FREE)";
-      else rollCostMsg = ` (${cost}gp)`;
-    }
+    // Simplified cost check
+    const cost = getDieCost(lastRoll.die, ante);
+    if (cost === 0) rollCostMsg = " (FREE)";
+    else rollCostMsg = ` (${cost}gp)`;
 
     let specialMsg = "";
     if (lastRoll.die === 20 && lastRoll.result === 21) specialMsg = " **NATURAL 20 = INSTANT 21!**";
     else if (lastRoll.die !== 20 && lastRoll.result === 1) specialMsg = " *Spilled drink! 1gp cleaning fee.*";
 
-    const userName = user?.name ?? "Unknown";
+    // V5.8: Add Log to All
+    await addLogToAll({
+      title: `${userName} rolled d${lastRoll.die}`,
+      message: `Result: <strong>${lastRoll.result}</strong>${rollCostMsg}${specialMsg}`,
+      icon: "fa-solid fa-dice",
+      type: "roll"
+    });
+
     await addHistoryEntry({
       type: "roll",
       player: userName,
@@ -418,6 +437,16 @@ export async function finishTurn(userId) {
       // Still busted after cheat decision
       updatedTable.busts = { ...updatedTable.busts, [userId]: true };
       const userName = game.users.get(userId)?.name ?? "Unknown";
+
+      // V5.8: Log Bust
+      await addLogToAll({
+        title: "BUST!",
+        message: `${userName} busted with ${currentTotal}!`,
+        icon: "fa-solid fa-skull",
+        type: "bust",
+        cssClass: "failure"
+      });
+
       await addHistoryEntry({
         type: "bust",
         player: userName,
@@ -503,6 +532,15 @@ export async function hold(userId) {
   updatedTable.skillUsedThisTurn = false;
 
   const userName = game.users.get(userId)?.name ?? "Unknown";
+
+  // V5.8: Log Hold
+  await addLogToAll({
+    title: "Hold",
+    message: `${userName} holds.`, // Don't show total yet? Or visible total?
+    icon: "fa-solid fa-hand",
+    type: "hold"
+  });
+
   await addHistoryEntry({
     type: "hold",
     player: userName,
@@ -559,13 +597,12 @@ export async function fold(userId) {
   tableData.currentPlayer = getNextActivePlayer(state, tableData);
   tableData.skillUsedThisTurn = false;
 
-  await createChatCard({
+  // V5.8: Log Fold
+  await addLogToAll({
     title: "Fold",
-    subtitle: `${userName} folds`,
-    message: refund > 0
-      ? `Received <strong>${refund}gp</strong> refund (50% ante). Now untargetable.`
-      : `No refund (already acted). Now untargetable.`,
+    message: `${userName} folds.${refund > 0 ? ` (Refund: ${refund}gp)` : ""}`,
     icon: "fa-solid fa-door-open",
+    type: "fold"
   });
 
   await addHistoryEntry({

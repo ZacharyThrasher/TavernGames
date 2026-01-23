@@ -9,7 +9,7 @@
  * - Nat 1: Locked into d20 Hit
  */
 
-import { MODULE_ID, getState, updateState } from "../../state.js";
+import { MODULE_ID, getState, updateState, addPrivateLog } from "../../state.js"; // V5.8: Import addPrivateLog
 import { tavernSocket } from "../../socket.js";
 import { showPublicRoll } from "../../dice.js";
 import { HUNCH_DC, HUNCH_THRESHOLDS, VALID_DICE, emptyTableData } from "../constants.js";
@@ -119,6 +119,14 @@ export async function hunch(userId) {
         // V4.9: Private Feedback (Hidden from GM)
         await tavernSocket.executeForUsers("showPrivateFeedback", [userId], userId, "Foresight Result", feedbackContent);
 
+        // V5.8: Add to Private Log
+        await addPrivateLog(userId, {
+            title: "Foresight (Nat 20)",
+            message: `Exact Values: ${Object.entries(predictions).map(([d, v]) => `d${d}:${v}`).join(", ")}`,
+            icon: "fa-solid fa-eye",
+            type: "hunch"
+        });
+
         await createChatCard({
             title: "Foresight",
             subtitle: `${userName}'s eyes close...`,
@@ -197,6 +205,16 @@ export async function hunch(userId) {
 
         // V4.9: Private Feedback
         await tavernSocket.executeForUsers("showPrivateFeedback", [userId], userId, "Foresight Failed", feedbackContent);
+
+        // V5.8: Add to Private Log
+        await addPrivateLog(userId, {
+            title: isLocked ? "Foresight (Nat 1)" : "Foresight Failed",
+            message: isLocked
+                ? "Locked into a BLIND d20 roll!"
+                : "Next roll will be BLIND (Hidden).",
+            icon: "fa-solid fa-eye-slash",
+            type: "hunch"
+        });
 
         await createChatCard({
             title: "Foresight",
