@@ -1,5 +1,4 @@
 import { deductFromActor } from "../../wallet.js";
-import { deductFromActor } from "../../wallet.js";
 import { MODULE_ID, getState, updateState, addHistoryEntry, addLogToAll } from "../../state.js"; // V5.8.6: Restore missing imports
 
 import { tavernSocket } from "../../socket.js";
