@@ -35,9 +35,9 @@ export async function submitRoll(payload, userId) {
     return state;
   }
 
-  // V4: Dared check - can ONLY buy d20 if dared
-  if (tableData.dared?.[userId] && die !== 20) {
-    ui.notifications.warn("You are Dared! You can only buy a d20.");
+  // V4.9: Dared check - can ONLY buy d8 (Free) if dared
+  if (tableData.dared?.[userId] && die !== 8) {
+    ui.notifications.warn("You are Dared! You forced to roll a d8 (Free) or Fold.");
     return state;
   }
 
@@ -58,7 +58,12 @@ export async function submitRoll(payload, userId) {
     // V3.5: GM-as-NPC pays for dice like regular players (unified via deductFromActor)
     // Removed !isHouse check to allow NPCs to pay
     {
-      rollCost = getDieCost(die, ante);
+      // V4.9: Dared rolls are FREE
+      if (tableData.dared?.[userId]) {
+        rollCost = 0;
+      } else {
+        rollCost = getDieCost(die, ante);
+      }
 
       if (rollCost > 0) {
         if (payload.payWithDrink) {
@@ -442,7 +447,7 @@ export async function hold(userId) {
 
   // V4: Dared check - cannot hold if dared
   if (tableData.dared?.[userId]) {
-    await notifyUser(userId, "You are Dared! You forced to roll a d20 or Fold.");
+    await notifyUser(userId, "You are Dared! You forced to roll a d8 (Free) or Fold.");
     return state;
   }
 

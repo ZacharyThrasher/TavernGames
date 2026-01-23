@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.8.58] - 2026-01-22
+### Changed
+- **Goad Balance**: Backfire now forces the attacker to roll a **d8** (Free) instead of a d20 or d4.
+- **Private Feedback**: Cheat, Profile, Foresight, and Cut results are now displayed in a private local Dialog rather than a whispered Chat Message, ensuring GMs cannot see sensitive player information.
+
 ## [4.8.57] - 2026-01-22
 - **UI Interaction Lock (Anti-Spam):**
   - Implemented comprehensive UI locking mechanism (`TavernApp.uiLocked`) for all player actions.

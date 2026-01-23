@@ -263,3 +263,29 @@ export function showSkillResult(type, userId, targetId, resultData) {
     console.error("Tavern | Skill Result Error:", error);
   }
 }
+
+/**
+ * V4.9: Secret Private Feedback (Client-Side Dialog)
+ * Shows private result only to the player (hiding it from GM chat logs)
+ * @param {string} userId - User ID to show this to
+ * @param {string} title - Title of the dialog
+ * @param {string} content - HTML content of the result card
+ */
+export function showPrivateFeedback(userId, title, content) {
+  // Security check: Only show if this is meant for me
+  // Also, GMs *can* receive this if they are playing as NPC and sent it to themselves
+  if (game.user.id !== userId) return;
+
+  new Dialog({
+    title: title,
+    content: content,
+    buttons: {
+      ok: {
+        icon: '<i class="fa-solid fa-check"></i>',
+        label: "OK",
+      }
+    },
+    default: "ok",
+    close: () => { }
+  }, { classes: ["tavern-cheat-feedback"] }).render(true);
+}

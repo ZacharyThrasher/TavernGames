@@ -1,7 +1,7 @@
 import { MODULE_ID } from "./state.js";
 import { handleJoinTable, handleLeaveTable, handleStartRound, handlePlayerAction, handleResetTable } from "./tavern-actions.js";
 import { showRollToUser } from "./dice.js";
-import { showVictoryFanfare, showBustFanfare, playBumpEffect, showFloatingText, showSkillCutIn, showSkillResult } from "./ui/fx.js";
+import { showVictoryFanfare, showBustFanfare, playBumpEffect, showFloatingText, showSkillCutIn, showSkillResult, showPrivateFeedback } from "./ui/fx.js";
 
 export let tavernSocket;
 
@@ -30,4 +30,6 @@ export function setupSockets() {
   tavernSocket.register("showSkillCutIn", showSkillCutIn);
   // V4.7.6: Result Overlay
   tavernSocket.register("showSkillResult", showSkillResult);
+  // V4.9: Secret Private Feedback
+  tavernSocket.register("showPrivateFeedback", showPrivateFeedback);
 }

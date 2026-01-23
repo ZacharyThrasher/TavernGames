@@ -109,18 +109,15 @@ export async function hunch(userId) {
         tableData.hunchExact = { ...tableData.hunchExact, [userId]: predictions };
         tableData.hunchRolls = { ...tableData.hunchRolls, [userId]: exactRolls };
 
-        await ChatMessage.create({
-            content: `<div class="tavern-skill-result success">
+        const feedbackContent = `<div class="tavern-skill-result success">
         <strong>Perfect Foresight!</strong><br>
         Your senses sharpen completely. You know exactly what each die will show:<br>
         <em>d4: ${predictions[4]}, d6: ${predictions[6]}, d8: ${predictions[8]}, 
         d10: ${predictions[10]}, d20: ${predictions[20]}</em>
-      </div>`,
-            flavor: `${userName} rolled ${d20} + ${wisMod} = ${rollTotal} (DC ${HUNCH_DC}) — <strong style="color: gold;">NAT 20!</strong>`,
-            whisper: [userId],
-            blind: true, // V3.5.2: Hide from GMs not in whisper list
-            // rolls: [roll], // V4.7.9: Suppress DSN
-        });
+      </div>`;
+
+        // V4.9: Private Feedback (Hidden from GM)
+        await tavernSocket.executeForUsers("showPrivateFeedback", [userId], userId, "Foresight Result", feedbackContent);
 
         await createChatCard({
             title: "Foresight",
@@ -133,17 +130,14 @@ export async function hunch(userId) {
         tableData.hunchLocked = { ...tableData.hunchLocked, [userId]: true };
         tableData.hunchLockedDie = { ...tableData.hunchLockedDie, [userId]: 20 };
 
-        await ChatMessage.create({
-            content: `<div class="tavern-skill-result failure">
+        const feedbackContent = `<div class="tavern-skill-result failure">
         <strong>Tunnel Vision!</strong><br>
         Your instincts betray you. You're compelled to take a risky gamble!
         <br><em>You MUST roll a d20 before your turn ends.</em>
-      </div>`,
-            flavor: `${userName} rolled ${d20} + ${wisMod} = ${rollTotal} — <strong style="color: #ff4444;">NAT 1!</strong>`,
-            whisper: [userId],
-            blind: true, // V3.5.2: Hide from GMs not in whisper list
-            // rolls: [roll], // V4.7.9: Suppress DSN
-        });
+      </div>`;
+
+        // V4.9: Private Feedback (Hidden from GM)
+        await tavernSocket.executeForUsers("showPrivateFeedback", [userId], userId, "Foresight Result", feedbackContent);
 
         await createChatCard({
             title: "Foresight",
@@ -151,9 +145,8 @@ export async function hunch(userId) {
             message: `Terrible intuition! Locked into rolling a <strong>d20</strong>!`,
             icon: "fa-solid fa-dice-d20",
         });
-        // await playSound("lose"); // V4.8.54: Removed undefined sound call check
     } else if (success) {
-        // Success = Learn high/low for each die type (and store exact values for enforcement)
+        // Success = Learn high/low for each die type
         const predictions = {};
         const exactRolls = {};
         for (const die of VALID_DICE) {
@@ -165,18 +158,15 @@ export async function hunch(userId) {
         tableData.hunchPrediction = { ...tableData.hunchPrediction, [userId]: predictions };
         tableData.hunchRolls = { ...tableData.hunchRolls, [userId]: exactRolls };
 
-        await ChatMessage.create({
-            content: `<div class="tavern-skill-result success">
+        const feedbackContent = `<div class="tavern-skill-result success">
         <strong>Foresight</strong><br>
         A feeling washes over you...<br>
         <em>d4: ${predictions[4]}, d6: ${predictions[6]}, d8: ${predictions[8]}, 
         d10: ${predictions[10]}, d20: ${predictions[20]}</em>
-      </div>`,
-            flavor: `${userName} rolled ${d20} + ${wisMod} = ${rollTotal} vs DC ${HUNCH_DC} — Success!`,
-            whisper: [userId],
-            blind: true, // V3.5.2: Hide from GMs not in whisper list
-            // rolls: [roll], // V4.7.9: Suppress DSN
-        });
+      </div>`;
+
+        // V4.9: Private Feedback (Hidden from GM)
+        await tavernSocket.executeForUsers("showPrivateFeedback", [userId], userId, "Foresight Result", feedbackContent);
 
         await createChatCard({
             title: "Foresight",
@@ -185,8 +175,7 @@ export async function hunch(userId) {
             icon: "fa-solid fa-eye",
         });
     } else {
-        // V4: Failure = Forced "Blind Hit" - roll a d4 (balance: small die for punishment)
-        // V4.6.1: Fixed to d4 instead of random die for balance reasons
+        // V4: Failure = Forced "Blind Hit" - roll a d4
         const blindDieType = 4;
         const blindRoll = await new Roll(`1d${blindDieType}`).evaluate();
         const blindValue = blindRoll.total;
@@ -234,16 +223,14 @@ export async function hunch(userId) {
 
         // V4.6: If blind die causes bust, reveal it immediately and trigger bust fanfare
         if (isBust) {
-            await ChatMessage.create({
-                content: `<div class="tavern-skill-result failure">
+            const feedbackContent = `<div class="tavern-skill-result failure">
             <strong>Bad Read - BUST!</strong><br>
             Your instincts betray you - you rolled a <strong>d${blindDieType}: ${blindValue}</strong>!<br>
             <em>Total: ${newTotal} - BUST!</em>
-          </div>`,
-                flavor: `${userName} rolled ${d20} + ${wisMod} = ${rollTotal} vs DC ${HUNCH_DC} — Failed!`,
-                whisper: [userId],
-                rolls: [roll],
-            });
+          </div>`;
+
+            // V4.9: Private Feedback (Hidden from GM)
+            await tavernSocket.executeForUsers("showPrivateFeedback", [userId], userId, "Foresight BUST", feedbackContent);
 
             await createChatCard({
                 title: "Foresight",
@@ -258,17 +245,14 @@ export async function hunch(userId) {
                 await tavernSocket.executeForEveryone("showBustFanfare", userId);
             } catch (e) { console.warn("Could not show bust fanfare:", e); }
         } else {
-            await ChatMessage.create({
-                content: `<div class="tavern-skill-result failure">
+            const feedbackContent = `<div class="tavern-skill-result failure">
         <strong>Bad Read</strong><br>
         Your instincts betray you - you commit to a blind gamble!
         <br><em>A d${blindDieType} has been rolled... but you can't see the result!</em>
-      </div>`,
-                flavor: `${userName} rolled ${d20} + ${wisMod} = ${rollTotal} vs DC ${HUNCH_DC} — Failed!`,
-                whisper: [userId],
-                blind: true,
-                rolls: [roll],
-            });
+      </div>`;
+
+            // V4.9: Private Feedback (Hidden from GM)
+            await tavernSocket.executeForUsers("showPrivateFeedback", [userId], userId, "Foresight Failed", feedbackContent);
 
             await createChatCard({
                 title: "Foresight",

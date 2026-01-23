@@ -1,284 +1,235 @@
-# Tavern Twenty-One V3.0 - Rules
+# Tavern Twenty-One V3.0 - Comprehensive Rules Manual
 
-A dice gambling game for your D&D tavern scenes. Roll polyhedral dice to reach 21 without going over!
-
----
-
-## Basic Rules
-
-### Goal
-Roll polyhedral dice to get as close to **21** as possible without going over.
-
-### Setup
-1. Players join the table and pay an **ante** (default: 5gp)
-2. The GM starts the round
-
-### Dice & Costs
-| Die | Cost | Strategy |
-|-----|------|----------|
-| **d20** | ½ ante | High risk, high reward |
-| **d10** | ½ ante | Balanced play |
-| **d8** | 1× ante | Standard play |
-| **d6** | 1× ante | Standard play |
-| **d4** | 2× ante | Precision play, low variance |
+**Tavern Twenty-One** is a high-stakes dice gambling game for D&D 5e, played within Foundry VTT. It combines blackjack-style risk management with RPG skill checks, allowing characters to use their stats to cheat, bully, and outwit opponents.
 
 ---
 
-## Gameplay
+## 1. Core Concepts
 
-### Opening Round
-- Each player automatically rolls **2d10** (free)
-- First die is **visible** to all, second is a **hole die** (hidden until reveal)
-- **The Cut**: The player with the **lowest visible die** may re-roll their hole die once (free)
+### The Goal
+Reach a **Total of 21** or as close as possible without exceeding it ("Busting").
+- **Highest Total ≤ 21 Wins.**
+- Ties are settled by a **Duel**.
 
-### Turn Order
-- Players take turns **sorted by visible total** (lowest goes first)
-- Turn order is recalculated at the **end of each round**
-
-### On Your Turn
-
-**Main Action** (required — choose one):
-- **Hit**: Roll another die (pay the die's cost)
-- **Hold**: Keep your current total and stop rolling
-- **Fold**: Exit the round (see Folding rules)
-
-**Bonus Action** (optional — one per turn):
-- Use a Skill: Goad, Bump, Cheat, Iron Liver, Hunch, or Profile
-
-*You must Hit, Hold, or Fold every turn. Skills are used in addition to your main action.*
-
-### Special Rolls
-- **Natural 20**: Instant 21! (Automatic win condition)
-- **Natural 1**: Spilled drink! Pay 1× ante cleaning fee at round end
-
-### Busting
-- If your total exceeds 21, you **bust** and are out of the round
-- Your dice are revealed immediately when you bust
-
-### Folding
-- **Early Fold** (no Hits or Skills used): Receive **50% ante** back
-- **Late Fold** (after any Hit or Skill): No refund
-- **Benefit**: Folded players become **untargetable** — cannot be Goaded, Bumped, or Accused
-
-### Winning
-- After all players hold, fold, or bust, dice are revealed (**The Showdown**)
-- Highest total **21 or under** wins the pot
-- **Ties → The Duel** (see below)
+### The Pot & Economy
+- **Ante**: The buy-in cost (Default: 5gp).
+- **The Pot**: Holds all antes, die costs, fines, and side bets.
+- **Winner Takes All**: The winner claims the entire pot. If multiple winners tie after duels, they split it.
 
 ---
 
-## Skills (One Per Ability)
+## 2. Game Flow
 
-Each skill has special outcomes for Natural 20 and Natural 1 rolls.
+### Phase 1: The Lobby
+- **Join**: Players take a seat at the table.
+- **GM Start**: The GM initiates the round. Everyone pays the **Ante** automatically.
+
+### Phase 2: The Opening
+- **Deal**: Every player rolls **2d10** for free.
+  - **Visible Die**: Public knowledge. Determines turn order.
+  - **Hole Die**: Private. Only the player knows this value.
+- **Turn Order**: Sorted by **Visible Total** (Lowest goes first).
+- **The Cut**: The player with the *lowest* visible die gets a special option:
+  - **Re-roll Hole Die**: They may freely re-roll their hidden die once to try for a better start.
+
+### Phase 3: The Betting Phase (Main Game)
+Players take turns in order. On your turn, you must perform **One Main Action** and may use **One Skill**.
+
+#### Main Actions (Choose One)
+1.  **Hit (Buy a Die)**: Add a die to your total.
+    - **d20** (½ Ante): High risk. **Special Rule**: Nat 20 = **Instant 21** (Total becomes 21).
+    - **d10** (½ Ante): Balanced.
+    - **d8/d6** (1× Ante): Standard safety.
+    - **d4** (2× Ante): Precision. Expensive but safe.
+2.  **Hold**: Lock in your current total. You stop rolling for the round.
+    - *You can still be targeted by skills (Bump, Profile).*
+3.  **Fold**: Leave the round.
+    - **Early Fold** (No actions taken yet): Refund **50% of Ante**.
+    - **Late Fold**: No refund.
+    - *Folded players are invulnerable (cannot be targeted).*
+
+#### The "Bust"
+If your total exceeds 21 at any point, you **BUST**.
+- Your turn ends immediately.
+- Your Hole Die is revealed.
+- You lose your ante and bets.
+- You cannot win the pot.
+
+### Phase 4: The Showdown
+Once all players have Held, Folded, or Busted:
+1.  **Reveal**: All Hole Dice are flipped face-up.
+2.  **Accusation Window**: Players have a final chance to **Accuse** cheaters before the winner is declared.
+
+### Phase 5: The Duel (Tie-Breaker)
+If two or more players tie for the winning score:
+1.  **Hit Count**: The game counts how many times each player "Hit" (bought a die) this round.
+2.  **Duel Roll**: Each tied player rolls **1d20 + (1d4 × Hit Count)**.
+3.  **Result**: Highest total wins the pot.
 
 ---
+
+## 3. Skills & Abilities
+**Limit**: You may use **one skill per turn** (Bonus Action).
+**Global Limit**: Each skill can be used **once per match/round** per player.
 
 ### Goad (CHA)
-*Intimidate or persuade another player into rolling.*
-
-- **When**: Your turn only
-- **Roll**: Your Intimidation/Persuasion vs their Insight
-- **Success**: Target must choose:
-  - **Comply**: Roll a die (forced Hit)
-  - **Resist**: Pay **1× ante** to the pot and ignore the Goad
-- **Backfire**: You pay **1× ante** to the pot
-- **Nat 20**: Target **cannot pay to resist** — must roll
-- **Nat 1**: Backfire + you must also roll (forced Hit)
-- **Limit**: Once per round, per player
-- **Note**: Sloppy and Folded players cannot be Goaded
-
----
+*Force a timid opponent to act.*
+- **Check**: Your **Intimidation/Persuasion** vs Target's **Insight**.
+- **Success**: Target becomes **GOADED**.
+  - They **MUST Hit** (any die) or **Fold** on their next turn.
+  - They *cannot* Hold.
+- **Backfire**: You pay **1× Ante** to the pot + You become **DARED**.
+  - **DARED Condition**: You **MUST Hit a d8 (Free)** or **Fold** on this turn.
+- **Nat 20**: The target cannot pay to resist (Guaranteed effect).
+- **Nat 1**: Backfire + Confirmed Dared status.
 
 ### Bump the Table (STR)
-*Jostle the table to force an opponent to re-roll one of their dice.*
-
-- **When**: Your turn only
-- **Roll**: Your Strength vs their Strength
-- **Success**: You choose which of their dice gets re-rolled
-- **Failure**: They choose which of YOUR dice gets re-rolled
-- **Nat 20**: Re-roll one of theirs + re-roll one of YOUR dice (your choice)
-- **Nat 1**: They re-roll one of yours + you pay **1× ante**
-- **Limit**: Once per round, per player
-- **Can target**: Anyone with dice (including holders, but not folded players)
-
----
+*Physically disrupt a roll.*
+- **Check**: Your **Strength** vs Target's **Strength**.
+- **Target**: Any player's die (Visible OR Hole Die).
+- **Success**: You force a **Re-roll** of that specific die.
+- **Failure**: **Retaliation Lock**.
+  - You are locked out of all actions (Hit/Hold/Fold).
+  - The Target chooses one of **YOUR** dice to re-roll.
+  - Your turn resumes after retaliation.
+- **Nat 20**: Re-roll theirs + You get a free re-roll of your own.
+- **Nat 1**: Retaliation + You pay **1× Ante** fine.
 
 ### Cheat (DEX)
-*Secretly adjust one of your dice by up to ±3.*
+*Secretly fudge the numbers.*
+- **Trigger**: Automatic prompt after buying a die.
+- **Effect**: Adjust the die value by **±1, ±2, or ±3**.
+- **Check**: **Sleight of Hand** vs **Heat DC**.
+- **Heat DC**: Starts at **10**. Increases by **+2** for *every* cheat attempt by anyone at the table.
+- **Success**: The die changes value secretly.
+- **Failure** (Roll < Heat DC): **Modification Fails**.
+  - The die does *not* change.
+  - Heat still increases.
+  - You are **NOT** caught.
+- **Nat 20**: **Invisible Cheat**. The Heat DC does not increase.
+- **Nat 1**: **CAUGHT!** (Fumble).
+  - Instant **BUST** (Disqualified).
+  - Lose all current bets.
+  - Pay **2× Ante** fine to the pot.
 
-- **When**: Your turn only, immediately after rolling (before reveal)
-- **Adjustment**: Add or subtract up to 3 from the die's value
-  - *Values are clamped to the die's range (d6 can't become 0 or 7)*
-- **Roll**: Sleight of Hand vs **Heat DC**
-- **Success**: Adjustment applied secretly
-- **Fumble** (roll below DC): Caught immediately — you **bust**!
-- **Nat 20**: No Heat added (the perfect crime)
-- **Nat 1**: Caught + pay **2× ante** fine to the pot
-
-#### Heat Mechanic
-The table gets "hotter" as more cheating occurs:
-- **Starting DC**: 10
-- **First cheat of the round**: No DC increase (but still roll)
-- **Each subsequent cheat**: DC increases by **+2**
-- **Each new round**: DC decreases by **-1**
-
-*The Heat DC is hidden from players.*
-
----
-
-### Iron Liver (CON)
-*Pay for dice with drinks instead of gold.*
-
-- **When**: Toggle "Put it on the Tab" before rolling
-- **Cost**: 1 Drink per ante required
-- **Roll**: Constitution Save
-  - **DC**: 10 + (2 × Drinks taken this round)
-- **Success**: Drink goes down smooth — action is free!
-- **Failure**: Gain the **Sloppy** condition
-- **Nat 20**: Chain drink — immediately take another free drink action
-- **Nat 1**: Pass out — instant **bust**!
-
-#### The Sloppy Condition
-- **Cannot be Goaded** (too drunk to care)
-- **Reveal your hole die** to all players
-- **Disadvantage** on all skill checks
-- **Duration**: Lasts until end of round
-
----
-
-### Hunch (WIS)
-*Trust your gut about your next roll.*
-
-- **When**: Your turn only
-- **Roll**: Wisdom check (DC set by GM, typically 12-15)
-- **Success**: Learn if your next Hit will be **high or low** (above/below median)
-  - *You learn this BEFORE choosing which die to roll*
-- **Failure**: Locked into a Hit — you MUST roll before your turn ends
-- **Nat 20**: Learn the **exact value** of your next Hit before rolling
-- **Nat 1**: Locked into a Hit with a **d20** specifically
-
-#### High/Low Thresholds
-| Die | Low | High |
-|-----|-----|------|
-| d4 | 1-2 | 3-4 |
-| d6 | 1-3 | 4-6 |
-| d8 | 1-4 | 5-8 |
-| d10 | 1-5 | 6-10 |
-| d20 | 1-10 | 11-20 |
-
----
+### Hunch / Foresight (WIS)
+*Predict the flow of luck.*
+- **Check**: **Wisdom** vs DC 15.
+- **Success**: You learn if your next roll will be **High** or **Low** *before* you pay for said die.
+  - *High/Low Thresholds depend on die size (e.g., d20 median is 10).*
+- **Failure**: **Blind Hit**.
+  - You are forced to roll a **d4**.
+  - The result is **Hidden** (Blind) from you until the end of the round.
+- **Nat 20**: You learn the **Exact Value** of the next potential roll.
+- **Nat 1**: You are **Locked** into buying a **d20**.
 
 ### Profile (INT)
-*Read your opponent to learn their secrets.*
+*Read an opponent's tells.*
+- **Check**: Your **Investigation** vs Target's **Passive Deception**.
+- **Success**: Reveals **Cheat Status**.
+  - "Has this player cheated this round? **YES/NO**"
+- **Failure**: No information.
+- **Nat 20**: Reveals **Specific Die** that was modified (if any).
+- **Nat 1**: **Counter-Read**.
+  - The Target learns **YOUR** Hole Die value.
+  - The Target learns if **YOU** have cheated.
 
-- **When**: Your turn only
-- **Roll**: Your Investigation vs their Deception
-- **Success**: Learn their **hole die** value
-- **Failure**: They learn YOUR hole die value
-- **Nat 20**: Learn their hole die + whether they've **cheated** (and which die)
-- **Nat 1**: They learn your hole die + whether YOU've cheated
+### Iron Liver (CON)
+*Pay with your liver instead of gold.*
+- **Trigger**: Toggle "Put it on the Tab" in the payment menu.
+- **Cost**: 1 Drink per Ante worth of value.
+- **Check**: **Constitution Save** vs DC (10 + 2 per drink taken).
+- **Success**: The action is free.
+- **Failure**: You gain the **SLOPPY** condition.
+- **Nat 20**: **Chain Drink**. You assume a triumphant stance and can take another free drink action immediately.
+- **Nat 1**: **Pass Out**. Instant **BUST**.
 
 ---
 
-## Accuse
+## 4. Conditions & Status Effects
 
-*Point the finger at someone you suspect of cheating.*
+### SLOPPY (Drunk)
+- **Cause**: Failed Iron Liver check.
+- **Effects**:
+  1.  **Hole Die Revealed**: You knock over your dice cup. Everyone sees your hole die.
+  2.  **Disadvantage**: All Skill Checks (Cheat, Goad, Bump, etc.) are rolled with disadvantage.
+  3.  **Immune to Goad**: You are too drunk to be intimidated.
 
-- **When**: Any time before the Showdown (not just your turn)
-- **Cost**: 2× ante (paid upfront)
-- **How**: Specify the player AND which die you believe was cheated
+### FOLDED
+- **Cause**: Choosing the "Fold" action.
+- **Effects**:
+  1.  **Untargetable**: Cannot be Goaded, Bumped, or Accused.
+  2.  **Out of Round**: Cannot win the pot.
+  3.  **Spectator**: Can still place Side Bets.
+
+### DARED
+- **Cause**: Failed Goad attempt (Backfire).
+- **Effects**:
+  1.  **Restricted Options**: You **cannot hold**. You **cannot buy standard dice**.
+  2.  **Forced Action**: You must **Buy a d8 (Free)** OR **Fold**.
+  3.  **Cleared**: Condition is removed after you roll the d8.
+
+### LOCKED (Retaliation)
+- **Cause**: Failed Bump attempt.
+- **Effects**:
+  1.  **Frozen**: You cannot perform any Main Action.
+  2.  **vulnerable**: You must wait for the victim to re-roll one of your dice.
+  3.  **Cleared**: Automatically removed after retaliation is resolved.
+
+---
+
+## 5. The Justice System
+
+### Accusations
+Any player can accuse another of cheating at any time before the final winner is declared.
+- **Cost**: **2× Ante** (Paid upfront).
+- **Action**: Select a player and a specific die.
 - **Correct Accusation**:
-  - Refund your 2× ante
-  - Receive **5× ante** from the cheater (or all their gold if they can't afford it)
-  - The cheater **busts**
-- **Wrong Accusation**:
-  - Lose your 2× ante
-  - You are **disqualified** from the round (cannot win)
-- **Limit**: One accusation per player, per round
+  - You get your 2× Ante back.
+  - You receive a **Bounty** (5× Ante or Cheater's entire wallet).
+  - The Cheater **Busts** immediately.
+- **False Accusation**:
+  - You lose your 2× Ante.
+  - You are **Disqualified** (Bust).
+
+### Heat
+The "Heat" represents the table's suspicion level.
+- Starts at **DC 10**.
+- Increases by **+2** every time anyone attempts to Cheat (Successful or not).
+- Decreases by **-1** at the start of a new round.
+- *Visible only to the GM (and via context clues).*
 
 ---
 
-## Side Bet
+## 6. Dice Mechanics Summary
 
-*Even spectators can join the action!*
-
-- **When**: Any time during the round
-- **Who**: Any player (including folded players and spectators)
-- **Cost**: 1× ante
-- **How**: Bet on which active player will win the round
-- **Correct**: Receive **2× ante** return
-- **Wrong**: Lose your bet
-
----
-
-## The Duel
-
-When two or more players tie for the winning total:
-
-1. Each tied player counts their **total Hits** taken this round
-2. Each tied player rolls **1d20 + 1d4 per Hit**
-3. **Highest total wins** the pot
-4. If still tied → Re-duel until resolved!
-
-*Example: Player A took 3 Hits → rolls 1d20 + 3d4. Player B took 5 Hits → rolls 1d20 + 5d4.*
+| Die | Cost | Risk Profile | Special Rule |
+| :--- | :--- | :--- | :--- |
+| **d20** | ½ Ante | Extreme | **Nat 20 = Instant 21** |
+| **d10** | ½ Ante | High | Standard Opening Roll |
+| **d8** | 1 Ante | Medium | — |
+| **d6** | 1 Ante | Low | — |
+| **d4** | 2 Ante | Minimal | Precision toll for finishing |
+| **Nat 1** | — | — | **Spilled Drink**: Pay 1gp fine |
 
 ---
 
-## Game Phases
+## 7. Edge Cases & FAQ
 
-| Phase | What Happens |
-|-------|--------------|
-| **Lobby** | Players join, GM sets ante |
-| **Opening** | Everyone rolls 2d10 (1 visible, 1 hole), The Cut |
-| **Betting** | Take turns: Hit, Hold, Fold, or use Skills |
-| **Showdown** | Dice revealed, Accusations resolved |
-| **Duel** | Hits-based tiebreaker (if tied) |
-| **Payout** | Winner(s) collect the pot |
+**Q: What happens if everyone busts?**
+A: The pot carries over to the next round ("Rollover"). No one wins.
 
----
+**Q: Can I cheat on a re-roll?**
+A: Yes. Any time you roll, you get a cheat prompt (if you have the gold/resources).
 
-## Quick Reference
+**Q: Can the GM cheat?**
+A: If the GM is playing as an NPC (Actor), yes. The "House" (System) does not cheat.
 
-### Actions
-| Action | Cost | When | Limit |
-|--------|------|------|-------|
-| Hit (d20/d10) | ½ ante | Your turn | — |
-| Hit (d6/d8) | 1× ante | Your turn | — |
-| Hit (d4) | 2× ante | Your turn | — |
-| Hold | — | Your turn | — |
-| Fold | — | Your turn | — |
-| Accuse | 2× ante | Any time | 1/round |
-| Side Bet | 1× ante | Any time | — |
+**Q: What if I have no gold?**
+A: You can use **Iron Liver** to pay with drinks, or ask the GM for a loan.
 
-### Skills
-| Skill | Ability | Nat 20 | Nat 1 |
-|-------|---------|--------|-------|
-| Goad | CHA | Can't pay to resist | Backfire + forced Hit |
-| Bump | STR | Also re-roll your die | They re-roll yours + 1× ante |
-| Cheat | DEX | No Heat added | Caught + 2× ante fine |
-| Iron Liver | CON | Chain drink | Pass out (bust) |
-| Hunch | WIS | Exact value | Locked into d20 Hit |
-| Profile | INT | + Cheat detection | They learn if you cheated |
+**Q: Can I use multiple skills in a turn?**
+A: No. One skill per turn.
 
-### Conditions
-| Condition | Effects |
-|-----------|---------|
-| **Sloppy** | Can't be Goaded, hole die revealed, disadvantage on skills |
-| **Folded** | Untargetable, can't win, can place Side Bets |
-
----
-
-## Tips
-
-- **Opening Cut** — If you rolled low visible, take the free hole re-roll
-- **d20 is cheap but dangerous** — Great for desperation plays
-- **d4 costs double but is precise** — Perfect for finishing near 21
-- **Watch visible totals** — Turn order tells you who's ahead
-- **Profile before you Accuse** — Information is cheaper than being wrong
-- **Goad can force holders to bust** — Powerful late-game disruption
-- **First cheat is safest** — Heat builds fast after that
-- **The Duel favors active players** — More Hits = more d4s in tiebreakers
-
----
-
-*May fortune favor the bold... and the clever.*
+**Q: Can I use skills when it's not my turn?**
+A: No. All skills are actions taken during your turn, except **Accuse** and **Side Bet** which can be done anytime.

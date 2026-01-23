@@ -50,31 +50,31 @@
       "SkillMagical": "Spellcasting Ability:",
       "HeatDC": "Heat DC",
       "Nat20": "Nat 20",
-      "Nat20Effect": "Invisible cheat (DC 0)",
+      "Nat20Effect": "Invisible cheat (No Heat)",
       "Nat1": "Nat 1",
-      "Nat1Effect": "Auto-caught + pay 1× ante",
+      "Nat1Effect": "Auto-caught + pay 2× ante",
       "Action": "Cheat"
     },
     "Profile": {
       "Title": "Profile",
       "Instruction": "Who do you want to read?",
-      "Effect": "Success: Learn their hole die. Failure: They learn yours!"
+      "Effect": "Success: Startling insight! Reveals IF they have cheated (Yes/No)."
     },
     "Goad": {
       "Title": "Goad",
-      "Instruction": "Select a target to goad into rolling:",
+      "Instruction": "Select a target to trigger:",
       "YourSkill": "Your Skill:",
       "TargetDefense": "Target defends with:",
-      "SuccessEffect": "Target must roll a die of their choice!",
-      "BackfireEffect": "YOU must roll a die of your choice!"
+      "SuccessEffect": "Target must HIT (any die) or FOLD!",
+      "BackfireEffect": "You pay 1x Ante + become DARED (Must Hit d8 (Free) or Fold)!"
     },
     "Bump": {
       "Title": "Bump the Table",
       "Instruction": "Select a target to bump:",
       "YourSkill": "Your Skill:",
       "SelectDie": "Select which die to bump:",
-      "DieHint": "V2.0: You can target visible dice OR the hole die!",
-      "FailureEffect": "If you fail, they choose one of YOUR dice to re-roll!"
+      "DieHint": "Target: Visible dice OR hole die!",
+      "FailureEffect": "Failure: You become LOCKED until they retaliate!"
     },
     "Accuse": {
       "Title": "Accuse",
@@ -82,7 +82,7 @@
       "Success": "SUCCESS",
       "SuccessEffect": "Refund + {bounty}gp bounty!",
       "Failure": "FAILURE",
-      "FailureEffect": "Lose {cost}gp",
+      "FailureEffect": "Lose {cost}gp + Disqualified",
       "Note": "Note: Even if they cheated on another die, accusing the wrong one fails!"
     },
     "SideBet": {

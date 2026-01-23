@@ -165,59 +165,33 @@ export async function profile(payload, userId) {
             message += `<br><span style="color: #88ff88;">They are playing clean.</span>`;
         }
 
-        await ChatMessage.create({
-            content: `<div class="tavern-skill-result success">
+        const feedbackContent = `<div class="tavern-skill-result success">
         <strong>Perfect Read!</strong><br>${message}
-      </div>`,
-            flavor: `${userName} rolled ${d20} + ${invMod} = ${attackTotal} vs passive ${defenseTotal} — <strong style="color: gold;">NAT 20!</strong>`,
-            whisper: [userId],
-            blind: true, // V3.5.2: Hide from GM-as-NPC
-            // rolls: [roll], // V4.7.9: Suppress DSN
-        });
+      </div>`;
 
-        /* Suppressed Public Card
-        await createChatCard({
-            title: "Profile",
-            subtitle: `${userName} stares down ${targetName}`,
-            message: `An intense read! ${userName} sees everything.`,
-            icon: "fa-solid fa-user-secret",
-        });
-        */
+        // V4.9: Secret Feedback
+        await tavernSocket.executeForUsers("showPrivateFeedback", [userId], userId, "Profile: Perfect Read", feedbackContent);
+
     } else if (isNat1) {
         let message = `${userName}'s hole die: <strong>${myHoleValue}</strong>`;
         if (myCheated) {
             message += `<br><span style="color: #ff6666;">They've CHEATED!</span>`;
         }
 
-        await ChatMessage.create({
-            content: `<div class="tavern-skill-result success">
+        const targetFeedback = `<div class="tavern-skill-result success">
         <strong>Counter-Read!</strong><br>${message}
-      </div>`,
-            flavor: `Investigation vs Deception — ${userName} got exposed!`,
-            whisper: [targetId],
-            blind: true, // V3.5.2: Hide from GM-as-NPC
-            // rolls: [roll], // V4.7.9: Suppress DSN
-        });
+      </div>`;
 
-        await ChatMessage.create({
-            content: `<div class="tavern-skill-result failure">
+        // V4.9: Reveal info to the TARGET (not the user)
+        await tavernSocket.executeForUsers("showPrivateFeedback", [targetId], targetId, "Profile: Counter-Read!", targetFeedback);
+
+        const myFeedback = `<div class="tavern-skill-result failure">
         <strong>Exposed!</strong><br>
         Your poker face cracked. ${targetName} read YOU instead!
-      </div>`,
-            flavor: `${userName} rolled ${d20} + ${invMod} = ${attackTotal} — <strong style="color: #ff4444;">NAT 1!</strong>`,
-            whisper: [userId],
-            blind: true, // V3.5.2: Hide from GM-as-NPC
-            // rolls: [roll], // V4.7.9: Suppress DSN
-        });
+      </div>`;
 
-        /* Suppressed Public Card
-        await createChatCard({
-            title: "Profile",
-            subtitle: `${userName} overreaches`,
-            message: `The tables turned! ${targetName} read ${userName} instead!`,
-            icon: "fa-solid fa-face-flushed",
-        });
-        */
+        // Tell user they failed
+        await tavernSocket.executeForUsers("showPrivateFeedback", [userId], userId, "Profile: BACKFIRE", myFeedback);
 
     } else if (success) {
         // Standard Success: Boolean Yes/No only
@@ -225,47 +199,24 @@ export async function profile(payload, userId) {
             ? `<span style="color: #ff6666; font-weight: bold;">YES</span>`
             : `<span style="color: #88ff88; font-weight: bold;">NO</span>`;
 
-        await ChatMessage.create({
-            content: `<div class="tavern-skill-result success">
+        const feedbackContent = `<div class="tavern-skill-result success">
         <strong>Profile Success</strong><br>
         Has ${targetName} cheated?<br>
         Answer: ${resultText}
-      </div>`,
-            flavor: `${userName} rolled ${d20} + ${invMod} = ${attackTotal} vs passive ${defenseTotal} — Success!`,
-            whisper: [userId],
-            blind: true, // V3.5.2: Hide from GM-as-NPC
-            rolls: [roll],
-        });
+      </div>`;
 
-        /* Suppressed Public Card
-        await createChatCard({
-            title: "Profile",
-            subtitle: `${userName} studies ${targetName}`,
-            message: `A solid read. Information gathered.`,
-            icon: "fa-solid fa-user-secret",
-        });
-        */
+        // V4.9: Secret Feedback
+        await tavernSocket.executeForUsers("showPrivateFeedback", [userId], userId, "Profile: Success", feedbackContent);
+
     } else {
         // Failure: No info
-        await ChatMessage.create({
-            content: `<div class="tavern-skill-result failure">
+        const feedbackContent = `<div class="tavern-skill-result failure">
         <strong>Failed Read</strong><br>
         You can't get a read on them.
-      </div>`,
-            flavor: `${userName} rolled ${d20} + ${invMod} = ${attackTotal} vs passive ${defenseTotal} — Failed!`,
-            whisper: [userId],
-            blind: true, // V3.5.2: Hide from GM-as-NPC
-            rolls: [roll],
-        });
+      </div>`;
 
-        /* Suppressed Public Card
-        await createChatCard({
-            title: "Profile",
-            subtitle: `${userName} overreaches`,
-            message: `${targetName} kept their composure.`,
-            icon: "fa-solid fa-eye",
-        });
-        */
+        // V4.9: Secret Feedback
+        await tavernSocket.executeForUsers("showPrivateFeedback", [userId], userId, "Profile: Failed", feedbackContent);
     }
 
     // Track profile

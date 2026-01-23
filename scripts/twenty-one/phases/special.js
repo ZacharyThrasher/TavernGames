@@ -56,16 +56,13 @@ export async function useCut(userId, reroll = false) {
     });
 
     // V4.6: Whisper actual values only to the cut player (no GM privilege)
-    await ChatMessage.create({
-      content: `<div class="tavern-skill-result success">
+    // V4.9: Secret Private Feedback (Hidden from GM)
+    const cutFeedback = `<div class="tavern-skill-result success">
         <strong>The Cut</strong><br>
         Your hole die: ${oldValue} → <strong>${roll.total}</strong><br>
         <em>New Total: ${tableData.totals[userId]}</em>
-      </div>`,
-      whisper: [userId],
-      blind: true, // V4.8.55: Hide from GM
-      speaker: { alias: "Tavern Twenty-One" },
-    });
+      </div>`;
+    await tavernSocket.executeForUsers("showPrivateFeedback", [userId], userId, "The Cut Result", cutFeedback);
 
     await addHistoryEntry({
       type: "cut",

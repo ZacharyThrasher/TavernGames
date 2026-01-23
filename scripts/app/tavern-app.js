@@ -617,8 +617,8 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }
 
     // V4: Dared Client-Side Validation
-    if (state.tableData?.dared?.[game.user.id] && die !== "20") {
-      ui.notifications.warn("You are Dared! You can only buy a d20.");
+    if (state.tableData?.dared?.[game.user.id] && die !== "8") {
+      ui.notifications.warn("You are Dared! You forced to roll a d8 (Free) or Fold.");
       return;
     }
 

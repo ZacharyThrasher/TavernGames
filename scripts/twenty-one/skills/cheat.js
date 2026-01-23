@@ -55,7 +55,7 @@ export async function cheat(payload, userId) {
 
     // V3: dieIndex + adjustment (1-3, positive or negative)
     let { dieIndex, adjustment = 1 } = payload;
-    
+
     // Strict Mode: ALWAYS Physical / Sleight of Hand
     const cheatType = "physical";
     const skill = "slt";
@@ -176,12 +176,9 @@ export async function cheat(payload, userId) {
       <br><small>d${targetDie.die}: ${oldValue} → ${newValue}</small>
     </div>`;
 
-    await ChatMessage.create({
-        content: cheatResultCard,
-        whisper: [userId],
-        blind: true, // V4.7.4: Hide from GM to prevent privileged info leak
-        speaker: { alias: "Tavern Twenty-One" },
-    });
+    // V4.9: Send secret feedback via Socket Dialog (Hidden from GM Chat Log)
+    // We target ONLY the user. The GM does not receive this event.
+    await tavernSocket.executeForUsers("showPrivateFeedback", [userId], userId, success ? "Cheat Success" : "Cheat Failed", cheatResultCard);
 
     // V4.7.1: Only apply changes if success (or Nat 20)
     // If failed (and not fumbled), nothing happens to the die
