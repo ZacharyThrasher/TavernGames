@@ -1,5 +1,11 @@
 # Changelog
 
+## [5.3.1] - 2026-01-23
+### Polish: Visual Improvements
+- **Cinematic Overlay**: Corrected layout issues in single-mode cut-ins where portraits were overlapping.
+- **Typography**: Added premium styling to "Goaded", "Occupied", and other result messages for better impact.
+- **CSS**: Fixed syntax errors affecting style rendering.
+
 ## [5.3.0] - 2026-01-23
 ### Feature: Visual Feedback & Events
 - **Results**: Skill cut-ins now display detailed result messages (e.g., "Player X bumped your die to a 2!").

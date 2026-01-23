@@ -3868,16 +3868,66 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  gap: 20px;
+  width: 100%;
+  gap: 40px;
+  /* Space out elements */
+  position: relative;
+  z-index: 10;
+}
+
+/* Force elements back into flow */
+.single-mode-container .portrait-container.single {
+  position: relative;
+  /* Override absolute */
+  bottom: auto;
+  right: auto;
+  width: 25vh;
+  /* Smaller portraits for stacking */
+  height: 25vh;
+  opacity: 1;
+  /* Reset opacity logic if needed, or keep animation */
+  /* Keep animation but adjust transform origin if needed */
+  transform: translateX(20%);
+  /* Start offset for animation compatibility? */
+  margin: 0;
+  mask-image: none;
+  /* Remove fade mask for cleaner look in center */
+  -webkit-mask-image: none;
 }
 
 .single-mode-container .portrait-container.initiator {
-  transform: scale(1.1);
+  animation: portrait-slide-center 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
+  transform: translateX(-50px);
+  opacity: 0;
 }
 
 .single-mode-container .portrait-container.target {
-  transform: scale(0.8);
-  opacity: 0.8;
+  animation: portrait-slide-center 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.4s forwards;
+  transform: translateX(50px);
+  /* Different direction? */
+  opacity: 0;
+}
+
+/* Fix text container to be in flow */
+.single-mode-container .text-container {
+  position: relative;
+  top: auto;
+  left: auto;
+  transform: rotate(-5deg);
+  /* Slight angle for style */
+  margin: 20px 0;
+}
+
+@keyframes portrait-slide-center {
+  0% {
+    transform: translateX(100px);
+    opacity: 0;
+  }
+
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 
@@ -4235,4 +4285,32 @@
 
 .tavern-cheat-result.tavern-cheat-fail {
   border-left: 4px solid #fbbf24;
+}
+
+/* Result Text Styling (V5.3.1 Polish) */
+.main-result {
+  font-family: "Modesto Condensed", "Palatino Linotype", serif;
+  font-size: 3em;
+  font-weight: 700;
+  color: #fff;
+  text-transform: uppercase;
+  text-shadow: 0 0 10px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 0, 0, 0.5);
+  margin-bottom: 5px;
+}
+
+.main-result.success {
+  color: var(--tavern-gold-bright);
+}
+
+.main-result.failure {
+  color: #e74c3c;
+}
+
+.result-detail {
+  font-family: "Signika", sans-serif;
+  font-size: 1.4em;
+  color: var(--tavern-parchment);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+  max-width: 80%;
+  margin: 0 auto;
 }
