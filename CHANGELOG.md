@@ -1,5 +1,9 @@
 # Changelog
 
+## [5.6.0] - 2026-01-23
+### Documentation: Skill Reference Table
+- **Quick Reference**: Added a comprehensive table to `RULES.md` summarizing every skill's effect, failure state, Nat 20 bonus, and Nat 1 penalty.
+
 ## [5.5.0] - 2026-01-23
 ### Documentation: Truth in Rules Audit
 - **Comprehensive Audit**: Reviewed the entire codebase to ensure `RULES.md` matches the *exact* runtime logic.

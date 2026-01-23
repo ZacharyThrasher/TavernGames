@@ -110,9 +110,23 @@ If players tie for the highest score:
 - **Failure**: **SLOPPY**. Disadvantage on INT/WIS/CHA/DEX checks.
 - **Nat 1**: **Pass Out**. Instant **BUST**.
 
+
 ---
 
-## 4. Justice System
+## 4. Skill Mechanics Summary
+
+| Skill | Success Effect | Failure / Backfire | Nat 20 (Crit Success) | Nat 1 (Crit Fail) |
+| :--- | :--- | :--- | :--- | :--- |
+| **Goad** (CHA) | Target **MUST Hit** or **Fold**. | You pay **1× Ante** + become **DARED** (Must Hit d8/Fold). | Target cannot resist. | Backfire + **DARED** confirmed. |
+| **Bump** (STR) | Target re-rolls specific die. | **Retaliation**: Target re-rolls *your* die. | Re-roll theirs + **Free re-roll** for you. | Retaliation + Pay **1× Ante**. |
+| **Cheat** (DEX) | Die value changes (±1 to ±3). | Cheat fails (Value unchanged). Heat +2. | **Invisible Cheat** (No Heat increase). | **CAUGHT!** Pay **2× Ante**. **BUST**. |
+| **Foresight** (WIS) | Predict **High/Low** for next roll. | **Blind Hit** (Roll d4, value hidden). | Predict **Exact Value**. | **Locked** into **d20** Hit. |
+| **Profile** (INT) | Reveal **Cheat Status** (Yes/No). | No information. | Reveal **Specific Die** cheated. | **Counter-Read** (Target learns your Hole Die + Cheat Status). |
+| **Iron Liver** (CON) | Free Action. Drink count +1. | **SLOPPY** (Disadvantage on mental/dex checks). | **Chain Drink** (Free drink + another action). | **Pass Out** (**BUST**). |
+
+---
+
+## 5. Justice System
 
 ### Accusations
 - **Cost**: **2× Ante**.
