@@ -12,22 +12,22 @@
     </div>
     <div class="tavern-info">
       {{#if isPlayingAsNpc}}
-        <div class="npc-wallet-display" title="NPC Table Wallet">
-          <i class="fa-solid fa-sack-dollar" style="color: #ffd700;"></i>
-          <span class="wallet-amount">{{npcWallet}} gp</span>
-        </div>
+      <div class="npc-wallet-display" title="NPC Table Wallet">
+        <i class="fa-solid fa-sack-dollar" style="color: #ffd700;"></i>
+        <span class="wallet-amount">{{npcWallet}} gp</span>
+      </div>
       {{/if}}
       {{#if isPlaying}}
-        <div class="pot-display">
-          <i class="fa-solid fa-coins"></i>
-          <span class="pot-amount">{{pot}} gp</span>
-          <span class="pot-label">in the pot</span>
-        </div>
+      <div class="pot-display">
+        <i class="fa-solid fa-coins"></i>
+        <span class="pot-amount">{{pot}} gp</span>
+        <span class="pot-label">in the pot</span>
+      </div>
       {{else}}
-        <div class="ante-display">
-          <span class="ante-label">Ante:</span>
-          <span class="ante-amount">{{ante}} gp</span>
-        </div>
+      <div class="ante-display">
+        <span class="ante-label">Ante:</span>
+        <span class="ante-amount">{{ante}} gp</span>
+      </div>
       {{/if}}
     </div>
   </header>
@@ -46,27 +46,22 @@
         {{> "modules/tavern-dice-master/templates/parts/controls.hbs"}}
       </div>
 
-      {{!-- History (GM only) --}}
-      {{#if isGM}}
-        <div class="tavern-history-panel">
-          {{> "modules/tavern-dice-master/templates/parts/history.hbs"}}
-        </div>
-      {{/if}}
+      {{!-- History Panel Removed (User Request V5) --}}
     </aside>
   </main>
 
   {{!-- Footer --}}
   <footer class="tavern-footer">
     {{#if hasGM}}
-      <span class="gm-status online"><i class="fa-solid fa-circle"></i> GM Online</span>
+    <span class="gm-status online"><i class="fa-solid fa-circle"></i> GM Online</span>
     {{else}}
-      <span class="gm-status offline"><i class="fa-solid fa-circle"></i> GM Required</span>
+    <span class="gm-status offline"><i class="fa-solid fa-circle"></i> GM Required</span>
     {{/if}}
     <span class="game-status">{{status}}</span>
     {{#if isGM}}
-      <button type="button" class="reset-btn" data-action="reset" title="Reset Table">
-        <i class="fa-solid fa-rotate-left"></i>
-      </button>
+    <button type="button" class="reset-btn" data-action="reset" title="Reset Table">
+      <i class="fa-solid fa-rotate-left"></i>
+    </button>
     {{/if}}
   </footer>
 </div>

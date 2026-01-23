@@ -194,7 +194,8 @@
 
 .tavern-main {
   display: grid;
-  grid-template-columns: 1fr 280px;
+  grid-template-columns: 1fr 240px;
+  /* Reduced width since History is gone */
   gap: var(--tavern-gap-md);
   flex: 1;
   padding: var(--tavern-gap-md);
@@ -3921,4 +3922,43 @@
   100% {
     box-shadow: 0 0 5px rgba(255, 68, 68, 0.2);
   }
+}
+/* V5: Semantic Result Colors (High Contrast) */
+.tavern-result-success {
+  color: #4ade80; /* Bright Green */
+  font-weight: bold;
+}
+
+.tavern-result-fail {
+  color: #fbbf24; /* Bright Amber */
+  font-weight: bold;
+}
+
+.tavern-result-crit-success {
+  color: #fcd34d; /* Bright Gold */
+  font-weight: bold;
+  text-shadow: 0 0 5px rgba(251, 191, 36, 0.5);
+}
+
+.tavern-result-crit-fail {
+  color: #ef4444; /* Bright Red */
+  font-weight: bold;
+  text-shadow: 0 0 5px rgba(239, 68, 68, 0.5);
+}
+
+.tavern-cheat-result {
+  background: rgba(0, 0, 0, 0.9);
+  border: 1px solid var(--tavern-gold-dim);
+  border-radius: 4px;
+  padding: 8px;
+  margin-top: 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+}
+
+.tavern-cheat-result.tavern-cheat-success {
+  border-left: 4px solid #4ade80;
+}
+
+.tavern-cheat-result.tavern-cheat-fail {
+  border-left: 4px solid #fbbf24;
 }

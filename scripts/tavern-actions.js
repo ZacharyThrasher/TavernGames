@@ -112,9 +112,9 @@ export async function handleLeaveTable(userId) {
   return updateState({ players, turnOrder, turnIndex });
 }
 
-export async function handleStartRound() {
+export async function handleStartRound(startingHeat) {
   ensureGM();
-  return startRound();
+  return startRound(startingHeat);
 }
 
 export async function handlePlayerAction(action, payload, userId) {

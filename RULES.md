@@ -99,8 +99,8 @@ If two or more players tie for the winning score:
 *Secretly fudge the numbers.*
 - **Trigger**: Automatic prompt after buying a die.
 - **Effect**: Adjust the die value by **±1, ±2, or ±3**.
-- **Check**: **Sleight of Hand** vs **Heat DC**.
-- **Heat DC**: Starts at **10**. Increases by **+2** for *every* cheat attempt by anyone at the table.
+- **Check**: **Sleight of Hand** vs **Personal Heat DC**.
+- **Personal Heat**: Starts at **10** (or GM setting). Increases by **+2** for *every* attempt you make. Heat is now individual to you.
 - **Success**: The die changes value secretly.
 - **Failure** (Roll < Heat DC): **Modification Fails**.
   - The die does *not* change.

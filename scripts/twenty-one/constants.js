@@ -99,8 +99,8 @@ export function emptyTableData() {
         duel: null,
         drinkCount: {},
         sloppy: {},
-        // V3: Heat mechanic
-        heatDC: 10,
+        // V5: Per-Player Heat (User Request)
+        playerHeat: {}, // { [userId]: number }
         cheatsThisRound: 0,
         // V3: Fold tracking
         folded: {},

@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.0.0] - 2026-01-22
+### Major Update: The "Heat" Refactor
+- **Per-Player Heat**: Heat is now tracked individually for each player. One clumsy cheater no longer ruins it for the professionals.
+- **Starting Heat Control**: The GM is now prompted to set the **Starting Heat DC** (Default 10) when starting a round.
+- **UI Cleanup**: Removed the Game Log/History sidebar from the main window for a cleaner look.
+- **Accessibility**: Improved color contrast for skill result popups (Red/Green/Gold on dark backgrounds).
+
 ## [4.8.61] - 2026-01-22
 ### Hotfix 61
 - **Duel Fanfare**: Fixed an issue where the Victory Fanfare (Cinematic Cut-in) would not play after someone won a Duel.

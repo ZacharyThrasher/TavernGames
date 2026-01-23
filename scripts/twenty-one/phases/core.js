@@ -9,7 +9,7 @@ import { calculateBettingOrder, getGMUserIds } from "../utils/game-logic.js";
 import { emptyTableData } from "../constants.js";
 import { processSideBetPayouts } from "./side-bets.js";
 
-export async function startRound() {
+export async function startRound(startingHeat = 10) {
   const state = getState();
   const ante = game.settings.get(MODULE_ID, "fixedAnte");
 
@@ -28,6 +28,11 @@ export async function startRound() {
 
 
   const tableData = emptyTableData();
+
+  // V5: Initialize Per-Player Heat
+  for (const pid of state.turnOrder) {
+    tableData.playerHeat[pid] = startingHeat;
+  }
 
   // Calculate pot: each player antes
   // V3.5: If GM is playing as NPC, no house match (everyone antes equally)

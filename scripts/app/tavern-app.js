@@ -601,7 +601,38 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   static async onStart() {
-    await tavernSocket.executeAsGM("startRound");
+    // V5: Prompt GM for Starting Heat
+    const startingHeat = await new Promise(resolve => {
+      new Dialog({
+        title: "Start Playing",
+        content: `
+          <div class="tavern-dialog-content">
+            <p>Ready to deal the dice?</p>
+            <div class="form-group">
+              <label>Starting Heat DC</label>
+              <input type="number" name="startingHeat" value="10" min="5" max="30" step="1" style="text-align: center;">
+              <p class="hint">Higher Heat makes cheating harder.</p>
+            </div>
+          </div>
+        `,
+        buttons: {
+          start: {
+            label: "Deal!",
+            icon: '<i class="fa-solid fa-dice"></i>',
+            callback: (html) => {
+              const val = parseInt(html.find('[name="startingHeat"]').val()) || 10;
+              resolve(val);
+            }
+          }
+        },
+        default: "start",
+        close: () => resolve(null)
+      }, { classes: ["tavern-dialog-window"] }).render(true);
+    });
+
+    if (startingHeat === null) return; // Cancelled
+
+    await tavernSocket.executeAsGM("startRound", startingHeat);
   }
 
   static async onRoll(event, target) {

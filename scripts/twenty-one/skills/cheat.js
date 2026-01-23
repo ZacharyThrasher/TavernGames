@@ -114,8 +114,8 @@ export async function cheat(payload, userId) {
     // V3: Mark as acted (affects Fold refund)
     tableData.hasActed = { ...tableData.hasActed, [userId]: true };
 
-    // V3: Get current Heat DC and roll against it
-    const heatDC = tableData.heatDC ?? 10;
+    // V5: Get Personal Heat DC (Defaults to 10 if missing)
+    const heatDC = tableData.playerHeat?.[userId] ?? 10;
 
     // Roll the check (Iron Liver: Sloppy = disadvantage)
     const actor = getActorForUser(userId);
@@ -151,29 +151,30 @@ export async function cheat(payload, userId) {
     // Whisper the skill roll to the player
     const cheatTypeLabel = isPhysical ? "Physical" : "Magical";
     let flavorText = `<em>${actor?.name ?? "You"} attempt${actor ? "s" : ""} to cheat (${cheatTypeLabel})...</em><br>`;
-    flavorText += `${skillName}: ${d20Result} + ${modifier} = <strong>${rollTotal}</strong> vs Heat DC ${heatDC}`;
+    flavorText += `${skillName}: ${d20Result} + ${modifier} = <strong>${rollTotal}</strong> vs Personal Heat DC ${heatDC}`;
 
     if (isNat20) {
-        flavorText += ` <span style='color: gold; font-weight: bold;'>NAT 20! Invisible cheat!</span>`;
+        flavorText += ` <span class="tavern-result-crit-success">NAT 20! Invisible cheat!</span>`;
     } else if (isNat1) {
-        flavorText += ` <span style='color: red; font-weight: bold;'>NAT 1! Caught + pay 1× ante!</span>`;
+        flavorText += ` <span class="tavern-result-crit-fail">NAT 1! Caught + pay 1× ante!</span>`;
     } else if (!success) {
-        flavorText += ` <span style='color: orange;'>Failed (${dcType}: ${rollTotal})</span>`;
+        flavorText += ` <span class="tavern-result-fail">Failed (${dcType}: ${rollTotal})</span>`;
     } else {
-        flavorText += ` <span style='color: #888;'>Success (${dcType}: ${rollTotal})</span>`;
+        flavorText += ` <span class="tavern-result-success">Success (${dcType}: ${rollTotal})</span>`;
     }
 
     // V4.4: Send proper feedback to the cheating player via whispered chat
     const userName = game.users.get(userId)?.name ?? "Unknown";
     const characterName = actor?.name ?? userName;
 
+    // V5: Use semantic classes for coloring
     const cheatResultCard = `<div class="tavern-cheat-result ${success ? 'tavern-cheat-success' : 'tavern-cheat-fail'}">
       <strong>${cheatTypeLabel} Cheat</strong><br>
       <em>${skillName}:</em> ${d20Raw}${isSloppy ? ' (Disadvantage)' : ''} + ${modifier} = <strong>${rollTotal}</strong> vs Heat DC ${heatDC}<br>
-      ${isNat20 ? '<span style="color: gold; font-weight: bold;">★ NAT 20 - INVISIBLE CHEAT! ★</span>' : ''}
-      ${isNat1 ? '<span style="color: red; font-weight: bold;">✖ NAT 1 - FUMBLED & CAUGHT!</span>' : ''}
-      ${!isNat20 && !isNat1 && success ? '<span style="color: #4ade80;">✓ Success! Cheat undetected.</span>' : ''}
-      ${!isNat20 && !isNat1 && !success ? '<span style="color: #fbbf24;">⚠ Failed Heat check - Heat increased.</span>' : ''}
+      ${isNat20 ? '<span class="tavern-result-crit-success">★ NAT 20 - INVISIBLE CHEAT! ★</span>' : ''}
+      ${isNat1 ? '<span class="tavern-result-crit-fail">✖ NAT 1 - FUMBLED & CAUGHT!</span>' : ''}
+      ${!isNat20 && !isNat1 && success ? '<span class="tavern-result-success">✓ Success! Cheat undetected.</span>' : ''}
+      ${!isNat20 && !isNat1 && !success ? '<span class="tavern-result-fail">⚠ Failed Heat check - Heat increased.</span>' : ''}
       <br><small>d${targetDie.die}: ${oldValue} → ${newValue}</small>
     </div>`;
 
@@ -209,9 +210,13 @@ export async function cheat(payload, userId) {
         }
     }
 
-    // V3: Update Heat DC (increases by 2 per cheat attempt, regardless of outcome)
-    // V4.7.9: Heat goes up no matter what (even on Nat 20)
-    let newHeatDC = heatDC + 2;
+    // V5: Update Personal Heat DC (increases by 2 per cheat attempt)
+    // Always increases unless Nat 20 (Invisible)
+    const currentHeat = tableData.playerHeat[userId] ?? 10;
+    const newHeat = isNat20 ? currentHeat : (currentHeat + 2);
+
+    // Update playerHeat map
+    const updatedPlayerHeat = { ...tableData.playerHeat, [userId]: newHeat };
     const newCheatsThisRound = (tableData.cheatsThisRound ?? 0) + 1;
 
     const updatedCaught = { ...tableData.caught };
@@ -268,7 +273,7 @@ export async function cheat(payload, userId) {
         busts: updatedBusts,
         caught: updatedCaught,
         cheaters,
-        heatDC: newHeatDC,
+        playerHeat: updatedPlayerHeat,
         cheatsThisRound: newCheatsThisRound,
     };
 
