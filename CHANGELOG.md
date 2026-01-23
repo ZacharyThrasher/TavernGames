@@ -1,5 +1,9 @@
 # Changelog
 
+## [5.8.1] - 2026-01-23
+### Hotfix: Syntax Error (Game Log)
+- **Fix**: Resolved `Identifier 'orderNames' has already been declared` in `turn.js`.
+
 ## [5.8.0] - 2026-01-23
 ### Features: Private Game Log & Anti-Cheat
 - **Game Log System**: Replaced all Chat Cards with a built-in "Private Log" panel in the sidebar.

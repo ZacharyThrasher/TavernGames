@@ -330,14 +330,8 @@ export async function submitRoll(payload, userId) {
           })
           .join(" → ");
 
-        const orderNames = updatedTable.bettingOrder
-          .filter(id => !updatedTable.busts[id])
-          .map(id => {
-            const name = game.users.get(id)?.name ?? "Unknown";
-            const vt = updatedTable.visibleTotals[id] ?? 0;
-            return `${name} (${vt})`;
-          })
-          .join(" → ");
+        // Duplicate removed
+
 
         // V5.8: Log instead of Chat Card
         await addLogToAll({
