@@ -1,5 +1,9 @@
 # Changelog
 
+## [5.2.2] - 2026-01-23
+### Hotfix: Accuracy Audit
+- **Cheat Update**: Fixed a discrepancy in the Cheat logic where a Fumble (Nat 1) was only fining 1x Ante instead of the stated 2x Ante. It now correctly fines 2x Ante to match the rules text.
+
 ## [5.2.1] - 2026-01-23
 ### Hotfix: Readability
 - **Header Contrast**: Ante and Pot labels ("Ante:", "in the pot") are now light parchment color to read clearly against the dark wood header.

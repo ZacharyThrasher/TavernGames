@@ -223,11 +223,11 @@ export async function cheat(payload, userId) {
     let newPot = state.pot;
 
     if (fumbled) {
-        // V3: Nat 1 = auto-caught + pay 1× ante
+        // V3: Nat 1 = auto-caught + pay 2× ante (Rules v3.0)
         updatedCaught[userId] = true;
         updatedBusts[userId] = true;
-        await deductFromActor(userId, ante);
-        newPot = state.pot + ante;
+        await deductFromActor(userId, ante * 2);
+        newPot = state.pot + (ante * 2);
     }
 
     // V3: Track cheat with new structure (Nat 20 = no DC recorded, invisible)
