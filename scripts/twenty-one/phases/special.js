@@ -252,6 +252,9 @@ async function resolveDuel() {
     message: `${winner.playerName} wins the duel and ${potAmount}gp!`,
   });
 
+  // V4.8.61: Trigger Victory Fanfare for Duel Winner
+  tavernSocket.executeForEveryone("showVictoryFanfare", winner.playerId);
+
   return updateState({
     status: "PAYOUT",
     tableData: { ...tableData, duel: null },

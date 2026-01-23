@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.8.61] - 2026-01-22
+### Hotfix 61
+- **Duel Fanfare**: Fixed an issue where the Victory Fanfare (Cinematic Cut-in) would not play after someone won a Duel.
+- **Text Correction**: Updated the "Dared" warning prompt to correctly state that the player must roll a **d8** (not a d20).
+
 ## [4.8.60] - 2026-01-22
 ### Hotfix 60
 - **Foresight Fix**: Restored the "Tunnel Vision" lock mechanic. Rolling a Nat 1 on Foresight now correctly forces the player to roll a d20 (as a penalty) and prevents them from selecting other dice.
