@@ -1,2 +1,2 @@
-### Documentation: Polish
-- **Skill Summary**: Refined the summary table in `RULES.md` for better readability, using line breaks and clearer terminology for success/failure states.
+### Hotfix: Syntax Error
+- **Breaking Change**: Fixed a critical syntax error in `turn.js` that broke the game loop upon roll submission.
