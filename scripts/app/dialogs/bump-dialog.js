@@ -35,12 +35,12 @@ export class BumpDialog {
             diceContainer.empty();
             targetData.dice.forEach((d) => {
               const isHole = !d.isPublic;
-              const visLabel = isHole ? "HOLE" : "Visible";
-              const holeClass = isHole ? "hole-die" : "";
+              const valueDisplay = isHole ? "?" : d.result;
               const btn = $(`
                 <button type="button" class="die-btn ${holeClass}" data-die-index="${d.index}">
                   <img src="modules/${MODULE_ID}/assets/d${d.die}-grey.svg" onerror="this.src='icons/svg/d${d.die}-grey.svg'" style="width: 24px; height: 24px;" />
                   <span class="die-label">d${d.die}</span>
+                  <span class="die-value">${valueDisplay}</span>
                   <span class="die-visibility">${visLabel}</span>
                 </button>
               `);

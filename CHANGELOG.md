@@ -1,5 +1,10 @@
 # Changelog
 
+## [5.2.3] - 2026-01-23
+### Polish: Bump Dialog
+- **Readability**: Fixed "dark text on dark background" issues in the Bump the Table dialog.
+- **UX**: The die selection screen now explicitly shows the current value of Visible dice (e.g., "7"), helping you choose the best target.
+
 ## [5.2.2] - 2026-01-23
 ### Hotfix: Accuracy Audit
 - **Cheat Update**: Fixed a discrepancy in the Cheat logic where a Fumble (Nat 1) was only fining 1x Ante instead of the stated 2x Ante. It now correctly fines 2x Ante to match the rules text.

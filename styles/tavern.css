@@ -2300,6 +2300,20 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Bump Dialog Specifics */
+.bump-dialog label,
+.bump-dialog .hint {
+  color: var(--tavern-parchment);
+  /* Ensure light text on dark background */
+}
+
+.bump-dialog .hint.danger {
+  color: #ff6666;
 }
 
 .bump-retaliation p {
@@ -3862,6 +3876,19 @@
 .die-btn:hover {
   border-color: var(--tavern-gold-dim);
   background: rgba(255, 255, 255, 0.05);
+  color: var(--tavern-gold-bright);
+}
+
+.die-btn .die-value {
+  font-size: 1.1em;
+  font-weight: 700;
+  color: var(--tavern-gold);
+  margin-top: 2px;
+}
+
+.die-btn.selected .die-value {
+  color: var(--tavern-gold-bright);
+  text-shadow: 0 0 5px var(--tavern-glow);
 }
 
 .die-option.selected,
