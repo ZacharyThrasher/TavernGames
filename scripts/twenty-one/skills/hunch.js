@@ -233,17 +233,50 @@ export async function hunch(userId) {
 
 
 
-    tableData.skillUsedThisTurn = true;
+    // V5.8.7 Race Condition Fix:
+    // We must NOT pass the stale 'tableData' object back to updateState.
+    // Instead, we fetch the LATEST state to ensure we don't revert other players' actions.
+    // Even better, we construct a patch with ONLY the fields we changed.
 
-    // V4.8.40: Mark usage
-    const usedSkills = { ...tableData.usedSkills };
-    if (!usedSkills[userId]) usedSkills[userId] = {};
-    usedSkills[userId] = { ...usedSkills[userId], hunch: true };
-    tableData.usedSkills = usedSkills;
+    // 1. Re-fetch latest state to get current `usedSkills` and `tableData` to ensure we merge correctly if needed
+    // Actually, updateState does a shallow merge of tableData.
+    // So if we pass { tableData: { hunchPrediction: ... } }, it merges it into current.
+    // BUT, we need to make sure we don't lose existing data in deep objects like `usedSkills` if we perform a replacement there.
 
-    await updateState({ tableData });
+    // Let's re-fetch state to be safe for deep merges that we compute manually.
+    const latestState = getState();
+    const latestTable = latestState.tableData ?? emptyTableData();
 
+    // Prepare updates
+    const updates = {};
 
+    if (isNat20) {
+        updates.hunchExact = { ...latestTable.hunchExact, [userId]: predictions };
+        updates.hunchRolls = { ...latestTable.hunchRolls, [userId]: exactRolls };
+    } else if (isNat1) {
+        updates.hunchLocked = { ...latestTable.hunchLocked, [userId]: true };
+        updates.hunchLockedDie = { ...latestTable.hunchLockedDie, [userId]: 20 };
+    } else if (success) {
+        updates.hunchPrediction = { ...latestTable.hunchPrediction, [userId]: predictions };
+        updates.hunchRolls = { ...latestTable.hunchRolls, [userId]: exactRolls };
+    } else {
+        updates.blindNextRoll = { ...latestTable.blindNextRoll, [userId]: true };
+    }
+
+    updates.skillUsedThisTurn = true;
+
+    // Merge usedSkills carefully
+    const currentUsedSkills = latestTable.usedSkills ?? {};
+    const myUsedSkills = currentUsedSkills[userId] ?? {};
+    updates.usedSkills = {
+        ...currentUsedSkills,
+        [userId]: { ...myUsedSkills, hunch: true }
+    };
+
+    // Also mark hasActed (this was done early in the function on local variable, need to persist it)
+    updates.hasActed = { ...latestTable.hasActed, [userId]: true };
+
+    await updateState({ tableData: updates });
 
     return getState();
 }

@@ -101,7 +101,16 @@ export async function submitRoll(payload, userId) {
 
   // V3: Hunch Accuracy - Use pre-rolled value if available
   let forcedResult = null;
-  if (tableData.hunchRolls?.[userId]?.[die]) {
+  console.log("Tavern Debug | Hunch Check:", {
+    userId,
+    die,
+    hunchRolls: tableData.hunchRolls,
+    userHunch: tableData.hunchRolls?.[userId],
+    forcedResult: tableData.hunchRolls?.[userId]?.[die]
+  });
+
+  // V5.8.7: Robust check for 0 or falsey values (though dice are 1+)
+  if (tableData.hunchRolls?.[userId] && tableData.hunchRolls[userId][die] !== undefined) {
     forcedResult = tableData.hunchRolls[userId][die];
   }
 
