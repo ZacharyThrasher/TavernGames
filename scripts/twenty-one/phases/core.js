@@ -375,7 +375,7 @@ export async function finishRound() {
 
     // V4.1: Victory Fanfare
     try {
-      await tavernSocket.executeForEveryone("showVictoryFanfare", winners[0]);
+      await tavernSocket.executeForEveryone("showVictoryFanfare", winners[0], finalPot);
     } catch (e) {
       console.warn("Could not show victory fanfare:", e);
     }

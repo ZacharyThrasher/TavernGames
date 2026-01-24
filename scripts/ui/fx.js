@@ -80,7 +80,13 @@ export const shake = (element, className, duration) => {
  * Shows celebratory banner with winner name and screen shake
  * @param {string} winnerId - User ID of the winner
  */
-export function showVictoryFanfare(winnerId) {
+/**
+ * V4.1: Visual Victory Fanfare
+ * Shows celebratory banner with winner name and screen shake
+ * @param {string} winnerId - User ID of the winner
+ * @param {number} [amount] - Gold amount won
+ */
+export function showVictoryFanfare(winnerId, amount) {
   try {
     // V13: Skip heavy effects in performance mode
     if (isPerformanceMode()) {
@@ -95,10 +101,18 @@ export function showVictoryFanfare(winnerId) {
     if (appWindow) shake(appWindow, "tavern-shake-victory", 600);
 
     // 2. Cinematic Cut-In (V13 Frameless Overlay)
+    // Pass gold amount as detail
+    const detail = amount ? `Wins ${amount}gp!` : null;
+
     CinematicOverlay.show({
       type: "VICTORY",
       userId: winnerId,
-      text: "VICTORY!"
+      text: "VICTORY!",
+      resultData: amount ? {
+        outcome: "WINNER TAKE ALL",
+        outcomeClass: "success", // gold styling
+        detail: `Wins <span style="color: #ffd700; text-shadow: 0 0 10px #b8860b;">${amount}gp</span>!`
+      } : undefined
     });
 
   } catch (error) {

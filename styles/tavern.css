@@ -315,14 +315,14 @@
 
 .tavern-main {
   display: grid;
-  grid-template-columns: 1fr 240px;
-  /* Reduced width since History is gone */
+  grid-template-columns: 1fr 300px;
+  /* Increased 240 -> 300 */
   gap: var(--tavern-gap-md);
   flex: 1;
   padding: var(--tavern-gap-md);
   overflow: hidden;
+  /* Important for flex child constraints */
   min-height: 0;
-  /* V4.3: Allow flex shrinkage */
 }
 
 .tavern-table-area {
@@ -364,10 +364,21 @@
 
 .tavern-controls-panel {
   flex-shrink: 0;
-  max-height: 70%;
-  /* V4.3: Prevent taking full height */
+  /* Don't shrink below content needs */
+  flex-grow: 0;
+  /* Don't grow unnecessarily */
+  max-height: 60%;
+  /* Limit height so chat always sees */
   overflow-y: auto;
-  /* V4.3: Allow scrolling if controls overflow */
+}
+
+.tavern-private-logs {
+  /* Existing styles... */
+  /* Make it dominate */
+  flex-grow: 1;
+  flex-shrink: 1;
+  min-height: 200px;
+  /* Ensure basic visibility */
 }
 
 .tavern-history-panel {
