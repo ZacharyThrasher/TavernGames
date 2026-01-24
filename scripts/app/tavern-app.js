@@ -539,6 +539,53 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         if (accuseBtn) accuseBtn.disabled = false;
       });
     });
+
+    // V5.11.4: Sidebar Resizer Logic
+    const resizer = this.element.querySelector('.sidebar-resizer');
+    const sidebar = this.element.querySelector('.tavern-sidebar');
+    const controlsPanel = this.element.querySelector('.tavern-controls-panel');
+    const logsPanel = this.element.querySelector('.tavern-private-logs');
+
+    if (resizer && sidebar && controlsPanel && logsPanel) {
+      let isResizing = false;
+
+      resizer.addEventListener('mousedown', (e) => {
+        isResizing = true;
+        resizer.classList.add('resizing');
+        document.body.style.cursor = 'col-resize';
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        if (!isResizing) return;
+
+        const sidebarRect = sidebar.getBoundingClientRect();
+        const pointerX = e.clientX;
+
+        // Calculate new width relative to sidebar left edge
+        // Min width 150px, Max width (Sidebar - 150px)
+        const relativeX = pointerX - sidebarRect.left;
+
+        // Constrain
+        const minWidth = 150;
+        const maxWidth = sidebarRect.width - 150;
+
+        const newWidth = Math.min(Math.max(relativeX, minWidth), maxWidth);
+
+        // Apply flex-basis to controls panel
+        controlsPanel.style.flex = `0 0 ${newWidth}px`;
+
+        // Prevent selection during drag
+        e.preventDefault();
+      });
+
+      document.addEventListener('mouseup', () => {
+        if (isResizing) {
+          isResizing = false;
+          resizer.classList.remove('resizing');
+          document.body.style.cursor = '';
+        }
+      });
+    }
   }
 
   static async onJoin() {

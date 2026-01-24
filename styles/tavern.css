@@ -375,13 +375,12 @@
   /* Chat takes remaining width */
   display: flex;
   flex-direction: column;
-  min-width: 250px;
-  overflow: hidden;
+  /* Make it dominate */
+  flex-grow: 1;
+  flex-shrink: 1;
+  min-height: 300px;
+  /* Ensure chat is substantial */
   max-height: 100%;
-}
-
-/* Ensure chat is substantial */
-max-height: 100%;
 }
 
 .tavern-history-panel {
@@ -4627,4 +4626,25 @@ max-height: 100%;
   color: #ffd700;
   text-shadow: 0 0 10px #b8860b;
   font-weight: bold;
+}
+
+/* V5.11.4: Resizer Handle */
+.sidebar-resizer {
+  width: 8px;
+  /* Hitbox width */
+  background: var(--tavern-wood-highlight);
+  border-left: 1px solid rgba(0, 0, 0, 0.5);
+  border-right: 1px solid rgba(0, 0, 0, 0.5);
+  cursor: col-resize;
+  flex: 0 0 auto;
+  margin: 0 -2px;
+  /* Slight overlap or tight fit */
+  position: relative;
+  transition: background 0.2s;
+  z-index: 10;
+}
+
+.sidebar-resizer:hover,
+.sidebar-resizer.resizing {
+  background: var(--tavern-gold);
 }
