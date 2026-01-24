@@ -132,7 +132,7 @@ If players tie for the highest score:
 - **Action**: Select a player and a **Specific Die**.
 - **Mechanic**: **Pure Deduction**. (No Roll).
 - **Correct**: Refund 2× Ante + Reward (5× Ante or Wallet). Target Busts.
-- **Incorrect**: Lose 2× Ante. You Accuser Busts (Disqualified).
+- **Incorrect**: Lose 2× Ante. (You do NOT Bust).
 
 ---
 
