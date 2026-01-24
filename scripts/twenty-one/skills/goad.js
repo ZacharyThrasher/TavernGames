@@ -133,6 +133,10 @@ export async function goad(payload, userId) {
     const attackerName = getActorName(userId);
     const defenderName = getActorName(targetId);
 
+    // V5.10.1: Fix ReferenceError - Define actor objects
+    const attackerActor = getActorForUser(userId);
+    const defenderActor = getActorForUser(targetId);
+
     // Attacker skill names
     const attackerSkillNames = {
         itm: "Intimidation",

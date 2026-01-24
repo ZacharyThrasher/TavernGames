@@ -3245,8 +3245,10 @@
     position: absolute;
     bottom: -50px;
     right: 5vw;
-    width: 50vh;
-    height: 70vh;
+    width: 35vh;
+    /* Reduced from 50vh */
+    height: 50vh;
+    /* Reduced from 70vh */
     transform: translateX(100%);
     opacity: 0;
     animation: portrait-slide 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
@@ -3561,8 +3563,10 @@
   bottom: auto;
   right: auto;
   left: auto;
-  width: 180px;
-  height: 180px;
+  width: 140px;
+  /* Reduced from 180px */
+  height: 140px;
+  /* Reduced from 180px */
   transform: none;
   /* Reset base transforms */
   flex: 0 0 auto;
