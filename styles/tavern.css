@@ -315,13 +315,12 @@
 
 .tavern-main {
   display: grid;
-  grid-template-columns: 1fr 300px;
-  /* Increased 240 -> 300 */
+  grid-template-columns: 1fr 500px;
+  /* Wider sidebar for side-by-side */
   gap: var(--tavern-gap-md);
   flex: 1;
   padding: var(--tavern-gap-md);
   overflow: hidden;
-  /* Important for flex child constraints */
   min-height: 0;
 }
 
@@ -336,12 +335,13 @@
     0 4px 12px rgba(0, 0, 0, 0.3);
   overflow: auto;
   min-height: 0;
-  /* V4.3: Ensure scrolling triggers */
 }
 
+/* V5.11.3: Side-by-Side Container */
 .tavern-sidebar {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  /* Horizontal Layout */
   gap: var(--tavern-gap-md);
   overflow: hidden;
   min-height: 0;
@@ -354,32 +354,34 @@
   background-blend-mode: multiply;
   border: 4px solid transparent;
   border-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMCIgaGVpZ2h0PSIzMCI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iIzNlMjcyMyIvPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCN3b29kLWdyYWluKSIgb3BhY2l0eT0iMC41Ii8+PC9zdmc+') 30 stretch;
-  /* Fallback border if image fails */
   border-color: var(--color-sc-border-dark);
   border-style: solid;
-
   border-radius: var(--tavern-radius-md);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
 }
 
 .tavern-controls-panel {
-  flex-shrink: 0;
-  /* Don't shrink below content needs */
-  flex-grow: 0;
-  /* Don't grow unnecessarily */
-  max-height: 40%;
-  /* Reduced to prioritize chat */
+  flex: 0 0 200px;
+  /* Fixed width for controls */
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
+  max-height: 100%;
+  /* Full height */
 }
 
 .tavern-private-logs {
-  /* Existing styles... */
-  /* Make it dominate */
-  flex-grow: 1;
-  flex-shrink: 1;
-  min-height: 300px;
-  /* Ensure chat is substantial */
+  flex: 1;
+  /* Chat takes remaining width */
+  display: flex;
+  flex-direction: column;
+  min-width: 250px;
+  overflow: hidden;
   max-height: 100%;
+}
+
+/* Ensure chat is substantial */
+max-height: 100%;
 }
 
 .tavern-history-panel {

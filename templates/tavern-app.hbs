@@ -43,8 +43,13 @@
 
     {{!-- Right sidebar --}}
     <aside class="tavern-sidebar">
-      {{!-- V5.11: Chat Logic Moved to Top for Dominance --}}
-      {{!-- V5.8: Private Logs Panel --}}
+      {{!-- V5.11.3: Side-by-Side Layout --}}
+      {{!-- 1. Controls (Left) --}}
+      <div class="tavern-controls-panel">
+        {{> "modules/tavern-dice-master/templates/parts/controls.hbs"}}
+      </div>
+
+      {{!-- 2. Private Logs (Right) --}}
       <div class="tavern-private-logs">
         <div class="logs-header">
           <i class="fa-solid fa-book-secret"></i> Your Private Log
@@ -69,11 +74,6 @@
           </div>
           {{/if}}
         </div>
-      </div>
-
-      {{!-- Controls at Bottom --}}
-      <div class="tavern-controls-panel">
-        {{> "modules/tavern-dice-master/templates/parts/controls.hbs"}}
       </div>
     </aside>
   </main>
