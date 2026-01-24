@@ -94,6 +94,10 @@ export async function hunch(userId) {
     const isNat1 = d20Raw === 1;
 
     // V4.7.8: Dice So Nice & Sync Pause
+    // V5.9: Lift variables to outer scope so they can be used in the update block later
+    let predictions = {};
+    let exactRolls = {};
+
     showPublicRoll(roll, userId);
     await new Promise(resolve => setTimeout(resolve, 3000));
 
@@ -114,8 +118,8 @@ export async function hunch(userId) {
 
     if (isNat20) {
         // Nat 20 = Learn exact value for each die type
-        const predictions = {};
-        const exactRolls = {};
+        predictions = {};
+        exactRolls = {};
         for (const die of VALID_DICE) {
             const preRoll = await new Roll(`1d${die}`).evaluate();
             predictions[die] = preRoll.total;
@@ -165,8 +169,8 @@ export async function hunch(userId) {
 
     } else if (success) {
         // Success = Learn high/low for each die type
-        const predictions = {};
-        const exactRolls = {};
+        predictions = {};
+        exactRolls = {};
         for (const die of VALID_DICE) {
             const preRoll = await new Roll(`1d${die}`).evaluate();
             const threshold = HUNCH_THRESHOLDS[die];
