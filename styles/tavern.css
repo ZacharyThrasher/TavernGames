@@ -4629,3 +4629,50 @@
   overflow-y: auto;
   flex: 1;
 }
+
+/* V5.12: Victory Particles */
+.cinematic-particles {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 1;
+  /* Behind text but over bg */
+}
+
+.tavern-coin {
+  position: absolute;
+  top: -50px;
+  color: #ffd700;
+  text-shadow: 0 0 5px #b8860b;
+  font-size: 24px;
+  opacity: 0;
+  animation-name: coin-fall;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes coin-fall {
+  0% {
+    transform: translateY(0) rotate(0deg) scale(var(--scale));
+    opacity: 1;
+    top: -50px;
+  }
+
+  100% {
+    transform: translateY(110vh) rotate(360deg) scale(var(--scale));
+    opacity: 0;
+    top: 100%;
+  }
+}
+
+/* Rolling Counter Style */
+.gold-text.rolling {
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
+  transform: scale(1.2);
+  transition: color 0.2s;
+}

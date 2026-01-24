@@ -1,6 +1,7 @@
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 import { MODULE_ID, getState } from "../state.js";
+import { ParticleFactory } from "./particle-fx.js"; // V5.12
 
 /**
  * Cinematic Overlay for Tavern Games
@@ -150,5 +151,56 @@ export class CinematicOverlay extends HandlebarsApplicationMixin(ApplicationV2) 
             targetImg: this.cutInData.targetImg,
             targetName: this.cutInData.targetName,
         };
+    }
+
+    _onRender(context, options) {
+        super._onRender(context, options);
+
+        // V5.12: Victory Effects
+        if (this.cutInData.type === "VICTORY") {
+            const container = this.element.querySelector(".cinematic-particles");
+            if (container) {
+                // Dynamically import to avoid circular dep issues in some contexts, or just standard import
+                // Using standard import at top of file is better, we'll add that.
+                ParticleFactory.spawnCoinShower(container, 50);
+            }
+
+            // Rolling Counter
+            if (this.cutInData.resultData?.amount) {
+                const amountEl = this.element.querySelector(".gold-text");
+                if (amountEl) {
+                    this._animateCounter(amountEl, 0, this.cutInData.resultData.amount, 1500);
+                }
+            }
+        }
+    }
+
+    _animateCounter(element, start, end, duration) {
+        const range = end - start;
+        const startTime = Date.now();
+        element.classList.add("rolling");
+
+        const update = () => {
+            const now = Date.now();
+            const elapsed = now - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+
+            // Ease Out Quart
+            const ease = 1 - Math.pow(1 - progress, 4);
+
+            const current = Math.floor(start + (range * ease));
+            element.textContent = `${current}gp`;
+
+            if (progress < 1) {
+                requestAnimationFrame(update);
+            } else {
+                element.classList.remove("rolling");
+                // Final pop
+                element.style.transform = "scale(1.5)";
+                setTimeout(() => element.style.transform = "scale(1)", 200);
+            }
+        };
+
+        requestAnimationFrame(update);
     }
 }
