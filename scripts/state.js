@@ -315,3 +315,18 @@ export async function addLogToAll(entry, excludeIds = []) {
 
   return updateState({ privateLogs: updatedPrivateLogs });
 }
+
+/**
+ * V5.13: Mark all private logs for a user as seen
+ */
+export async function markLogsAsSeen(userId) {
+  const state = getState();
+  const currentLogs = state.privateLogs?.[userId] ?? [];
+
+  if (currentLogs.every(log => log.seen)) return state;
+
+  const updatedLogs = currentLogs.map(log => ({ ...log, seen: true }));
+  const updatedPrivateLogs = { ...state.privateLogs, [userId]: updatedLogs };
+
+  return updateState({ privateLogs: updatedPrivateLogs });
+}

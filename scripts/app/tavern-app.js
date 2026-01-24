@@ -369,10 +369,14 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       timeAgo: this._formatTimeAgo(entry.timestamp)
     }));
 
+    // V5.13: Unread Logs
+    const unreadCount = (state.privateLogs?.[userId] ?? []).filter(l => !l.seen).length;
+
     return {
       moduleId: MODULE_ID,
       state,
       isPlayingAsNpc,
+      // ... existing props ...
       npcWallet: isPlayingAsNpc ? getNpcWallet(userId) : 0,
       players: playerSeats,
       isGM,
@@ -417,6 +421,8 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       openingRollsRemaining,
       history,
       privateLogs: myPrivateLogs, // V5.8
+      unreadLogsCount: unreadCount, // V5.13
+      hasUnreadLogs: unreadCount > 0, // V5.13
       dice: this._buildDiceArray(ante, isBettingPhase || isCutPhase, tableData.dared?.[userId] ?? false),
       isDuel: state.status === "DUEL",
       duel: tableData.duel ?? null,
@@ -562,7 +568,24 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   static onToggleLogs() {
+    // Mark logs as seen when opening
+    // We do this optimistically here.
+    // If we want to do it ONLY when it wasn't open, we need to check window state.
+    // But markLogsAsSeen is idempotent (except for the update).
+    // Let's import markLogsAsSeen.
+    /*
+      Since this is static and modules might be loaded differently, 
+      we should probably access it via the module api if possible, 
+      but for now we'll assume imports.
+      Wait, we need to import `markLogsAsSeen` at the top.
+    */
+    // For now, toggle behavior:
     game.tavernDiceMaster?.toggleLogs();
+
+    // V5.13: Mark as seen
+    import("../state.js").then(({ markLogsAsSeen }) => {
+      markLogsAsSeen(game.user.id);
+    });
   }
 
   static async onJoin() {

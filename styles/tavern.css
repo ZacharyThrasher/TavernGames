@@ -4685,3 +4685,35 @@
   transform: scale(1.2);
   transition: color 0.2s;
 }
+
+/* V5.13: Notification Badge */
+.notification-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  background: #ff4444;
+  border-radius: 50%;
+  border: 1px solid #1a1a1a;
+  box-shadow: 0 0 4px #ff4444;
+  animation: pulse-badge 2s infinite;
+  pointer-events: none;
+}
+
+@keyframes pulse-badge {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

@@ -11,8 +11,12 @@
             style="font-size: 0.6em; color: #aaa; cursor: pointer; vertical-align: top;" data-action="help"
             title="Rules & Help"></i>
           <i class="fa-solid fa-scroll help-icon"
-            style="font-size: 0.6em; color: #ffd700; cursor: pointer; vertical-align: top; margin-left: 5px;"
-            data-action="toggleLogs" title="Open Private Log"></i>
+            style="font-size: 0.6em; color: #ffd700; cursor: pointer; vertical-align: top; margin-left: 5px; position: relative;"
+            data-action="toggleLogs" title="Open Private Log">
+            {{#if hasUnreadLogs}}
+            <span class="notification-badge"></span>
+            {{/if}}
+          </i>
         </h1>
         <span class="tavern-subtitle">A Game of Fortune & Folly</span>
       </div>
