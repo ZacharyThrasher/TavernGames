@@ -30,7 +30,7 @@
         </div>
         {{else}}
         {{!-- Classic Single Mode --}}
-        <div class="single-mode-container">
+        <div class="single-mode-container {{#unless targetImg}}single-portrait{{/unless}}">
             {{#if img}}
             <div class="portrait-container single initiator">
                 <img src="{{img}}" alt="{{name}}" class="portrait-img" />

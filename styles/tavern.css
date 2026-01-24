@@ -3897,6 +3897,15 @@
   animation: portrait-slide-left 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
 }
 
+/* V5.12.2: Single Portrait moves to Bottom Right */
+.single-mode-container.single-portrait .portrait-container.initiator {
+  left: auto;
+  right: 0;
+  bottom: -50px;
+  transform: translateX(100%);
+  animation: portrait-slide-right 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
+}
+
 /* Target: Top Right */
 .single-mode-container .portrait-container.target {
   right: 0;
