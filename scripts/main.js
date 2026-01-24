@@ -84,7 +84,7 @@ Hooks.once("ready", async () => {
 
   game.tavernDiceMaster = {
     app,
-    logs,
+    logsWindow: logs, // V5.13: Renamed for clarity and consistency
     open: () => app.render(true),
     close: () => app.close(),
     toggleLogs: () => { // Helper for button

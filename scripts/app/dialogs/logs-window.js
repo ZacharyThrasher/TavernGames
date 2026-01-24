@@ -48,4 +48,20 @@ export class LogsWindow extends HandlebarsApplicationMixin(ApplicationV2) {
         const hours = Math.floor(minutes / 60);
         return `${hours}h ago`;
     }
+    async _onRender(context, options) {
+        super._onRender(context, options);
+        // Refresh main app to update badge state
+        if (game.tavernDiceMaster?.app?.rendered) {
+            game.tavernDiceMaster.app.render();
+        }
+    }
+
+    async close(options) {
+        const result = await super.close(options);
+        // Refresh main app to update badge state
+        if (game.tavernDiceMaster?.app?.rendered) {
+            game.tavernDiceMaster.app.render();
+        }
+        return result;
+    }
 }
