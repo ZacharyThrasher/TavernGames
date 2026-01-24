@@ -210,18 +210,6 @@ export async function submitRoll(payload, userId) {
 
   const userName = getActorName(userId);
 
-  // Line 402-404
-  const userName = getActorName(userId);
-
-  // Line 449-450
-  const userName = getActorName(userId);
-
-  // Line 544
-  const userName = getActorName(userId);
-
-  // Line 599
-  const userName = getActorName(userId);
-
   // V3.5: Show roll cost message for GM-as-NPC too
   const msgUser = game.users.get(userId);
   const msgPlayerData = state.players?.[userId];
@@ -350,9 +338,6 @@ export async function submitRoll(payload, userId) {
             return `${name} (${vt})`;
           })
           .join(" → ");
-
-        // Duplicate removed
-
 
         // V5.8: Log instead of Chat Card
         await addLogToAll({
@@ -553,18 +538,6 @@ export async function hold(userId) {
   updatedTable.currentPlayer = getNextActivePlayer(state, updatedTable);
   updatedTable.skillUsedThisTurn = false;
 
-  const userName = getActorName(userId);
-
-  // Line 402-404
-  const userName = getActorName(userId);
-
-  // Line 449-450
-  const userName = getActorName(userId);
-
-  // Line 544
-  const userName = getActorName(userId);
-
-  // Line 599
   const userName = getActorName(userId);
 
   // V5.8: Log Hold
