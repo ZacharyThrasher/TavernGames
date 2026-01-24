@@ -317,10 +317,10 @@ export async function submitRoll(payload, userId) {
     updatedTable.hasActed = { ...updatedTable.hasActed, [userId]: true };
   }
 
-  await updateState({
+  await updateState((current) => ({
     tableData: updatedTable,
-    pot: newPot,
-  });
+    pot: current.pot + rollCost,
+  }));
 
   if (isOpeningPhase) {
     const myRolls = rolls[userId] ?? [];

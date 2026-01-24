@@ -176,8 +176,13 @@ export function getState() {
 /**
  * V4: Update game state in World Settings
  */
-export async function updateState(patch) {
+export async function updateState(patchOrFn) {
+  // Use a transaction-like pattern by fetching fresh state explicitly
+  // Note: Foundry settings are not truly transactional, but this helps with async race conditions
   const current = getState();
+
+  // Resolve patch if it's a function
+  const patch = typeof patchOrFn === 'function' ? patchOrFn(current) : patchOrFn;
 
   // Manual merge to ensure arrays are replaced, not merged by index
   const next = {
@@ -206,7 +211,6 @@ export async function updateState(patch) {
   };
 
   console.log("Tavern Twenty-One | Updating state:", { current, patch, next });
-  console.log("Tavern Twenty-One | turnOrder after update:", next.turnOrder);
 
   await game.settings.set(MODULE_ID, "gameState", next);
   return next;
