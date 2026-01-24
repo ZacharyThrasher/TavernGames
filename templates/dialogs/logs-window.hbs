@@ -1,0 +1,20 @@
+<div class="logs-content">
+    {{#if privateLogs}}
+    {{#each privateLogs}}
+    <div class="log-entry {{this.type}}">
+        <div class="log-meta">
+            <span class="log-icon"><i class="{{this.icon}}"></i></span>
+            <span class="log-time">{{this.timeAgo}}</span>
+        </div>
+        <div class="log-details">
+            <div class="log-title">{{this.title}}</div>
+            <div class="log-message">{{{this.message}}}</div>
+        </div>
+    </div>
+    {{/each}}
+    {{else}}
+    <div class="no-logs">
+        <em>No secrets yet...</em>
+    </div>
+    {{/if}}
+</div>

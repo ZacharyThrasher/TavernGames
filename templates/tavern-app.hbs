@@ -6,9 +6,14 @@
         <i class="fa-solid fa-dice-d20"></i>
       </div>
       <div class="tavern-title-text">
-        <h1>Twenty-One <i class="fa-solid fa-circle-question help-icon"
+        <h1>Twenty-One
+          <i class="fa-solid fa-circle-question help-icon"
             style="font-size: 0.6em; color: #aaa; cursor: pointer; vertical-align: top;" data-action="help"
-            title="Rules & Help"></i></h1>
+            title="Rules & Help"></i>
+          <i class="fa-solid fa-book-secret help-icon"
+            style="font-size: 0.6em; color: #ffd700; cursor: pointer; vertical-align: top; margin-left: 5px;"
+            data-action="toggleLogs" title="Open Private Log"></i>
+        </h1>
         <span class="tavern-subtitle">A Game of Fortune & Folly</span>
       </div>
     </div>
@@ -43,40 +48,9 @@
 
     {{!-- Right sidebar --}}
     <aside class="tavern-sidebar">
-      {{!-- V5.11.3: Side-by-Side Layout --}}
-      {{!-- 1. Controls (Left) --}}
+      {{!-- Controls --}}
       <div class="tavern-controls-panel">
         {{> "modules/tavern-dice-master/templates/parts/controls.hbs"}}
-      </div>
-
-      {{!-- Resizer Handle --}}
-      <div class="sidebar-resizer"></div>
-
-      {{!-- 2. Private Logs (Right) --}}
-      <div class="tavern-private-logs">
-        <div class="logs-header">
-          <i class="fa-solid fa-book-secret"></i> Your Private Log
-        </div>
-        <div class="logs-content">
-          {{#if privateLogs}}
-          {{#each privateLogs}}
-          <div class="log-entry {{this.type}}">
-            <div class="log-meta">
-              <span class="log-icon"><i class="{{this.icon}}"></i></span>
-              <span class="log-time">{{this.timeAgo}}</span>
-            </div>
-            <div class="log-details">
-              <div class="log-title">{{this.title}}</div>
-              <div class="log-message">{{{this.message}}}</div>
-            </div>
-          </div>
-          {{/each}}
-          {{else}}
-          <div class="no-logs">
-            <em>No secrets yet...</em>
-          </div>
-          {{/if}}
-        </div>
       </div>
     </aside>
   </main>

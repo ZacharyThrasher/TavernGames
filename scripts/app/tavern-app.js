@@ -61,6 +61,8 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       reset: TavernApp.onReset,
       toggleLiquidMode: TavernApp.onToggleLiquidMode,
       help: TavernApp.onHelp,
+      toggleLogs: TavernApp.onToggleLogs, // V5.11.5
+      toggleLogs: TavernApp.onToggleLogs, // V5.11.5
     },
     classes: ["tavern-dice-master"],
   };
@@ -71,7 +73,8 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     },
   };
 
-  // Dice display helper
+  // ... (Dice Icons preserved via simple re-declaration if needed, or just skipping lines)
+
   static DICE_ICONS = {
     4: "d4",
     6: "d6",
@@ -80,6 +83,21 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     12: "d12",
     20: "d20",
   };
+
+  async _prepareContext() {
+    const state = getState();
+    // ... (Existing context logic up to History)
+
+    // (We will use the existing _prepareContext logic but strip the privateLogs part if we want,
+    //  but since the new window handles it, we can just leave it unused or remove it. 
+    //  For minimal diff, I will just remove the privateLogs property passed to template)
+
+    // ... (Use replace_file_content to target specific blocks)
+  }
+
+  static onToggleLogs() {
+    game.tavernDiceMaster?.toggleLogs();
+  }
 
   async _prepareContext() {
     const state = getState();
@@ -540,52 +558,11 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       });
     });
 
-    // V5.11.4: Sidebar Resizer Logic
-    const resizer = this.element.querySelector('.sidebar-resizer');
-    const sidebar = this.element.querySelector('.tavern-sidebar');
-    const controlsPanel = this.element.querySelector('.tavern-controls-panel');
-    const logsPanel = this.element.querySelector('.tavern-private-logs');
+    // V5.11.5: Resizer logic removed. Chat is now a separate window.
+  }
 
-    if (resizer && sidebar && controlsPanel && logsPanel) {
-      let isResizing = false;
-
-      resizer.addEventListener('mousedown', (e) => {
-        isResizing = true;
-        resizer.classList.add('resizing');
-        document.body.style.cursor = 'col-resize';
-      });
-
-      document.addEventListener('mousemove', (e) => {
-        if (!isResizing) return;
-
-        const sidebarRect = sidebar.getBoundingClientRect();
-        const pointerX = e.clientX;
-
-        // Calculate new width relative to sidebar left edge
-        // Min width 150px, Max width (Sidebar - 150px)
-        const relativeX = pointerX - sidebarRect.left;
-
-        // Constrain
-        const minWidth = 150;
-        const maxWidth = sidebarRect.width - 150;
-
-        const newWidth = Math.min(Math.max(relativeX, minWidth), maxWidth);
-
-        // Apply flex-basis to controls panel
-        controlsPanel.style.flex = `0 0 ${newWidth}px`;
-
-        // Prevent selection during drag
-        e.preventDefault();
-      });
-
-      document.addEventListener('mouseup', () => {
-        if (isResizing) {
-          isResizing = false;
-          resizer.classList.remove('resizing');
-          document.body.style.cursor = '';
-        }
-      });
-    }
+  static onToggleLogs() {
+    game.tavernDiceMaster?.toggleLogs();
   }
 
   static async onJoin() {

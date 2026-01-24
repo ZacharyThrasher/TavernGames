@@ -1,4 +1,5 @@
 import { TavernApp } from "./app/tavern-app.js";
+import { LogsWindow } from "./app/dialogs/logs-window.js"; // V5.11.5
 import { CinematicOverlay } from "./ui/cinematic-overlay.js";
 import { MODULE_ID, STATE_MACRO_NAME, preloadTemplates, registerSettings, ensureStateMacro } from "./state.js";
 import { setupSockets } from "./socket.js";
@@ -79,10 +80,17 @@ Hooks.once("ready", async () => {
   }
 
   const app = new TavernApp();
+  const logs = new LogsWindow(); // V5.11.5
+
   game.tavernDiceMaster = {
     app,
+    logs,
     open: () => app.render(true),
     close: () => app.close(),
+    toggleLogs: () => { // Helper for button
+      if (logs.rendered) logs.close();
+      else logs.render(true);
+    }
   };
 
   // V13 Premium Pattern: Expose module API for interoperability
@@ -100,9 +108,14 @@ Hooks.once("ready", async () => {
 
   // V4: Watch for state changes via World Settings (replaces Macro hook)
   Hooks.on("updateSetting", (setting) => {
-    if (setting.key === `${MODULE_ID}.gameState` && app.rendered) {
-      console.log("Tavern Twenty-One | State changed, re-rendering UI");
-      app.render();
+    if (setting.key === `${MODULE_ID}.gameState`) {
+      if (app.rendered) {
+        // console.log("Tavern Twenty-One | State changed, re-rendering App");
+        app.render();
+      }
+      if (logs.rendered) {
+        logs.render(); // Re-render logs if open
+      }
     }
   });
 

@@ -315,8 +315,8 @@
 
 .tavern-main {
   display: grid;
-  grid-template-columns: 1fr 500px;
-  /* Wider sidebar for side-by-side */
+  grid-template-columns: 1fr 240px;
+  /* Reverted to classic width */
   gap: var(--tavern-gap-md);
   flex: 1;
   padding: var(--tavern-gap-md);
@@ -340,8 +340,7 @@
 /* V5.11.3: Side-by-Side Container */
 .tavern-sidebar {
   display: flex;
-  flex-direction: row;
-  /* Horizontal Layout */
+  flex-direction: column;
   gap: var(--tavern-gap-md);
   overflow: hidden;
   min-height: 0;
@@ -361,27 +360,14 @@
 }
 
 .tavern-controls-panel {
-  flex: 0 0 200px;
-  /* Fixed width for controls */
+  flex: 1;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
   max-height: 100%;
-  /* Full height */
 }
 
-.tavern-private-logs {
-  flex: 1;
-  /* Chat takes remaining width */
-  display: flex;
-  flex-direction: column;
-  /* Make it dominate */
-  flex-grow: 1;
-  flex-shrink: 1;
-  min-height: 300px;
-  /* Ensure chat is substantial */
-  max-height: 100%;
-}
+/* Removed .tavern-private-logs styles they are no longer used here */
 
 .tavern-history-panel {
   flex: 1;
@@ -4628,23 +4614,18 @@
   font-weight: bold;
 }
 
-/* V5.11.4: Resizer Handle */
-.sidebar-resizer {
-  width: 8px;
-  /* Hitbox width */
-  background: var(--tavern-wood-highlight);
-  border-left: 1px solid rgba(0, 0, 0, 0.5);
-  border-right: 1px solid rgba(0, 0, 0, 0.5);
-  cursor: col-resize;
-  flex: 0 0 auto;
-  margin: 0 -2px;
-  /* Slight overlap or tight fit */
-  position: relative;
-  transition: background 0.2s;
-  z-index: 10;
+/* V5.11.5: Logs Window Styling */
+.tavern-logs-window .window-content {
+  background-color: var(--color-sc-bg-dark);
+  background-image: var(--texture-parchment);
+  background-blend-mode: multiply;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
 }
 
-.sidebar-resizer:hover,
-.sidebar-resizer.resizing {
-  background: var(--tavern-gold);
+.tavern-logs-window .logs-content {
+  padding: var(--tavern-gap-md);
+  overflow-y: auto;
+  flex: 1;
 }
