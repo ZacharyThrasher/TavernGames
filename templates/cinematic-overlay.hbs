@@ -42,7 +42,9 @@
                 {{#if resultData}}
                 {{!-- Impactful Result Text --}}
                 <div class="main-result {{resultData.outcomeClass}}">{{resultData.outcome}}</div>
-                {{#if resultData.detail}}
+                {{#if resultData.amount}}
+                <div class="result-detail">Wins <span class="gold-text">{{resultData.amount}}gp</span>!</div>
+                {{else if resultData.detail}}
                 <div class="result-detail">{{{resultData.detail}}}</div>
                 {{/if}}
                 {{else}}

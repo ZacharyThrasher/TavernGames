@@ -4620,3 +4620,9 @@
 .help-table tr:nth-child(even) {
   background: rgba(0, 0, 0, 0.03);
 }
+
+.gold-text {
+  color: #ffd700;
+  text-shadow: 0 0 10px #b8860b;
+  font-weight: bold;
+}

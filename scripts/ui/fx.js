@@ -111,7 +111,8 @@ export function showVictoryFanfare(winnerId, amount) {
       resultData: amount ? {
         outcome: "WINNER TAKE ALL",
         outcomeClass: "success", // gold styling
-        detail: `Wins <span style="color: #ffd700; text-shadow: 0 0 10px #b8860b;">${amount}gp</span>!`
+        detail: `Wins ${amount}gp!`, // Plain text fallback
+        amount: amount // Pass raw amount for template
       } : undefined
     });
 
