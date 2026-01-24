@@ -1,0 +1,207 @@
+<div class="tavern-help-container">
+    <nav class="tavern-tabs">
+        <a class="item active" data-tab="overview"><i class="fa-solid fa-book"></i> Overview</a>
+        <a class="item" data-tab="skills"><i class="fa-solid fa-hand-sparkles"></i> Skills</a>
+        <a class="item" data-tab="rules"><i class="fa-solid fa-scale-balanced"></i> Cheatsheet</a>
+    </nav>
+
+    <section class="tavern-tab-content">
+        {{!-- Overview Tab --}}
+        <div class="tab active" data-tab="overview">
+            <h2><i class="fa-solid fa-dice-d20"></i> Tavern Twenty-One</h2>
+            <p class="subtitle">A game of Fortune, Folly, and reckless abandon.</p>
+
+            <div class="help-card">
+                <h3><i class="fa-solid fa-bullseye"></i> The Goal</h3>
+                <p>
+                    Reach a <strong>Total of 21</strong> (or close to it) without going over ("Busting").<br>
+                    The highest total wins the pot. Ties are settled by a <strong>Duel</strong>.
+                </p>
+            </div>
+
+            <div class="help-card">
+                <h3><i class="fa-solid fa-forward"></i> Game Flow</h3>
+                <ol class="help-list">
+                    <li><strong>Ante Up:</strong> Everyone pays the toll.</li>
+                    <li><strong>The Opening:</strong> Roll 2d10 (One visible, one hidden).</li>
+                    <li><strong>The Cut:</strong> Lowest visible die may re-roll their hole die.</li>
+                    <li><strong>Betting:</strong> Take turns buying dice, holding, or using skills.</li>
+                    <li><strong>Showdown:</strong> All dice revealed. Accusations are made.</li>
+                    <li><strong>Payout:</strong> Winner takes all.</li>
+                </ol>
+            </div>
+
+            <div class="help-card">
+                <h3><i class="fa-solid fa-coins"></i> Betting & Actions</h3>
+                <ul>
+                    <li><strong>Hit (Buy Die):</strong> Add a d4, d6, d8, d10, or d20 to your total.</li>
+                    <li><strong>Hold:</strong> Compete with your current total.</li>
+                    <li><strong>Fold:</strong> Leave the round (Refund 50% Ante if early).</li>
+                </ul>
+            </div>
+        </div>
+
+        {{!-- Skills Tab --}}
+        <div class="tab" data-tab="skills">
+            <div class="skills-grid">
+                {{!-- Goad --}}
+                <div class="skill-card">
+                    <div class="skill-header">
+                        <i class="fa-solid fa-comments"></i> <strong>Goad</strong>
+                        <span class="stat">CHA</span>
+                    </div>
+                    <div class="skill-body">
+                        <p>Force a timid opponent to act.</p>
+                        <hr>
+                        <ul>
+                            <li><strong>Success:</strong> Target MUST Hit or Fold.</li>
+                            <li><strong>Backfire:</strong> YOU must Hit or Fold.</li>
+                            <li><strong>Critical:</strong> Target Locked into d20.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                {{!-- Bump --}}
+                <div class="skill-card">
+                    <div class="skill-header">
+                        <i class="fa-solid fa-hand-fist"></i> <strong>Bump</strong>
+                        <span class="stat">STR</span>
+                    </div>
+                    <div class="skill-body">
+                        <p>Physically disrupt the table.</p>
+                        <hr>
+                        <ul>
+                            <li><strong>Success:</strong> Re-roll Target's die.</li>
+                            <li><strong>Fail:</strong> Target re-rolls YOUR die.</li>
+                            <li><strong>Nat 1:</strong> Fail + Pay Ante.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                {{!-- Cheat --}}
+                <div class="skill-card">
+                    <div class="skill-header">
+                        <i class="fa-solid fa-mask"></i> <strong>Cheat</strong>
+                        <span class="stat">DEX</span>
+                    </div>
+                    <div class="skill-body">
+                        <p>Secretly fudge the numbers.</p>
+                        <hr>
+                        <ul>
+                            <li><strong>Effect:</strong> Modify die ±1 to ±3.</li>
+                            <li><strong>Risk:</strong> Increases Heat DC.</li>
+                            <li><strong>Nat 20:</strong> Invisible (No Heat).</li>
+                            <li><strong>Nat 1:</strong> CAUGHT! Pay 2x Ante.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                {{!-- Foresight --}}
+                <div class="skill-card">
+                    <div class="skill-header">
+                        <i class="fa-solid fa-eye"></i> <strong>Foresight</strong>
+                        <span class="stat">WIS</span>
+                    </div>
+                    <div class="skill-body">
+                        <p>Predict the next roll.</p>
+                        <hr>
+                        <ul>
+                            <li><strong>Success:</strong> See High/Low hints.</li>
+                            <li><strong>Fail:</strong> Next roll is BLIND.</li>
+                            <li><strong>Nat 20:</strong> See EXACT values.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                {{!-- Profile --}}
+                <div class="skill-card">
+                    <div class="skill-header">
+                        <i class="fa-solid fa-user-secret"></i> <strong>Profile</strong>
+                        <span class="stat">INT</span>
+                    </div>
+                    <div class="skill-body">
+                        <p>Read opponent's tells.</p>
+                        <hr>
+                        <ul>
+                            <li><strong>Success:</strong> Reveal Cheat Status.</li>
+                            <li><strong>Fail:</strong> No info.</li>
+                            <li><strong>Nat 20:</strong> Reveal specific die.</li>
+                            <li><strong>Nat 1:</strong> They read YOU.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                {{!-- Iron Liver --}}
+                <div class="skill-card">
+                    <div class="skill-header">
+                        <i class="fa-solid fa-beer-mug-empty"></i> <strong>Iron Liver</strong>
+                        <span class="stat">CON</span>
+                    </div>
+                    <div class="skill-body">
+                        <p>Pay with your liver.</p>
+                        <hr>
+                        <ul>
+                            <li><strong>Success:</strong> Action is Free.</li>
+                            <li><strong>Fail:</strong> SLOPPY (Disadvantage).</li>
+                            <li><strong>Nat 1:</strong> PASS OUT (Bust).</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{!-- Rules Cheatsheet --}}
+        <div class="tab" data-tab="rules">
+            <h3><i class="fa-solid fa-list"></i> Quick Reference</h3>
+
+            <table class="help-table">
+                <thead>
+                    <tr>
+                        <th>Die</th>
+                        <th>Cost</th>
+                        <th>Note</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>d20</td>
+                        <td>½ Ante</td>
+                        <td>High Risk. Nat 20 = 21.</td>
+                    </tr>
+                    <tr>
+                        <td>d10</td>
+                        <td>½ Ante</td>
+                        <td>Builder.</td>
+                    </tr>
+                    <tr>
+                        <td>d8</td>
+                        <td>1× Ante</td>
+                        <td>Standard.</td>
+                    </tr>
+                    <tr>
+                        <td>d6</td>
+                        <td>1× Ante</td>
+                        <td>Safe.</td>
+                    </tr>
+                    <tr>
+                        <td>d4</td>
+                        <td>2× Ante</td>
+                        <td>Precision (Expensive).</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3><i class="fa-solid fa-gavel"></i> Justice System</h3>
+            <div class="help-card justice">
+                <p><strong>Accusation (2× Ante):</strong> Spot a cheater during the Showdown.<br>
+                    If Correct: Target Busts + You get reward.<br>
+                    If Wrong: You Bust + Lose fee.</p>
+            </div>
+
+            <h3><i class="fa-solid fa-handshake"></i> Side Bets</h3>
+            <div class="help-card">
+                <p>Bet on a champion to win. Payout is 2:1 (Configurable).</p>
+            </div>
+        </div>
+    </section>
+</div>

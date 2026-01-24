@@ -20,6 +20,7 @@ import { BumpDialog } from "./dialogs/bump-dialog.js";
 import { AccuseDialog } from "./dialogs/accuse-dialog.js";
 import { SideBetDialog } from "./dialogs/side-bet-dialog.js";
 import { PaymentDialog } from "./dialogs/payment-dialog.js";
+import { HelpDialog } from "./dialogs/help-dialog.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -59,6 +60,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       newRound: TavernApp.onNewRound,
       reset: TavernApp.onReset,
       toggleLiquidMode: TavernApp.onToggleLiquidMode,
+      help: TavernApp.onHelp,
     },
     classes: ["tavern-dice-master"],
   };
@@ -795,6 +797,10 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       TavernApp.uiLocked = false;
       if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
     }
+  }
+
+  static async onHelp() {
+    new HelpDialog().render(true);
   }
 
   static async onFold() {
