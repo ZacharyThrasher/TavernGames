@@ -367,8 +367,8 @@
   /* Don't shrink below content needs */
   flex-grow: 0;
   /* Don't grow unnecessarily */
-  max-height: 60%;
-  /* Limit height so chat always sees */
+  max-height: 40%;
+  /* Reduced to prioritize chat */
   overflow-y: auto;
 }
 
@@ -377,8 +377,9 @@
   /* Make it dominate */
   flex-grow: 1;
   flex-shrink: 1;
-  min-height: 200px;
-  /* Ensure basic visibility */
+  min-height: 300px;
+  /* Ensure chat is substantial */
+  max-height: 100%;
 }
 
 .tavern-history-panel {

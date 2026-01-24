@@ -43,11 +43,7 @@
 
     {{!-- Right sidebar --}}
     <aside class="tavern-sidebar">
-      {{!-- Controls --}}
-      <div class="tavern-controls-panel">
-        {{> "modules/tavern-dice-master/templates/parts/controls.hbs"}}
-      </div>
-
+      {{!-- V5.11: Chat Logic Moved to Top for Dominance --}}
       {{!-- V5.8: Private Logs Panel --}}
       <div class="tavern-private-logs">
         <div class="logs-header">
@@ -73,6 +69,11 @@
           </div>
           {{/if}}
         </div>
+      </div>
+
+      {{!-- Controls at Bottom --}}
+      <div class="tavern-controls-panel">
+        {{> "modules/tavern-dice-master/templates/parts/controls.hbs"}}
       </div>
     </aside>
   </main>
