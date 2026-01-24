@@ -208,9 +208,6 @@ export async function submitRoll(payload, userId) {
     tavernSocket.executeForEveryone("showBustFanfare", userId);
   }
 
-  /* import at top is already: import { getActorForUser, getActorName } from "../utils/actors.js"; */
-
-  // Line 211
   const userName = getActorName(userId);
 
   // Line 402-404
@@ -415,7 +412,7 @@ export async function finishTurn(userId) {
     // Let's log the "Finalized Roll" to everyone.
 
     const user = game.users.get(userId);
-    const userName = user?.name ?? "Unknown";
+    const userName = getActorName(userId);
 
     // Check cost again for log consistency
     let rollCostMsg = "";
@@ -556,9 +553,6 @@ export async function hold(userId) {
   updatedTable.currentPlayer = getNextActivePlayer(state, updatedTable);
   updatedTable.skillUsedThisTurn = false;
 
-  /* import at top is already: import { getActorForUser, getActorName } from "../utils/actors.js"; */
-
-  // Line 211
   const userName = getActorName(userId);
 
   // Line 402-404
@@ -626,7 +620,7 @@ export async function fold(userId) {
   const refund = hasActed ? 0 : Math.floor(ante / 2);
 
   const actor = getActorForUser(userId);
-  const userName = actor?.name ?? game.users.get(userId)?.name ?? "Unknown";
+  const userName = getActorName(userId);
 
   if (refund > 0) {
     await payOutWinners({ [userId]: refund });
