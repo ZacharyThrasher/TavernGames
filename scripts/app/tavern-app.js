@@ -370,7 +370,20 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }));
 
     // V5.13: Unread Logs
+    const logWindow = game.tavernDiceMaster?.logsWindow;
+    const isLogsOpen = logWindow && logWindow.rendered;
     const unreadCount = (state.privateLogs?.[userId] ?? []).filter(l => !l.seen).length;
+    const hasUnreadLogs = unreadCount > 0 && !isLogsOpen;
+
+    // Trigger read state if window is open and there are unread logs
+    // Use a timeout to avoid render-cycle loops
+    if (isLogsOpen && unreadCount > 0) {
+      setTimeout(() => {
+        import("../state.js").then(({ markLogsAsSeen }) => {
+          markLogsAsSeen(userId);
+        });
+      }, 500);
+    }
 
     return {
       moduleId: MODULE_ID,
@@ -422,7 +435,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       history,
       privateLogs: myPrivateLogs, // V5.8
       unreadLogsCount: unreadCount, // V5.13
-      hasUnreadLogs: unreadCount > 0, // V5.13
+      hasUnreadLogs, // V5.13 (Computed with window state)
       dice: this._buildDiceArray(ante, isBettingPhase || isCutPhase, tableData.dared?.[userId] ?? false),
       isDuel: state.status === "DUEL",
       duel: tableData.duel ?? null,

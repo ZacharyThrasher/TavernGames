@@ -208,7 +208,22 @@ export async function submitRoll(payload, userId) {
     tavernSocket.executeForEveryone("showBustFanfare", userId);
   }
 
-  const userName = game.users.get(userId)?.name ?? "Unknown";
+  /* import at top is already: import { getActorForUser, getActorName } from "../utils/actors.js"; */
+
+  // Line 211
+  const userName = getActorName(userId);
+
+  // Line 402-404
+  const userName = getActorName(userId);
+
+  // Line 449-450
+  const userName = getActorName(userId);
+
+  // Line 544
+  const userName = getActorName(userId);
+
+  // Line 599
+  const userName = getActorName(userId);
 
   // V3.5: Show roll cost message for GM-as-NPC too
   const msgUser = game.users.get(userId);
@@ -446,7 +461,22 @@ export async function finishTurn(userId) {
     if (currentTotal > 21) {
       // Still busted after cheat decision
       updatedTable.busts = { ...updatedTable.busts, [userId]: true };
-      const userName = game.users.get(userId)?.name ?? "Unknown";
+      /* import at top is already: import { getActorForUser, getActorName } from "../utils/actors.js"; */
+
+      // Line 211
+      const userName = getActorName(userId);
+
+      // Line 402-404
+      const userName = getActorName(userId);
+
+      // Line 449-450
+      const userName = getActorName(userId);
+
+      // Line 544
+      const userName = getActorName(userId);
+
+      // Line 599
+      const userName = getActorName(userId);
 
       // V5.8: Log Bust
       await addLogToAll({
@@ -541,7 +571,22 @@ export async function hold(userId) {
   updatedTable.currentPlayer = getNextActivePlayer(state, updatedTable);
   updatedTable.skillUsedThisTurn = false;
 
-  const userName = game.users.get(userId)?.name ?? "Unknown";
+  /* import at top is already: import { getActorForUser, getActorName } from "../utils/actors.js"; */
+
+  // Line 211
+  const userName = getActorName(userId);
+
+  // Line 402-404
+  const userName = getActorName(userId);
+
+  // Line 449-450
+  const userName = getActorName(userId);
+
+  // Line 544
+  const userName = getActorName(userId);
+
+  // Line 599
+  const userName = getActorName(userId);
 
   // V5.8: Log Hold
   await addLogToAll({
