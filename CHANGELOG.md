@@ -1,5 +1,10 @@
 # Changelog
 
+## [5.17.3] - 2026-01-25
+### UI: Clarity Tweaks
+- **Goblin Used Dice**: Removed redundant "USED" cost label (stamp only).
+- **Put it on the Tab**: Stronger active-state glow and pulse for clarity.
+
 ## [5.17.2] - 2026-01-25
 ### UI: Skill Success Power
 - **Skill Success**: Power glow + pulse and arcane burst for successful skill checks.

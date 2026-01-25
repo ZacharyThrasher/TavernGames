@@ -541,7 +541,6 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         // So checking usedDice.includes(d.value) is correct.
         if (d.value !== 2 && usedDice.includes(d.value)) {
           disabled = true;
-          costLabel = "USED";
         }
       } else {
         // Dared Mechanic (Standard Mode)
@@ -893,7 +892,9 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       const canCheat = lastDieIndex >= 0 && !cheatIsHouse && !isBlind && updatedState.tableData?.gameMode !== "goblin";
 
     if (canCheat) {
-      const heatDC = updatedState.tableData?.heatDC ?? 10;
+      const heatDC = updatedState.tableData?.playerHeat?.[game.user.id]
+        ?? updatedState.tableData?.heatDC
+        ?? 10;
 
         try {
           const result = await CheatDialog.show({
@@ -1026,7 +1027,9 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       const result = await CheatDialog.show({
         myRolls,
         actor: game.user.character,
-        heatDC: state.tableData?.heatDC ?? 10
+        heatDC: state.tableData?.playerHeat?.[userId]
+          ?? state.tableData?.heatDC
+          ?? 10
       });
 
       if (result) {
