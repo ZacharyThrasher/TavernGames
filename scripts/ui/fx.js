@@ -229,7 +229,7 @@ export function showSkillBanner(payload = {}) {
     const icon = payload.icon ? `<i class="${payload.icon}"></i>` : "";
 
     const banner = createElement("div", {
-      className: `skill-banner ${tone}`,
+      className: `skill-banner ${tone} ${tone === "success" ? "power" : ""}`,
       innerHTML: `
         <div class="skill-banner-title">${icon}${title}</div>
         <div class="skill-banner-message">${message}</div>
@@ -238,7 +238,15 @@ export function showSkillBanner(payload = {}) {
 
     appWindow.appendChild(banner);
     requestAnimationFrame(() => banner.classList.add("show"));
-    setTimeout(() => fadeOutAndRemove(banner, 500), 1800);
+
+    if (tone === "success") {
+      const particleLayer = createElement("div", { className: "cinematic-particles" });
+      banner.appendChild(particleLayer);
+      ParticleFactory.spawnArcaneBurst(particleLayer, 24);
+      setTimeout(() => particleLayer.remove(), 1400);
+    }
+
+    setTimeout(() => fadeOutAndRemove(banner, 500), 3200);
   } catch (error) {
     console.error("Tavern Twenty-One | Skill banner error:", error);
   }

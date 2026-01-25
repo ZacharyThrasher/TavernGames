@@ -4998,7 +4998,7 @@
 }
 
 .skill-banner-title {
-  font-size: 14px;
+  font-size: 15px;
   text-transform: uppercase;
   font-weight: 700;
   display: flex;
@@ -5017,6 +5017,30 @@
 .skill-banner.success {
   background: linear-gradient(135deg, rgba(72, 120, 90, 0.95), rgba(32, 70, 50, 0.95));
   color: #dcffea;
+}
+
+.skill-banner.success.power {
+  border-color: rgba(255, 215, 120, 0.7);
+  box-shadow:
+    0 0 18px rgba(255, 215, 120, 0.45),
+    0 0 28px rgba(150, 100, 255, 0.35),
+    inset 0 0 22px rgba(255, 215, 120, 0.2);
+  animation: skillPowerPulse 1.2s ease-in-out infinite;
+}
+
+.skill-banner.success.power::before {
+  content: "";
+  position: absolute;
+  inset: -10px;
+  border-radius: 16px;
+  background: radial-gradient(circle, rgba(255, 215, 120, 0.25), transparent 70%);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+@keyframes skillPowerPulse {
+  0%, 100% { transform: translateX(-50%) scale(1); }
+  50% { transform: translateX(-50%) scale(1.03); }
 }
 
 .skill-banner.failure {
