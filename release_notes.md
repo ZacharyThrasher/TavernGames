@@ -1,3 +1,2 @@
-### UI: Clarity Tweaks
-- **Goblin Used Dice**: Removed redundant "USED" cost label (stamp only).
-- **Put it on the Tab**: Stronger active-state glow and pulse for clarity.
+### Goblin: Score Surge
+- **Goblin Scores**: High roll increases now trigger a casino‑style score surge (pulse + pop text).

@@ -329,6 +329,45 @@ export function showFullSetBurst(userId) {
 }
 
 /**
+ * Score surge effect for Goblin mode
+ * @param {string} userId
+ * @param {object} payload - { from, to, delta, multiplied }
+ */
+export function showScoreSurge(userId, payload = {}) {
+  try {
+    if (!game.tavernDiceMaster?.app?.rendered) return;
+    if (isPerformanceMode()) return;
+
+    const appWindow = document.querySelector(".tavern-dice-master.application");
+    if (!appWindow) return;
+
+    const seat = appWindow.querySelector(`.player-seat[data-user-id="${userId}"]`);
+    if (!seat) return;
+
+    const totalEl = seat.querySelector(".player-total .total-value");
+    if (!totalEl) return;
+
+    const surgeClass = payload.multiplied ? "score-surge-multi" : "score-surge";
+    totalEl.classList.remove("score-surge", "score-surge-multi");
+    void totalEl.offsetWidth;
+    totalEl.classList.add(surgeClass);
+    setTimeout(() => totalEl.classList.remove(surgeClass), 800);
+
+    // Floating pop value
+    const delta = payload.delta ?? 0;
+    const popText = payload.multiplied ? "x2!" : (delta > 0 ? `+${delta}` : "");
+    if (popText) {
+      const pop = createElement("div", { className: "score-pop", innerHTML: popText });
+      seat.appendChild(pop);
+      requestAnimationFrame(() => pop.classList.add("show"));
+      setTimeout(() => pop.remove(), 900);
+    }
+  } catch (error) {
+    console.error("Tavern Twenty-One | Score surge error:", error);
+  }
+}
+
+/**
  * V4.2: Floating Gold Text
  * Shows animated gold gain/loss text above player avatar
  * @param {string} userId - User ID

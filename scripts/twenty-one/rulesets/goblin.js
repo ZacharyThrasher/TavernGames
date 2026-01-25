@@ -81,7 +81,8 @@ export async function submitGoblinRoll({ state, tableData, userId, die }) {
   rolls[userId] = [...existingRolls, { die, result: naturalRoll, public: isPublic, blind: isBlind }];
 
   // Update Totals
-  let currentTotal = totals[userId] ?? 0;
+  const previousTotal = totals[userId] ?? 0;
+  let currentTotal = previousTotal;
   if (multiplier > 1) {
     currentTotal *= multiplier;
   } else {
@@ -115,6 +116,18 @@ export async function submitGoblinRoll({ state, tableData, userId, die }) {
   if (bust) {
     busts[userId] = true;
     tavernSocket.executeForEveryone("showBustFanfare", userId);
+  }
+
+  const totalDelta = currentTotal - previousTotal;
+  if (!bust && (totalDelta > 0 || multiplier > 1)) {
+    try {
+      await tavernSocket.executeForEveryone("showScoreSurge", userId, {
+        from: previousTotal,
+        to: currentTotal,
+        delta: totalDelta,
+        multiplied: multiplier > 1
+      });
+    } catch (e) { }
   }
 
   const userName = getActorName(userId);

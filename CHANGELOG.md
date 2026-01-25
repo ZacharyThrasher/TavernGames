@@ -1,5 +1,9 @@
 # Changelog
 
+## [5.17.4] - 2026-01-25
+### Goblin: Score Surge
+- **Goblin Scores**: High roll increases now trigger a casino‑style score surge (pulse + pop text).
+
 ## [5.17.3] - 2026-01-25
 ### UI: Clarity Tweaks
 - **Goblin Used Dice**: Removed redundant "USED" cost label (stamp only).
