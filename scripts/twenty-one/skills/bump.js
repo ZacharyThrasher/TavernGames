@@ -31,6 +31,10 @@ export async function bumpTable(payload, userId) {
         ui.notifications.warn("Cannot bump the table outside of an active round.");
         return state;
     }
+    if (state.tableData?.gameMode === "goblin") {
+        ui.notifications.warn("Bump is disabled in Goblin Rules.");
+        return state;
+    }
 
     const tableData = state.tableData ?? emptyTableData();
 

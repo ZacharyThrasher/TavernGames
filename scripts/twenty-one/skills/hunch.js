@@ -29,6 +29,10 @@ export async function hunch(userId) {
         ui.notifications.warn("Cannot use Foresight outside of an active round.");
         return state;
     }
+    if (state.tableData?.gameMode === "goblin") {
+        ui.notifications.warn("Foresight is disabled in Goblin Rules.");
+        return state;
+    }
 
     let tableData = state.tableData ?? emptyTableData();
 

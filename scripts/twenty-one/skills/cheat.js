@@ -28,6 +28,10 @@ export async function cheat(payload, userId) {
         ui.notifications.warn("Cannot cheat outside of an active round.");
         return state;
     }
+    if (state.tableData?.gameMode === "goblin") {
+        ui.notifications.warn("Cheating is disabled in Goblin Rules.");
+        return state;
+    }
 
     // V3.5: House cannot cheat (but GM-as-NPC can)
     const user = game.users.get(userId);

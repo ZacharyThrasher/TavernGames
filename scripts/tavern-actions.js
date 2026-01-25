@@ -1,4 +1,4 @@
-import { MODULE_ID, getState, updateState } from "./state.js";
+import { MODULE_ID, getState, updateState, markLogsAsSeen } from "./state.js";
 import { startRound, submitRoll, hold, revealDice, finishRound, returnToLobby, cheat, accuse, skipInspection, goad, bumpTable, bumpRetaliation, hunch, profile, useCut, fold, submitDuelRoll, finishTurn } from "./twenty-one/index.js";
 import { emptyTableData } from "./twenty-one/constants.js";
 import { placeSideBet } from "./twenty-one/phases/side-bets.js";
@@ -188,4 +188,9 @@ export async function handleResetTable() {
     tableData: { ...emptyTableData(), gameMode },
     history: [],
   });
+}
+
+export async function handleMarkLogsAsSeen(userId) {
+  ensureGM();
+  return markLogsAsSeen(userId);
 }

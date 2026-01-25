@@ -146,6 +146,13 @@ export async function submitRoll(payload, userId) {
       }
     }
 
+    // Coin flip pizzazz
+    if (die === 2) {
+      try {
+        await tavernSocket.executeForEveryone("showCoinFlip", userId, naturalRoll);
+      } catch (e) { }
+    }
+
     // Update State
     const rolls = { ...tableData.rolls };
     const totals = { ...tableData.totals };
@@ -156,7 +163,7 @@ export async function submitRoll(payload, userId) {
     const existingRolls = rolls[userId] ?? [];
 
     // Add roll to history
-    const isPublic = !isBlind;
+    const isPublic = tableData.phase === "opening" && !isBlind;
     rolls[userId] = [...existingRolls, { die, result: naturalRoll, public: isPublic, blind: isBlind }];
 
     // Update Totals
@@ -201,22 +208,34 @@ export async function submitRoll(payload, userId) {
       else msg = `${userName} rolled ${result} on d${die}. Total: ${currentTotal}.`;
     }
 
-    await addLogToAll({
-      title: bust ? "BUST!" : (exploded ? "Explosion!" : "Roll"),
-      message: msg,
-      icon: bust ? "fa-solid fa-skull" : "fa-solid fa-dice",
-      type: bust ? "bust" : "roll",
-      cssClass: bust ? "failure" : (exploded ? "success" : "")
-    });
+    if (tableData.phase === "opening") {
+      await addLogToAll({
+        title: bust ? "BUST!" : (exploded ? "Explosion!" : "Roll"),
+        message: msg,
+        icon: bust ? "fa-solid fa-skull" : "fa-solid fa-dice",
+        type: bust ? "bust" : "roll",
+        cssClass: bust ? "failure" : (exploded ? "success" : "")
+      });
 
-    await addHistoryEntry({
-      type: bust ? "bust" : "roll",
-      player: userName,
-      die: `d${die}`,
-      result: naturalRoll,
-      total: currentTotal,
-      message: msg
-    });
+      await addHistoryEntry({
+        type: bust ? "bust" : "roll",
+        player: userName,
+        die: `d${die}`,
+        result: naturalRoll,
+        total: currentTotal,
+        message: msg
+      });
+    }
+
+    let fullSetReset = false;
+    if (!bust) {
+      const requiredDice = [4, 6, 8, 10, 20];
+      const used = new Set(usedDiceMap[userId] ?? []);
+      fullSetReset = requiredDice.every(d => used.has(d));
+      if (fullSetReset) {
+        usedDiceMap[userId] = [];
+      }
+    }
 
     let updatedTable = {
       ...tableData,
@@ -228,6 +247,22 @@ export async function submitRoll(payload, userId) {
       hasActed: { ...tableData.hasActed, [userId]: true },
       pendingAction: "cheat_decision"
     };
+
+    if (fullSetReset) {
+      await addLogToAll({
+        title: "Full Set!",
+        message: `${userName} rolled a full set and resets their dice!`,
+        icon: "fa-solid fa-dice",
+        type: "roll",
+        cssClass: "success"
+      });
+
+      await addHistoryEntry({
+        type: "roll",
+        player: userName,
+        message: `${userName} completed a full set and reset their dice.`,
+      });
+    }
 
     return updateState({ tableData: updatedTable });
   }
@@ -334,15 +369,18 @@ export async function submitRoll(payload, userId) {
     }
   }
 
-  try {
-    await tavernSocket.executeAsUser("showRoll", userId, {
-      formula: `1d${die}`,
-      die: die,
-      result: result,
-      blind: isBlind // V5.7: Pass blind status to visual layer
-    });
-  } catch (e) {
-    console.warn("Tavern Twenty-One | Could not show dice to player:", e);
+  // In betting phase, delay visuals until after cheat resolution to avoid double rolls.
+  if (isOpeningPhase) {
+    try {
+      await tavernSocket.executeAsUser("showRoll", userId, {
+        formula: `1d${die}`,
+        die: die,
+        result: result,
+        blind: isBlind // V5.7: Pass blind status to visual layer
+      });
+    } catch (e) {
+      console.warn("Tavern Twenty-One | Could not show dice to player:", e);
+    }
   }
 
 
@@ -559,7 +597,15 @@ export async function finishTurn(userId) {
     updatedRolls[lastRollIndex] = { ...lastRoll, public: true };
 
     const updatedVisibleTotals = { ...tableData.visibleTotals };
-    updatedVisibleTotals[userId] = (updatedVisibleTotals[userId] ?? 0) + lastRoll.result;
+    const gameMode = tableData.gameMode ?? "standard";
+    if (gameMode === "goblin" && lastRoll.die === 2) {
+      if (lastRoll.result === 2) {
+        updatedVisibleTotals[userId] = (updatedVisibleTotals[userId] ?? 0) * 2;
+      }
+      // Tails adds nothing; bust is handled elsewhere.
+    } else {
+      updatedVisibleTotals[userId] = (updatedVisibleTotals[userId] ?? 0) + lastRoll.result;
+    }
 
     tableData.rolls = { ...tableData.rolls, [userId]: updatedRolls };
     tableData.visibleTotals = updatedVisibleTotals;
@@ -572,16 +618,29 @@ export async function finishTurn(userId) {
     const user = game.users.get(userId);
     const userName = getActorName(userId);
 
+    const gameMode = tableData.gameMode ?? "standard";
     // Check cost again for log consistency
     let rollCostMsg = "";
-    // Simplified cost check
-    const cost = getDieCost(lastRoll.die, ante);
-    if (cost === 0) rollCostMsg = " (FREE)";
-    else rollCostMsg = ` (${cost}gp)`;
+    if (gameMode !== "goblin") {
+      // Simplified cost check
+      const cost = getDieCost(lastRoll.die, ante);
+      if (cost === 0) rollCostMsg = " (FREE)";
+      else rollCostMsg = ` (${cost}gp)`;
+    }
 
     let specialMsg = "";
-    if (lastRoll.die === 20 && lastRoll.result === 21) specialMsg = " **NATURAL 20 = INSTANT 21!**";
-    else if (lastRoll.die !== 20 && lastRoll.result === 1) specialMsg = " *Spilled drink! 1gp cleaning fee.*";
+    if (gameMode === "goblin") {
+      if (lastRoll.die === 2) {
+        specialMsg = lastRoll.result === 2 ? " **COIN: DOUBLE!**" : " **COIN: BUST!**";
+      } else if (lastRoll.result === 1) {
+        specialMsg = " **BUST!**";
+      } else if (lastRoll.die === 20 && lastRoll.result === 20) {
+        specialMsg = " **NAT 20: EXPLODE!**";
+      }
+    } else {
+      if (lastRoll.die === 20 && lastRoll.result === 21) specialMsg = " **NATURAL 20 = INSTANT 21!**";
+      else if (lastRoll.die !== 20 && lastRoll.result === 1) specialMsg = " *Spilled drink! 1gp cleaning fee.*";
+    }
 
     // V5.8: Add Log to All
     await addLogToAll({

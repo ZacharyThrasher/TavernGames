@@ -22,6 +22,10 @@ export async function profile(payload, userId) {
         ui.notifications.warn("Cannot Profile outside of an active round.");
         return state;
     }
+    if (state.tableData?.gameMode === "goblin") {
+        ui.notifications.warn("Profile is disabled in Goblin Rules.");
+        return state;
+    }
 
     let tableData = state.tableData ?? emptyTableData();
     const { targetId } = payload;

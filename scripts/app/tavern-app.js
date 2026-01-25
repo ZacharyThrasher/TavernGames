@@ -97,6 +97,8 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
     const players = Object.values(state.players ?? {});
     const tableData = state.tableData ?? {};
+    const gameMode = tableData.gameMode ?? "standard";
+    const isGoblinMode = gameMode === "goblin";
     const ante = game.settings.get(MODULE_ID, "fixedAnte");
     const liquidMode = game.settings.get(MODULE_ID, "liquidMode");
 
@@ -206,11 +208,18 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       if (showFullTotal) {
         if (isMe && !isRevealPhase) {
           // Sum only non-blind dice
-          const nonBlindTotal = rolls
-            .filter(r => !r.blind)
-            .reduce((acc, r) => acc + (r.result || 0), 0);
+          let nonBlindTotal = 0;
+          let hasBlind = false;
 
-          const hasBlind = rolls.some(r => r.blind);
+          if (isGoblinMode) {
+            ({ total: nonBlindTotal, hasBlind } = this._computeGoblinTotal(rolls, false));
+          } else {
+            nonBlindTotal = rolls
+              .filter(r => !r.blind)
+              .reduce((acc, r) => acc + (r.result || 0), 0);
+            hasBlind = rolls.some(r => r.blind);
+          }
+
           displayTotal = hasBlind ? `${nonBlindTotal}+?` : `${nonBlindTotal}`;
         } else {
           displayTotal = `${total}`;
@@ -272,11 +281,11 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
     // Goad context updated (remove resist)
     const hasGoadedThisRound = tableData.goadedThisRound?.[userId] ?? tableData.usedSkills?.[userId]?.goad ?? false;
-    const canGoad = isBettingPhase && !isCutPhase && myTurn && isInGame && !(tableData.busts?.[userId]) && !isFolded && !isHouse && !hasGoadedThisRound && !tableData.skillUsedThisTurn;
+    const canGoad = !isGoblinMode && isBettingPhase && !isCutPhase && myTurn && isInGame && !(tableData.busts?.[userId]) && !isFolded && !isHouse && !hasGoadedThisRound && !tableData.skillUsedThisTurn;
     const goadTargets = canGoad ? getValidGoadTargets(state, userId) : [];
 
     // Cheating Context
-    const canCheat = state.status === "PLAYING" && state.players?.[userId] && myRolls.length > 0 && !tableData.busts?.[userId] && !isHouse;
+    const canCheat = !isGoblinMode && state.status === "PLAYING" && state.players?.[userId] && myRolls.length > 0 && !tableData.busts?.[userId] && !isHouse;
     const myDiceForCheat = canCheat ? myRolls.map((r, idx) => ({
       index: idx,
       die: r.die,
@@ -309,17 +318,17 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     // Hunch Context
     const isHolding = tableData.holds?.[userId] ?? false;
     const hasHunched = tableData.usedSkills?.[userId]?.hunch ?? false;
-    const canHunch = isBettingPhase && !isCutPhase && myTurn && isInGame && !isBusted && !isFolded && !isHolding && !isHouse && !hunchLocked && !tableData.skillUsedThisTurn && !hasHunched;
+    const canHunch = !isGoblinMode && isBettingPhase && !isCutPhase && myTurn && isInGame && !isBusted && !isFolded && !isHolding && !isHouse && !hunchLocked && !tableData.skillUsedThisTurn && !hasHunched;
 
     // Profile Context
     const hasProfiled = tableData.usedSkills?.[userId]?.profile ?? false;
-    const profileTargets = (isBettingPhase && !isCutPhase && myTurn && !isBusted && !isFolded && !isHouse && !tableData.skillUsedThisTurn && !hasProfiled)
+    const profileTargets = (!isGoblinMode && isBettingPhase && !isCutPhase && myTurn && !isBusted && !isFolded && !isHouse && !tableData.skillUsedThisTurn && !hasProfiled)
       ? getValidProfileTargets(state, userId) : [];
     const canProfile = profileTargets.length > 0;
 
     // Bump Context
     const hasBumpedThisRound = tableData.bumpedThisRound?.[userId] ?? tableData.usedSkills?.[userId]?.bump ?? false;
-    const canBump = isBettingPhase && !isCutPhase && myTurn && isInGame && !isBusted && !isHolding && !isHouse && !hasBumpedThisRound && !tableData.skillUsedThisTurn;
+    const canBump = !isGoblinMode && isBettingPhase && !isCutPhase && myTurn && isInGame && !isBusted && !isHolding && !isHouse && !hasBumpedThisRound && !tableData.skillUsedThisTurn;
     const bumpTargets = canBump ? getValidBumpTargets(state, userId) : [];
 
     // Retaliation Context
@@ -364,9 +373,13 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     // Use a timeout to avoid render-cycle loops
     if (isLogsOpen && unreadCount > 0) {
       setTimeout(() => {
-        import("../state.js").then(({ markLogsAsSeen }) => {
-          markLogsAsSeen(userId);
-        });
+        if (game.user.isGM) {
+          import("../state.js").then(({ markLogsAsSeen }) => {
+            markLogsAsSeen(userId);
+          });
+        } else {
+          tavernSocket.executeAsGM("markLogsAsSeen", userId);
+        }
       }, 500);
     }
 
@@ -439,8 +452,8 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       isDared: tableData.dared?.[userId] ?? false,
       startingHeat: tableData.houseRules?.startingHeat ?? 10,
       uiLocked: TavernApp.uiLocked, // V4.8.56: UI Lock State
-      gameMode: state.tableData?.gameMode ?? "standard", // V5.14.1: Game Mode for UI
-      isGoblinMode: state.tableData?.gameMode === "goblin", // V5.14.0
+      gameMode, // V5.14.1: Game Mode for UI
+      isGoblinMode, // V5.14.0
       // Pass usedDice for Goblin Mode
       dice: this._buildDiceArray(ante, isBettingPhase || isCutPhase, tableData.dared?.[userId] ?? false, state.tableData?.gameMode === "goblin", tableData.usedDice?.[userId] ?? [])
     };
@@ -448,6 +461,25 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   // V4.8.56: UI Lock State
   static uiLocked = false;
+
+  _computeGoblinTotal(rolls, includeBlind = true) {
+    let total = 0;
+    let hasBlind = false;
+    for (const roll of rolls) {
+      if (roll.blind && !includeBlind) {
+        hasBlind = true;
+        continue;
+      }
+      if (roll.die === 2) {
+        if (roll.result === 2) {
+          total *= 2;
+        }
+      } else {
+        total += roll.result || 0;
+      }
+    }
+    return { total, hasBlind };
+  }
 
   _buildDiceArray(ante, isBettingPhase, isDared, isGoblinMode = false, usedDice = []) {
     const diceConfig = [
@@ -616,9 +648,13 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     game.tavernDiceMaster?.toggleLogs();
 
     // V5.13: Mark as seen
-    import("../state.js").then(({ markLogsAsSeen }) => {
-      markLogsAsSeen(game.user.id);
-    });
+    if (game.user.isGM) {
+      import("../state.js").then(({ markLogsAsSeen }) => {
+        markLogsAsSeen(game.user.id);
+      });
+    } else {
+      tavernSocket.executeAsGM("markLogsAsSeen", game.user.id);
+    }
   }
 
   static async onJoin() {
@@ -825,10 +861,10 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       // V5.8: Anti-Cheat Blindness - Cannot cheat if you can't see the die!
       const isBlind = lastDie?.blind ?? false;
 
-      const canCheat = lastDieIndex >= 0 && !cheatIsHouse && !isBlind;
+      const canCheat = lastDieIndex >= 0 && !cheatIsHouse && !isBlind && updatedState.tableData?.gameMode !== "goblin";
 
-      if (canCheat) {
-        const heatDC = updatedState.tableData?.heatDC ?? 10;
+    if (canCheat) {
+      const heatDC = updatedState.tableData?.heatDC ?? 10;
 
         console.log("Tavern | Triggering Cheat Dialog", { lastDie, heatDC, actor: game.user.character });
 
@@ -851,11 +887,11 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
             await tavernSocket.executeAsGM("playerAction", "finishTurn", {}, game.user.id);
           }
         }
-      } else {
-        if (updatedState.tableData?.phase === "betting") {
-          await tavernSocket.executeAsGM("playerAction", "finishTurn", {}, game.user.id);
-        }
+    } else {
+      if (updatedState.tableData?.phase === "betting") {
+        await tavernSocket.executeAsGM("playerAction", "finishTurn", {}, game.user.id);
       }
+    }
     } finally {
       TavernApp.uiLocked = false;
       if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();

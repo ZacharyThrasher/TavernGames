@@ -27,11 +27,15 @@ import { showPublicRoll } from "../../dice.js";
  * @param {string} userId - The goading player
  */
 export async function goad(payload, userId) {
-    const state = getState();
-    if (state.status !== "PLAYING") {
-        ui.notifications.warn("Cannot goad outside of an active round.");
-        return state;
-    }
+  const state = getState();
+  if (state.status !== "PLAYING") {
+    ui.notifications.warn("Cannot goad outside of an active round.");
+    return state;
+  }
+  if (state.tableData?.gameMode === "goblin") {
+    ui.notifications.warn("Goad is disabled in Goblin Rules.");
+    return state;
+  }
 
     let tableData = state.tableData ?? emptyTableData();
     const ante = game.settings.get(MODULE_ID, "fixedAnte");
@@ -331,4 +335,3 @@ export async function goad(payload, userId) {
         return updateState({ tableData: updatedTableData }); // No pot change
     }
 }
-

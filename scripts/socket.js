@@ -1,7 +1,7 @@
 import { MODULE_ID } from "./state.js";
-import { handleJoinTable, handleLeaveTable, handleStartRound, handlePlayerAction, handleResetTable } from "./tavern-actions.js";
+import { handleJoinTable, handleLeaveTable, handleStartRound, handlePlayerAction, handleResetTable, handleMarkLogsAsSeen } from "./tavern-actions.js";
 import { showRollToUser } from "./dice.js";
-import { showVictoryFanfare, showBustFanfare, playBumpEffect, showFloatingText, showSkillCutIn, showSkillResult, showPrivateFeedback } from "./ui/fx.js";
+import { showVictoryFanfare, showBustFanfare, showCoinFlip, playBumpEffect, showFloatingText, showSkillCutIn, showSkillResult, showPrivateFeedback } from "./ui/fx.js";
 
 export let tavernSocket;
 
@@ -17,6 +17,7 @@ export function setupSockets() {
   tavernSocket.register("startRound", handleStartRound);
   tavernSocket.register("playerAction", handlePlayerAction);
   tavernSocket.register("resetTable", handleResetTable);
+  tavernSocket.register("markLogsAsSeen", handleMarkLogsAsSeen);
 
   // Register client-side function for showing dice rolls
   tavernSocket.register("showRoll", showRollToUser);
@@ -25,6 +26,7 @@ export function setupSockets() {
   tavernSocket.register("showNotification", showNotification);
   tavernSocket.register("showVictoryFanfare", showVictoryFanfare);
   tavernSocket.register("showBustFanfare", showBustFanfare);
+  tavernSocket.register("showCoinFlip", showCoinFlip);
   tavernSocket.register("playBumpEffect", playBumpEffect);
   tavernSocket.register("showFloatingText", showFloatingText);
   tavernSocket.register("showSkillCutIn", showSkillCutIn);
