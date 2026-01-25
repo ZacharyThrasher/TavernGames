@@ -1,5 +1,11 @@
 # Changelog
 
+## [5.14.5] - 2026-01-25
+### Hotfix + Refactor: Goblin Rules & Stability
+- **Goblin Rules**: Start at 0, skip opening/cut, coin unlimited, Nat 1 bust, Nat 20 explode, highest total wins.
+- **Cheat Fixes**: Restored cheat application, logs, heat tracking, and goblin-aware total recalculation.
+- **Stability**: Normalized tableData schema defaults and reset behavior; fixed blind roll timing and UI duplication.
+
 ## [5.8.2] - 2026-01-23
 ### Hotfix: Missing Module Export (Game Log)
 - **Fix**: Resolved `does not provide an export named 'addLogToAll'` error in `state.js`.

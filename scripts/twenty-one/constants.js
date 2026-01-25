@@ -7,6 +7,11 @@ export const MODULE_ID = "tavern-dice-master";
 
 // Valid dice types in the game
 export const VALID_DICE = [4, 6, 8, 10, 20];
+export const GOBLIN_DICE = [...VALID_DICE, 2];
+
+export function getAllowedDice(gameMode = "standard") {
+    return gameMode === "goblin" ? GOBLIN_DICE : VALID_DICE;
+}
 
 // Opening phase requirements
 export const OPENING_ROLLS_REQUIRED = 2;
@@ -14,6 +19,7 @@ export const OPENING_ROLLS_REQUIRED = 2;
 // Hunch skill DC and thresholds
 export const HUNCH_DC = 12;
 export const HUNCH_THRESHOLDS = {
+    2: 1,
     4: 2,
     6: 3,
     8: 4,
@@ -111,6 +117,7 @@ export function emptyTableData() {
         hunchLocked: {},
         hunchLockedDie: {},
         hunchExact: {},
+        blindNextRoll: {},
         // V3: Side bets
         sideBets: {},
         // V3: Hit tracking for Duel
@@ -122,12 +129,18 @@ export function emptyTableData() {
         dared: {},
         // V4: Blind dice (from Hunch failure)
         blindDice: {},
-        // V4: Blind dice (from Hunch failure)
-        blindDice: {},
         // V4.7.1: Track who has accused this round (one accusation per round)
         accusedThisRound: {},
         // V4.8.40: Unified skill usage tracking (Once per Round/Match limit)
         usedSkills: {}, // { [userId]: { bump: true, goad: true, hunch: true, profile: true } }
+        // V5.14: Goblin Mode
+        usedDice: {}, // { [userId]: [4, 6, 8] } - tracks used dice types
+        gameMode: "standard",
+        // V5.14: House Rules
+        houseRules: { startingHeat: 10 },
+        // V5: Default Heat DC (legacy)
+        heatDC: 10,
+        // V5.8: Pending action (cheat decision)
+        pendingAction: null,
     };
 }
-

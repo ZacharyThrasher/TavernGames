@@ -4,7 +4,7 @@ import { MODULE_ID, getState, updateState, addHistoryEntry, addLogToAll } from "
 import { tavernSocket } from "../../socket.js";
 import { getActorForUser, getActorName } from "../utils/actors.js";
 import { getNextActivePlayer, getNextOpeningPlayer, allPlayersCompletedOpening, allPlayersFinished, calculateBettingOrder, drinkForPayment, notifyUser } from "../utils/game-logic.js";
-import { emptyTableData, VALID_DICE, OPENING_ROLLS_REQUIRED, getDieCost } from "../constants.js";
+import { emptyTableData, OPENING_ROLLS_REQUIRED, getDieCost, getAllowedDice } from "../constants.js";
 import { revealDice } from "./core.js";
 import { showPublicRollFromData } from "../../dice.js";
 
@@ -24,6 +24,48 @@ export async function submitRoll(payload, userId) {
 
   const gameMode = tableData.gameMode ?? "standard";
   const isGoblinMode = gameMode === "goblin";
+  const allowedDice = getAllowedDice(gameMode);
+
+  if (!allowedDice.includes(die)) {
+    ui.notifications.warn("Invalid die selection.");
+    return state;
+  }
+
+  if (tableData.currentPlayer !== userId) {
+    await notifyUser(userId, "It's not your turn.");
+    return state;
+  }
+
+  if (tableData.holds[userId] || tableData.busts[userId] || tableData.folded?.[userId]) {
+    ui.notifications.warn("You've already finished this round.");
+    return state;
+  }
+
+  // V4.9: Dared check - can ONLY buy d8 (Free) if dared
+  // V5.7: Deprecated Dared in favor of Goad Backfire Symmetry, but keeping for legacy safety
+  if (tableData.dared?.[userId] && die !== 8) {
+    ui.notifications.warn("You are Dared! You forced to roll a d8 (Free) or Fold.");
+    return state;
+  }
+
+  // V5.7: Goad Force D20 check
+  if (tableData.goadBackfire?.[userId]?.forceD20 && die !== 20) {
+    ui.notifications.warn("Critically Goaded! You are forced to roll a d20!");
+    return state;
+  }
+
+  // V4.9: Hunch Lock check - can ONLY roll d20 if locked
+  if (tableData.hunchLocked?.[userId] && die !== 20) {
+    ui.notifications.warn("Foresight locked you into rolling a d20!");
+    return state;
+  }
+
+  // V3.5: Bump Retaliation Lock
+  if (tableData.pendingBumpRetaliation?.attackerId === userId) {
+    console.warn("Tavern | Blocked Roll due to Lock:", tableData.pendingBumpRetaliation);
+    ui.notifications.warn("You were caught bumping! Wait for retaliation.");
+    return state;
+  }
 
   if (isGoblinMode) {
     /* -------------------------------------------------------------
@@ -44,19 +86,35 @@ export async function submitRoll(payload, userId) {
     // If so, we allow it (and don't block). 
     // Actually, simpler: If Nat 20, we just DON'T add it to 'usedDice'.
 
-    if (usedDice.includes(die)) {
+    if (die !== 2 && usedDice.includes(die)) {
       ui.notifications.warn("You have already used this die type!");
       return state;
     }
-
-    // Cost is 0 (Risk only)
-    let rollCost = 0;
-    let newPot = state.pot;
 
     // Roll
     const roll = await new Roll(`1d${die}`).evaluate();
     let result = roll.total;
     const naturalRoll = result;
+
+    // V5.7: Check for Blind State (from Foresight failure)
+    let isBlind = false;
+    if (tableData.blindNextRoll?.[userId]) {
+      isBlind = true;
+      // Consume the flag immediately
+      const blindNextRoll = { ...tableData.blindNextRoll };
+      delete blindNextRoll[userId];
+      tableData.blindNextRoll = blindNextRoll;
+
+      // Also clear Hunch Lock if present
+      if (tableData.hunchLocked?.[userId]) {
+        const hunchLocked = { ...tableData.hunchLocked };
+        delete hunchLocked[userId];
+        const hunchLockedDie = { ...tableData.hunchLockedDie };
+        delete hunchLockedDie[userId];
+        tableData.hunchLocked = hunchLocked;
+        tableData.hunchLockedDie = hunchLockedDie;
+      }
+    }
 
     // Visuals
     try {
@@ -64,7 +122,7 @@ export async function submitRoll(payload, userId) {
         formula: `1d${die}`,
         die: die,
         result: result,
-        blind: false // No blind in Goblin Mode? Or maybe allow Hunch? Let's say false for now.
+        blind: isBlind
       });
     } catch (e) { }
 
@@ -92,12 +150,14 @@ export async function submitRoll(payload, userId) {
     const rolls = { ...tableData.rolls };
     const totals = { ...tableData.totals };
     const busts = { ...tableData.busts };
+    const visibleTotals = { ...tableData.visibleTotals };
     const usedDiceMap = { ...tableData.usedDice }; // [userId]: []
 
     const existingRolls = rolls[userId] ?? [];
 
     // Add roll to history
-    rolls[userId] = [...existingRolls, { die, result: naturalRoll, public: true }];
+    const isPublic = !isBlind;
+    rolls[userId] = [...existingRolls, { die, result: naturalRoll, public: isPublic, blind: isBlind }];
 
     // Update Totals
     let currentTotal = totals[userId] ?? 0;
@@ -109,8 +169,18 @@ export async function submitRoll(payload, userId) {
     }
     totals[userId] = currentTotal;
 
+    if (isPublic) {
+      let currentVisible = visibleTotals[userId] ?? 0;
+      if (multiplier > 1) {
+        currentVisible *= multiplier;
+      } else {
+        currentVisible += result;
+      }
+      visibleTotals[userId] = currentVisible;
+    }
+
     // Mark die as used (Unless exploded)
-    if (!exploded) {
+    if (!exploded && die !== 2) {
       usedDiceMap[userId] = [...(usedDiceMap[userId] ?? []), die];
     }
 
@@ -153,62 +223,16 @@ export async function submitRoll(payload, userId) {
       rolls,
       totals,
       busts,
+      visibleTotals,
       usedDice: usedDiceMap,
-      currentPlayer: bust ? getNextActivePlayer(state, { ...tableData, busts }) : userId // Keep turn if not bust?
-      // Wait, "Players take turns, can hold whenever". 
-      // In standard, you roll until you hold or bust. Same here.
+      hasActed: { ...tableData.hasActed, [userId]: true },
+      pendingAction: "cheat_decision"
     };
-
-    // If bust, pass turn.
-    if (bust) {
-      updatedTable.currentPlayer = getNextActivePlayer(state, updatedTable);
-    }
 
     return updateState({ tableData: updatedTable });
   }
 
   // Standard Rules Continuation...
-  if (tableData.currentPlayer !== userId) {
-    await notifyUser(userId, "It's not your turn.");
-    return state;
-  }
-
-  if (tableData.holds[userId] || tableData.busts[userId]) {
-    ui.notifications.warn("You've already finished this round.");
-    return state;
-  }
-
-
-  if (!VALID_DICE.includes(die)) {
-    ui.notifications.warn("Invalid die selection.");
-    return state;
-  }
-
-  // V4.9: Dared check - can ONLY buy d8 (Free) if dared
-  // V5.7: Deprecated Dared in favor of Goad Backfire Symmetry, but keeping for legacy safety
-  if (tableData.dared?.[userId] && die !== 8) {
-    ui.notifications.warn("You are Dared! You forced to roll a d8 (Free) or Fold.");
-    return state;
-  }
-
-  // V5.7: Goad Force D20 check
-  if (tableData.goadBackfire?.[userId]?.forceD20 && die !== 20) {
-    ui.notifications.warn("Critically Goaded! You are forced to roll a d20!");
-    return state;
-  }
-
-  // V4.9: Hunch Lock check - can ONLY roll d20 if locked
-  if (tableData.hunchLocked?.[userId] && die !== 20) {
-    ui.notifications.warn("Foresight locked you into rolling a d20!");
-    return state;
-  }
-
-  // V3.5: Bump Retaliation Lock
-  if (tableData.pendingBumpRetaliation?.attackerId === userId) {
-    console.warn("Tavern | Blocked Roll due to Lock:", tableData.pendingBumpRetaliation);
-    ui.notifications.warn("You were caught bumping! Wait for retaliation.");
-    return state;
-  }
 
   // V2.0: Variable dice costs in betting phase
   let newPot = state.pot;
@@ -290,6 +314,26 @@ export async function submitRoll(payload, userId) {
     result = 21 - currentTotal;
   }
 
+  // V5.7: Check for Blind State (from Foresight failure)
+  let isBlind = false;
+  if (tableData.blindNextRoll?.[userId]) {
+    isBlind = true;
+    // Consume the flag immediately
+    const blindNextRoll = { ...tableData.blindNextRoll };
+    delete blindNextRoll[userId];
+    tableData.blindNextRoll = blindNextRoll;
+
+    // Also clear Hunch Lock if present
+    if (tableData.hunchLocked?.[userId]) {
+      const hunchLocked = { ...tableData.hunchLocked };
+      delete hunchLocked[userId];
+      const hunchLockedDie = { ...tableData.hunchLockedDie };
+      delete hunchLockedDie[userId];
+      tableData.hunchLocked = hunchLocked;
+      tableData.hunchLockedDie = hunchLockedDie;
+    }
+  }
+
   try {
     await tavernSocket.executeAsUser("showRoll", userId, {
       formula: `1d${die}`,
@@ -310,26 +354,6 @@ export async function submitRoll(payload, userId) {
 
   const existingRolls = rolls[userId] ?? [];
   const isPublic = isOpeningPhase ? existingRolls.length === 0 : false;
-
-  // V5.7: Check for Blind State (from Foresight failure)
-  let isBlind = false;
-  if (tableData.blindNextRoll?.[userId]) {
-    isBlind = true;
-    // Consume the flag immediately
-    const blindNextRoll = { ...tableData.blindNextRoll };
-    delete blindNextRoll[userId];
-    tableData.blindNextRoll = blindNextRoll;
-
-    // Also clear Hunch Lock if present
-    if (tableData.hunchLocked?.[userId]) {
-      const hunchLocked = { ...tableData.hunchLocked };
-      delete hunchLocked[userId];
-      const hunchLockedDie = { ...tableData.hunchLockedDie };
-      delete hunchLockedDie[userId];
-      tableData.hunchLocked = hunchLocked;
-      tableData.hunchLockedDie = hunchLockedDie;
-    }
-  }
 
   rolls[userId] = [...existingRolls, { die, result, public: isPublic, blind: isBlind }];
   totals[userId] = (totals[userId] ?? 0) + result;

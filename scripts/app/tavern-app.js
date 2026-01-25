@@ -1,4 +1,4 @@
-import { MODULE_ID, getState } from "../state.js";
+import { MODULE_ID, getState, updateState } from "../state.js";
 import { tavernSocket } from "../socket.js";
 import { getDieCost } from "../twenty-one/constants.js";
 import { getNpcWallet } from "../wallet.js"; // V4: Import NPC wallet helper
@@ -62,7 +62,6 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       toggleLiquidMode: TavernApp.onToggleLiquidMode,
       help: TavernApp.onHelp,
       toggleLogs: TavernApp.onToggleLogs, // V5.11.5
-      toggleLogs: TavernApp.onToggleLogs, // V5.11.5
     },
     classes: ["tavern-dice-master"],
   };
@@ -76,6 +75,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
   // ... (Dice Icons preserved via simple re-declaration if needed, or just skipping lines)
 
   static DICE_ICONS = {
+    2: "circle-dollar",
     4: "d4",
     6: "d6",
     8: "d8",
@@ -83,21 +83,6 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     12: "d12",
     20: "d20",
   };
-
-  async _prepareContext() {
-    const state = getState();
-    // ... (Existing context logic up to History)
-
-    // (We will use the existing _prepareContext logic but strip the privateLogs part if we want,
-    //  but since the new window handles it, we can just leave it unused or remove it. 
-    //  For minimal diff, I will just remove the privateLogs property passed to template)
-
-    // ... (Use replace_file_content to target specific blocks)
-  }
-
-  static onToggleLogs() {
-    game.tavernDiceMaster?.toggleLogs();
-  }
 
   async _prepareContext() {
     const state = getState();
@@ -399,10 +384,6 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       pot: state.pot,
       accusationCost,
       status: state.status,
-      // Dared Context
-      isDared: tableData.dared?.[userId] ?? false,
-      canHold: (isBettingPhase || isCutPhase) && myTurn && isInGame && !tableData.busts?.[userId] && !isFolded && !tableData.dared?.[userId],
-      status: state.status,
       isLobby: state.status === "LOBBY",
       isPlaying: state.status === "PLAYING",
       isInspection,
@@ -436,7 +417,6 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       privateLogs: myPrivateLogs, // V5.8
       unreadLogsCount: unreadCount, // V5.13
       hasUnreadLogs, // V5.13 (Computed with window state)
-      dice: this._buildDiceArray(ante, isBettingPhase || isCutPhase, tableData.dared?.[userId] ?? false),
       isDuel: state.status === "DUEL",
       duel: tableData.duel ?? null,
       isMyDuel: (tableData.duel?.pendingRolls ?? []).includes(userId),
@@ -454,8 +434,6 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       canHunch,
       hunchLocked,
       hunchLockedDie,
-      canProfile,
-      profileTargets,
       canProfile,
       profileTargets,
       isDared: tableData.dared?.[userId] ?? false,
@@ -500,7 +478,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         // Ideally state should clear it from usedDice if exploded, so simple .includes check works.
         // My Logic in turn.js: "If Nat 20, we just DON'T add it to 'usedDice'".
         // So checking usedDice.includes(d.value) is correct.
-        if (usedDice.includes(d.value)) {
+        if (d.value !== 2 && usedDice.includes(d.value)) {
           disabled = true;
           costLabel = "USED";
         }
@@ -579,9 +557,10 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         const state = getState();
         const currentTable = state.tableData ?? {};
 
-        // Update state directly - this will trigger re-render via hooks
+        // Update setting + state via helper to keep sources in sync
         const updatedTable = { ...currentTable, gameMode: newMode };
-        await game.settings.set(MODULE_ID, "gameState", { ...state, tableData: updatedTable });
+        await game.settings.set(MODULE_ID, "gameMode", newMode);
+        await updateState({ tableData: updatedTable });
 
         ui.notifications.info(`Game Mode changed to ${newMode === "goblin" ? "Goblin Rules" : "Standard Twenty-One"}`);
       });
@@ -598,10 +577,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
           const houseRules = state.tableData?.houseRules || {};
           houseRules.startingHeat = newHeat;
 
-          if (!state.tableData) state.tableData = {};
-          state.tableData.houseRules = houseRules;
-
-          await game.settings.set(MODULE_ID, "gameState", state);
+          await updateState({ tableData: { ...state.tableData, houseRules } });
           // ui.notifications.info(`Starting Heat set to DC ${newHeat}`);
         } else {
           ui.notifications.warn("Heat must be between 5 and 30");
@@ -794,6 +770,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       // const state = getState(); // Reuse existing state variable from above
       const ante = game.settings.get(MODULE_ID, "fixedAnte");
       const isBettingPhase = state.tableData?.phase === "betting";
+      const isGoblinMode = state.tableData?.gameMode === "goblin";
       const isHouse = isActingAsHouse(game.user.id, state); // Helpers imported? No, need to verify imports or use static
       // Actually tavern-app.js imports these.
 
@@ -804,7 +781,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       const isPlayingAsNpc = state.players?.[game.user.id]?.playingAsNpc;
       const isNpc = isPlayingAsNpc;
 
-      const cost = (isBettingPhase && !isHouse) ? getDieCost(parseInt(die), ante) : 0;
+      const cost = (isBettingPhase && !isHouse && !isGoblinMode) ? getDieCost(parseInt(die), ante) : 0;
       let payWithDrink = false;
 
       if (liquidMode) {

@@ -12,7 +12,7 @@
 import { MODULE_ID, getState, updateState, addPrivateLog, addLogToAll } from "../../state.js"; // V5.8: Import addPrivateLog
 import { tavernSocket } from "../../socket.js";
 import { showPublicRoll } from "../../dice.js";
-import { HUNCH_DC, HUNCH_THRESHOLDS, VALID_DICE, emptyTableData } from "../constants.js";
+import { HUNCH_DC, HUNCH_THRESHOLDS, getAllowedDice, emptyTableData } from "../constants.js";
 // import { createChatCard, addHistoryEntry } from "../../ui/chat.js"; // Removed
 import { addHistoryEntry } from "../../state.js"; // History moved to state long ago? CHECK IMPORTS. 
 // state.js DOES export addHistoryEntry.
@@ -103,6 +103,8 @@ export async function hunch(userId) {
 
     const rollTotal = d20 + wisMod;
     const success = !isNat1 && rollTotal >= HUNCH_DC;
+    const gameMode = state.tableData?.gameMode ?? "standard";
+    const allowedDice = getAllowedDice(gameMode);
 
     // Log the attempt Publicly?
     // "X used Foresight to predict the dice..."
@@ -120,7 +122,7 @@ export async function hunch(userId) {
         // Nat 20 = Learn exact value for each die type
         predictions = {};
         exactRolls = {};
-        for (const die of VALID_DICE) {
+        for (const die of allowedDice) {
             const preRoll = await new Roll(`1d${die}`).evaluate();
             predictions[die] = preRoll.total;
             exactRolls[die] = preRoll.total;
@@ -171,7 +173,7 @@ export async function hunch(userId) {
         // Success = Learn high/low for each die type
         predictions = {};
         exactRolls = {};
-        for (const die of VALID_DICE) {
+        for (const die of allowedDice) {
             const preRoll = await new Roll(`1d${die}`).evaluate();
             const threshold = HUNCH_THRESHOLDS[die];
             predictions[die] = preRoll.total > threshold ? "HIGH" : "LOW";

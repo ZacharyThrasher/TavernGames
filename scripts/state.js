@@ -59,8 +59,10 @@ export function registerSettings() {
     },
     default: "standard",
     onChange: value => {
-      // Allow GM to execute a reset or mode switch logic if needed
-      // For now, next round will pick it up or UI triggers re-render
+      // Keep table state in sync with the setting
+      const state = getState();
+      const tableData = state.tableData ?? emptyTableData();
+      updateState({ tableData: { ...tableData, gameMode: value } });
       game.tavernDiceMaster?.app?.render();
     }
   });
@@ -94,23 +96,7 @@ export function defaultState() {
     turnOrder: [],
     turnIndex: 0,
     players: {},
-    tableData: {
-      totals: {},
-      holds: {},
-      busts: {},
-      rolls: {},
-      currentPlayer: null,
-      phase: "opening", // "opening" or "betting"
-      cheaters: {},         // { [userId]: { deceptionRolls: [...] } }
-      bluffers: {},         // { [userId]: true } - players who bluffed (faked a tell)
-      tells: {},            // { [userId]: true } - players who triggered a tell (cheat OR bluff)
-      caught: {},           // { [userId]: true } - caught cheaters
-      accusation: null,     // { accuserId, targetId, success } - targeted accusation
-      failedInspector: null,   // User who made false accusation (forfeits winnings)
-      // V5.14.0: Goblin Mode
-      usedDice: {}, // { [userId]: [4, 6, 8] } - tracks used dice types
-      gameMode: "standard", // Tracked in state for consistency during round
-    },
+    tableData: emptyTableData(),
     history: [],
     // V4: NPC Bank
     npcWallets: {},
@@ -192,7 +178,9 @@ export function getState() {
   if (!state || Object.keys(state).length === 0) {
     return defaultState();
   }
-  return state;
+  // Ensure tableData has all expected fields
+  const tableData = state.tableData ?? {};
+  return { ...state, tableData: { ...emptyTableData(), ...tableData } };
 }
 
 /**

@@ -4,8 +4,6 @@ import { getActorForUser, getActorName } from "./actors.js"; // V5.9
 import { tavernSocket } from "../../socket.js";
 import { getDieCost } from "../constants.js";
 
-// V2.0: d12 removed, variable costs
-export const VALID_DICE = [20, 10, 8, 6, 4];
 export const OPENING_ROLLS_REQUIRED = 2;
 export const OPENING_DIE = 10;
 

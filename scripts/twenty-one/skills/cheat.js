@@ -12,7 +12,6 @@
  */
 
 import { MODULE_ID, getState, updateState, addHistoryEntry, addLogToAll, addPrivateLog } from "../../state.js"; // V5.8
-import { tavernSocket } from "../../socket.js";
 import { deductFromActor } from "../../wallet.js"; // V5.9: Use wallet.js for proper NPC support
 import { getActorForUser, notifyUser, getActorName } from "../utils/actors.js"; // V5.9
 // import { createChatCard } from "../../ui/chat.js"; // Removed
@@ -169,7 +168,7 @@ export async function cheat(payload, userId) {
         // Public Caught Log
         await addLogToAll({
             title: "Clumsy Hands!",
-            message: `<strong>${characterName}</strong> fumbled a cheat attempt!<br><em>CAUGHT and forfeited the round.</em>`,
+            message: `<strong>${getActorName(userId)}</strong> fumbled a cheat attempt!<br><em>CAUGHT and forfeited the round.</em>`,
             icon: "fa-solid fa-hand-fist",
             type: "cheat",
             cssClass: "failure"
@@ -178,7 +177,7 @@ export async function cheat(payload, userId) {
         // Private Log for Cheater
         await addPrivateLog(userId, {
             title: success ? "Cheat Success" : "Cheat Failed",
-            message: `${skillName}: <strong>${rollTotal}</strong> vs Heath DC ${heatDC}<br>${isNat20 ? "NAT 20! Invisible!" : ""}`,
+            message: `${skillName}: <strong>${rollTotal}</strong> vs Heat DC ${heatDC}<br>${isNat20 ? "NAT 20! Invisible!" : ""}`,
             icon: "fa-solid fa-mask",
             type: "cheat",
             cssClass: success ? "success" : "failure"
@@ -186,17 +185,113 @@ export async function cheat(payload, userId) {
     }
 
 
+    const userName = getActorName(userId);
+
     await addHistoryEntry({
         type: fumbled ? "cheat_caught" : "cheat",
-        player: characterName,
+        player: userName,
         cheatType,
         skill: skillName,
         dc: rollTotal,
         fumbled,
         message: fumbled
-            ? `${characterName} fumbled their cheat and was caught!`
-            : `${characterName} attempted a ${cheatTypeLabel.toLowerCase()} cheat (${dcType}: ${rollTotal}).`,
+            ? `${userName} fumbled their cheat and was caught!`
+            : `${userName} attempted a ${cheatTypeLabel.toLowerCase()} cheat (${dcType}: ${rollTotal}).`,
     });
+
+    // Apply the cheat to state
+    const rolls = tableData.rolls?.[userId] ?? [];
+    const updatedRolls = [...rolls];
+    updatedRolls[dieIndex] = { ...targetDie, result: newValue };
+
+    const rollDelta = newValue - oldValue;
+    const totals = { ...tableData.totals };
+    const visibleTotals = { ...tableData.visibleTotals };
+    const gameMode = tableData.gameMode ?? "standard";
+
+    if (gameMode === "goblin") {
+        let total = 0;
+        let visibleTotal = 0;
+        for (const rollEntry of updatedRolls) {
+            const isCoin = rollEntry.die === 2;
+            const isPublic = rollEntry.public ?? true;
+            if (isCoin) {
+                if (rollEntry.result === 2) {
+                    total *= 2;
+                    if (isPublic) visibleTotal *= 2;
+                }
+            } else {
+                total += rollEntry.result;
+                if (isPublic) visibleTotal += rollEntry.result;
+            }
+        }
+        totals[userId] = total;
+        visibleTotals[userId] = visibleTotal;
+    } else {
+        totals[userId] = (tableData.totals?.[userId] ?? 0) + rollDelta;
+        if (targetDie.public ?? true) {
+            visibleTotals[userId] = (visibleTotals[userId] ?? 0) + rollDelta;
+        }
+    }
+
+    const cheaters = { ...tableData.cheaters };
+    const existingCheater = cheaters[userId] ?? {};
+    const existingCheats = existingCheater.cheats ?? existingCheater.deceptionRolls ?? [];
+    const cheatRecord = {
+        dieIndex,
+        die: targetDie.die,
+        oldValue,
+        newValue,
+        adjustment,
+        skill: skillName,
+        roll: rollTotal,
+        success,
+        fumbled,
+        invisible: isNat20
+    };
+    cheaters[userId] = {
+        ...existingCheater,
+        cheats: [...existingCheats, cheatRecord]
+    };
+
+    const playerHeat = { ...tableData.playerHeat };
+    if (!isNat20) {
+        const currentHeat = playerHeat[userId] ?? heatDC;
+        playerHeat[userId] = currentHeat + 2;
+    }
+
+    const caught = { ...tableData.caught };
+    const busts = { ...tableData.busts };
+    let newPot = state.pot;
+    if (fumbled) {
+        caught[userId] = true;
+        const paid = await deductFromActor(userId, ante);
+        if (paid) newPot += ante;
+    }
+
+    if (gameMode === "goblin") {
+        const anyBust = updatedRolls.some(r => r.result === 1);
+        if (anyBust) busts[userId] = true;
+        else delete busts[userId];
+    }
+
+    const pendingBust = gameMode === "goblin"
+        ? null
+        : (tableData.phase === "betting"
+            ? ((totals[userId] ?? 0) > 21 ? userId : null)
+            : tableData.pendingBust ?? null);
+
+    const updatedTable = {
+        ...tableData,
+        rolls: { ...tableData.rolls, [userId]: updatedRolls },
+        totals,
+        visibleTotals,
+        cheaters,
+        caught,
+        busts,
+        playerHeat,
+        pendingBust
+    };
 
     console.log(`Tavern Twenty-One | ${userName} cheated: d${targetDie.die} ${oldValue} → ${newValue}, ${skillName}: ${rollTotal} (fumbled: ${fumbled})`);
 

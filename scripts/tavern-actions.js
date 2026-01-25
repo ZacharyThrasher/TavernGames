@@ -1,5 +1,6 @@
 import { MODULE_ID, getState, updateState } from "./state.js";
 import { startRound, submitRoll, hold, revealDice, finishRound, returnToLobby, cheat, accuse, skipInspection, goad, bumpTable, bumpRetaliation, hunch, profile, useCut, fold, submitDuelRoll, finishTurn } from "./twenty-one/index.js";
+import { emptyTableData } from "./twenty-one/constants.js";
 import { placeSideBet } from "./twenty-one/phases/side-bets.js";
 import { setNpcWallet, getNpcCashOutSummary } from "./wallet.js";
 import { createChatCard } from "./ui/chat.js";
@@ -175,53 +176,16 @@ export async function handlePlayerAction(action, payload, userId) {
 export async function handleResetTable() {
   ensureGM();
 
+  const configuredMode = game.settings.get(MODULE_ID, "gameMode");
+  const state = getState();
+  const gameMode = state.tableData?.gameMode ?? configuredMode ?? "standard";
+
   return updateState({
     status: "LOBBY",
     pot: 0,
     turnOrder: [],
     players: {},
-    tableData: {
-      totals: {},
-      visibleTotals: {},
-      bettingOrder: null,
-      holds: {},
-      busts: {},
-      rolls: {},
-      currentPlayer: null,
-      phase: "opening",
-      cheaters: {},
-      caught: {},
-      accusation: null,
-      disqualified: {},           // V3: Wrong accusation = disqualified
-      goadedThisRound: {},
-      goadBackfire: {},
-      bumpedThisRound: {},
-      pendingBumpRetaliation: null,
-      cleaningFees: {},
-      profiledBy: {},             // V3: Replaces scannedBy
-      duel: null,
-      drinkCount: {},
-      sloppy: {},
-      // V3: Heat mechanic
-      heatDC: 10,
-      cheatsThisRound: 0,
-      // V3: Fold tracking
-      folded: {},
-      foldedEarly: {},
-      hasActed: {},
-      // V3: Hunch tracking
-      hunchPrediction: {},
-      hunchLocked: {},
-      hunchLockedDie: {},
-      hunchExact: {},
-      // V3: Side bets
-      sideBets: {},
-      // V3: Hit tracking for Duel
-      hitCount: {},
-      // V3: The Cut
-      theCutPlayer: null,
-      theCutUsed: false,
-    },
+    tableData: { ...emptyTableData(), gameMode },
     history: [],
   });
 }

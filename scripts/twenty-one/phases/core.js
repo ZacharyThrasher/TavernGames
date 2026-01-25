@@ -12,6 +12,7 @@ import { processSideBetPayouts } from "./side-bets.js";
 export async function startRound(startingHeat = 10) {
   const state = getState();
   const ante = game.settings.get(MODULE_ID, "fixedAnte");
+  const configuredMode = game.settings.get(MODULE_ID, "gameMode");
 
   if (!state.turnOrder.length) {
     ui.notifications.warn("No players at the table.");
@@ -28,6 +29,9 @@ export async function startRound(startingHeat = 10) {
 
 
   const tableData = emptyTableData();
+  const gameMode = state.tableData?.gameMode ?? configuredMode ?? "standard";
+  tableData.gameMode = gameMode;
+  tableData.usedDice = {};
 
   // V5: Initialize Per-Player Heat
   for (const pid of state.turnOrder) {
@@ -51,6 +55,38 @@ export async function startRound(startingHeat = 10) {
     const playerAntes = nonGMPlayers.length * ante;
     const houseMatch = playerAntes;
     pot = playerAntes + houseMatch;
+  }
+
+  if (gameMode === "goblin") {
+    tableData.phase = "betting";
+    tableData.bettingOrder = [...state.turnOrder];
+    tableData.currentPlayer = tableData.bettingOrder[0] ?? null;
+    tableData.theCutPlayer = null;
+    tableData.theCutUsed = false;
+
+    const next = await updateState({
+      status: "PLAYING",
+      pot,
+      tableData,
+      turnIndex: 0,
+    });
+
+    const playerNames = state.turnOrder.map(id => getActorName(id)).join(", ");
+    await addHistoryEntry({
+      type: "round_start",
+      message: `New Goblin round started. Ante: ${ante}gp each. Pot: ${pot}gp.`,
+      players: playerNames,
+    });
+
+    await addLogToAll({
+      title: "Goblin Rules",
+      message: `New round started (Goblin Rules).<br>
+        <em>Roll each die type once (coin unlimited). Nat 1 = Bust. Nat 20 (d20) explodes. Highest total wins.</em>`,
+      icon: "fa-solid fa-dice",
+      type: "phase"
+    });
+
+    return next;
   }
 
   // V3: Auto-roll 2d10 for everyone (1 visible, 1 hole)
@@ -293,16 +329,28 @@ export async function finishRound() {
   }
 
   const totals = tableData.totals ?? {};
-  let best = 0;
+  const gameMode = tableData.gameMode ?? state.tableData?.gameMode ?? "standard";
+  const isGoblinMode = gameMode === "goblin";
+  let best = isGoblinMode ? -Infinity : 0;
   state.turnOrder.forEach((id) => {
     if (caught[id]) return;
+    if (tableData.busts?.[id]) return;
+    if (tableData.folded?.[id]) return;
     const total = totals[id] ?? 0;
-    if (total <= 21 && total > best) best = total;
+    if (isGoblinMode) {
+      if (total > best) best = total;
+    } else if (total <= 21 && total > best) {
+      best = total;
+    }
   });
 
   const winners = state.turnOrder.filter((id) => {
     if (caught[id]) return false;
     if (tableData.folded?.[id]) return false; // V3: Folded players cannot win
+    if (tableData.busts?.[id]) return false;
+    if (isGoblinMode) {
+      return best !== -Infinity && (totals[id] ?? 0) === best;
+    }
     return (totals[id] ?? 0) === best && best > 0;
   });
 
@@ -396,9 +444,12 @@ export async function finishRound() {
 }
 
 export async function returnToLobby() {
+  const state = getState();
+  const configuredMode = game.settings.get(MODULE_ID, "gameMode");
+  const gameMode = state.tableData?.gameMode ?? configuredMode ?? "standard";
   return updateState({
     status: "LOBBY",
     pot: 0,
-    tableData: emptyTableData(),
+    tableData: { ...emptyTableData(), gameMode },
   });
 }
