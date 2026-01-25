@@ -116,14 +116,9 @@ export async function submitRoll(payload, userId) {
       }
     }
 
-    // Visuals
+    // Visuals (Goblin: show once, publicly)
     try {
-      await tavernSocket.executeAsUser("showRoll", userId, {
-        formula: `1d${die}`,
-        die: die,
-        result: result,
-        blind: isBlind
-      });
+      await showPublicRollFromData(Number(die), Number(result), userId);
     } catch (e) { }
 
     // Logic Processing
@@ -159,11 +154,12 @@ export async function submitRoll(payload, userId) {
     const busts = { ...tableData.busts };
     const visibleTotals = { ...tableData.visibleTotals };
     const usedDiceMap = { ...tableData.usedDice }; // [userId]: []
+    const goblinSetProgress = { ...tableData.goblinSetProgress }; // [userId]: []
 
     const existingRolls = rolls[userId] ?? [];
 
     // Add roll to history
-    const isPublic = tableData.phase === "opening" && !isBlind;
+    const isPublic = true;
     rolls[userId] = [...existingRolls, { die, result: naturalRoll, public: isPublic, blind: isBlind }];
 
     // Update Totals
@@ -189,6 +185,13 @@ export async function submitRoll(payload, userId) {
     // Mark die as used (Unless exploded)
     if (!exploded && die !== 2) {
       usedDiceMap[userId] = [...(usedDiceMap[userId] ?? []), die];
+    }
+
+    // Track full-set progress (counts die types rolled since last reset)
+    if (die !== 2) {
+      const progress = new Set(goblinSetProgress[userId] ?? []);
+      progress.add(die);
+      goblinSetProgress[userId] = [...progress];
     }
 
     // Check Bust
@@ -230,10 +233,11 @@ export async function submitRoll(payload, userId) {
     let fullSetReset = false;
     if (!bust) {
       const requiredDice = [4, 6, 8, 10, 20];
-      const used = new Set(usedDiceMap[userId] ?? []);
-      fullSetReset = requiredDice.every(d => used.has(d));
+      const progress = new Set(goblinSetProgress[userId] ?? []);
+      fullSetReset = requiredDice.every(d => progress.has(d));
       if (fullSetReset) {
         usedDiceMap[userId] = [];
+        goblinSetProgress[userId] = [];
       }
     }
 
@@ -244,8 +248,9 @@ export async function submitRoll(payload, userId) {
       busts,
       visibleTotals,
       usedDice: usedDiceMap,
+      goblinSetProgress,
       hasActed: { ...tableData.hasActed, [userId]: true },
-      pendingAction: "cheat_decision"
+      pendingAction: null
     };
 
     if (fullSetReset) {
@@ -264,7 +269,14 @@ export async function submitRoll(payload, userId) {
       });
     }
 
-    return updateState({ tableData: updatedTable });
+    const next = await updateState({ tableData: updatedTable });
+
+    // Auto-advance in Goblin mode (no cheat flow)
+    if (allPlayersFinished(state, updatedTable)) {
+      return revealDice();
+    }
+
+    return next;
   }
 
   // Standard Rules Continuation...
@@ -540,6 +552,8 @@ export async function submitRoll(payload, userId) {
         updatedTable.bettingOrder = calculateBettingOrder(state, updatedTable);
         updatedTable.phase = "betting";
         updatedTable.currentPlayer = updatedTable.bettingOrder.find(id => !updatedTable.busts[id]) ?? null;
+        updatedTable.sideBetRound = 1;
+        updatedTable.sideBetRoundStart = updatedTable.currentPlayer;
 
         const orderNames = updatedTable.bettingOrder
           .filter(id => !updatedTable.busts[id])
@@ -591,7 +605,7 @@ export async function finishTurn(userId) {
   const lastRollIndex = rolls.length - 1;
   const lastRoll = rolls[lastRollIndex];
 
-  if (lastRoll && tableData.phase === "betting" && !lastRoll.public && !lastRoll.blind) {
+  if (lastRoll && tableData.phase === "betting" && !lastRoll.public && !lastRoll.blind && (tableData.gameMode ?? "standard") !== "goblin") {
     // It was hidden for cheat opportunity - time to reveal
     const updatedRolls = [...rolls];
     updatedRolls[lastRollIndex] = { ...lastRoll, public: true };
@@ -665,44 +679,49 @@ export async function finishTurn(userId) {
     } catch (e) { console.warn("Tavern | DSN Error:", e); }
   }
 
-  const updatedTable = { ...tableData, pendingAction: null };
+    const updatedTable = { ...tableData, pendingAction: null };
 
-  // V3.4: Resolve pending bust after cheat decision
-  if (tableData.pendingBust === userId) {
-    const currentTotal = tableData.totals[userId] ?? 0;
-    if (currentTotal > 21) {
-      // Still busted after cheat decision
-      updatedTable.busts = { ...updatedTable.busts, [userId]: true };
-      const userName = getActorName(userId);
+  // V3.4: Resolve pending bust after cheat decision (Standard only)
+  if ((tableData.gameMode ?? "standard") !== "goblin") {
+    if (tableData.pendingBust === userId) {
+      const currentTotal = tableData.totals[userId] ?? 0;
+      if (currentTotal > 21) {
+        // Still busted after cheat decision
+        updatedTable.busts = { ...updatedTable.busts, [userId]: true };
+        const userName = getActorName(userId);
 
-      // V5.8: Log Bust
-      await addLogToAll({
-        title: "BUST!",
-        message: `${userName} busted with ${currentTotal}!`,
-        icon: "fa-solid fa-skull",
-        type: "bust",
-        cssClass: "failure"
-      });
+        // V5.8: Log Bust
+        await addLogToAll({
+          title: "BUST!",
+          message: `${userName} busted with ${currentTotal}!`,
+          icon: "fa-solid fa-skull",
+          type: "bust",
+          cssClass: "failure"
+        });
 
-      await addHistoryEntry({
-        type: "bust",
-        player: userName,
-        total: currentTotal,
-        message: `${userName} BUSTED with ${currentTotal}!`,
-      });
-      // Trigger fanfare
-      await tavernSocket.executeForEveryone("showBustFanfare", userId);
+        await addHistoryEntry({
+          type: "bust",
+          player: userName,
+          total: currentTotal,
+          message: `${userName} BUSTED with ${currentTotal}!`,
+        });
+        // Trigger fanfare
+        await tavernSocket.executeForEveryone("showBustFanfare", userId);
+      }
+      // Clear the pending bust flag
+      updatedTable.pendingBust = null;
     }
-    // Clear the pending bust flag
-    updatedTable.pendingBust = null;
   }
 
   const isBust = updatedTable.busts?.[userId];
 
-  if (isBust) {
-    updatedTable.currentPlayer = getNextActivePlayer(state, updatedTable);
-  } else {
-    updatedTable.currentPlayer = getNextActivePlayer(state, updatedTable);
+  updatedTable.currentPlayer = getNextActivePlayer(state, updatedTable);
+
+  if (updatedTable.phase === "betting" && updatedTable.sideBetRoundStart) {
+    const nextId = updatedTable.currentPlayer;
+    if (nextId === updatedTable.sideBetRoundStart) {
+      updatedTable.sideBetRound = (updatedTable.sideBetRound ?? 1) + 1;
+    }
   }
 
   // V3: Reset skill usage flag for the new player

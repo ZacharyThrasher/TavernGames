@@ -1,5 +1,9 @@
 # Changelog
 
+## [5.15.2] - 2026-01-25
+### Hotfix: Duplicate Dice Visuals
+- **Fix**: Prevented double dice rolls in Goblin mode by using a single public DSN call.
+
 ## [5.15.1] - 2026-01-25
 ### Side Bets: Winner Flair
 - **Payout Feedback**: Side‑bet winners now get floating gold text and a private win log.
