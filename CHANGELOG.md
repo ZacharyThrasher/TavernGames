@@ -1,5 +1,9 @@
 # Changelog
 
+## [5.15.0] - 2026-01-25
+### UI: Goblin Rules Help Page
+- **Help Dialog**: Added a dedicated Goblin Rules page to the in‑game help UI.
+
 ## [5.14.9] - 2026-01-25
 ### Hotfix: Duplicate Declaration
 - **Fix**: Resolved duplicate `gameMode` declaration in `turn.js`.

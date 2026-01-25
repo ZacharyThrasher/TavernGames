@@ -3,6 +3,7 @@
         <a class="item active" data-tab="overview"><i class="fa-solid fa-book"></i> Overview</a>
         <a class="item" data-tab="skills"><i class="fa-solid fa-hand-sparkles"></i> Skills</a>
         <a class="item" data-tab="rules"><i class="fa-solid fa-scale-balanced"></i> Cheatsheet</a>
+        <a class="item" data-tab="goblin"><i class="fa-solid fa-skull"></i> Goblin Rules</a>
     </nav>
 
     <section class="tavern-tab-content">
@@ -201,6 +202,41 @@
             <h3><i class="fa-solid fa-handshake"></i> Side Bets</h3>
             <div class="help-card">
                 <p>Bet on a champion to win. Payout is 2:1 (Configurable).</p>
+            </div>
+        </div>
+
+        {{!-- Goblin Rules Tab --}}
+        <div class="tab" data-tab="goblin">
+            <h2><i class="fa-solid fa-skull"></i> Goblin Rules (Russian Roulette)</h2>
+            <p class="subtitle">Fast. Brutal. No skills, no accusations, no staredown.</p>
+
+            <div class="help-card">
+                <h3><i class="fa-solid fa-dice"></i> Core Rules</h3>
+                <ul class="help-list">
+                    <li><strong>Start at 0:</strong> No opening hand, no cut.</li>
+                    <li><strong>Roll once per die:</strong> d20, d10, d8, d6, d4 (one each).</li>
+                    <li><strong>Coin is unlimited:</strong> Flip as many times as you dare.</li>
+                    <li><strong>Nat 1 = Bust:</strong> Any die or coin tail ends you.</li>
+                    <li><strong>d20 Nat 20:</strong> Explodes and can be rolled again.</li>
+                    <li><strong>Highest total wins:</strong> No 21 cap.</li>
+                </ul>
+            </div>
+
+            <div class="help-card">
+                <h3><i class="fa-solid fa-coins"></i> Coin Flip</h3>
+                <ul class="help-list">
+                    <li><strong>Heads (2):</strong> Double your total.</li>
+                    <li><strong>Tails (1):</strong> Immediate bust.</li>
+                </ul>
+            </div>
+
+            <div class="help-card">
+                <h3><i class="fa-solid fa-ban"></i> Disabled</h3>
+                <ul class="help-list">
+                    <li><strong>Skills:</strong> All skills are disabled.</li>
+                    <li><strong>Accusations:</strong> Disabled.</li>
+                    <li><strong>Staredown:</strong> Skipped.</li>
+                </ul>
             </div>
         </div>
     </section>
