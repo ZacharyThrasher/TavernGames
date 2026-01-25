@@ -460,14 +460,17 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       profileTargets,
       isDared: tableData.dared?.[userId] ?? false,
       startingHeat: tableData.houseRules?.startingHeat ?? 10,
-      uiLocked: TavernApp.uiLocked // V4.8.56: UI Lock State
+      uiLocked: TavernApp.uiLocked, // V4.8.56: UI Lock State
+      isGoblinMode: state.tableData?.gameMode === "goblin", // V5.14.0
+      // Pass usedDice for Goblin Mode
+      dice: this._buildDiceArray(ante, isBettingPhase || isCutPhase, tableData.dared?.[userId] ?? false, state.tableData?.gameMode === "goblin", tableData.usedDice?.[userId] ?? [])
     };
   }
 
   // V4.8.56: UI Lock State
   static uiLocked = false;
 
-  _buildDiceArray(ante, isBettingPhase, isDared) {
+  _buildDiceArray(ante, isBettingPhase, isDared, isGoblinMode = false, usedDice = []) {
     const diceConfig = [
       { value: 20, label: "d20", icon: "d20-grey", strategy: "Hail Mary" },
       { value: 10, label: "d10", icon: "d10-grey", strategy: "Builder" },
@@ -476,20 +479,44 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       { value: 4, label: "d4", icon: "d4-grey", strategy: "Precision" },
     ];
 
+    if (isGoblinMode) {
+      // Add Coin
+      diceConfig.push({ value: 2, label: "Coin", icon: "circle-dollar", strategy: "Double or Nothing" });
+    }
+
     return diceConfig.map(d => {
       let cost = getDieCost(d.value, ante);
       let costLabel = this._formatCostLabel(cost, ante, isBettingPhase);
+      let disabled = false;
 
-      // Dared Mechanic: d8 is free, others are normal (but logic elsewhere prevents rolling them)
-      if (isDared && d.value === 8) {
+      // Goblin Mode Logic
+      if (isGoblinMode) {
         cost = 0;
-        costLabel = "FREE";
+        costLabel = "FREE"; // Or "RISK"
+
+        // Track Used Dice
+        // Exception: d20 can explode (handled in logic, but UI needs to know if allowed)
+        // Ideally state should clear it from usedDice if exploded, so simple .includes check works.
+        // My Logic in turn.js: "If Nat 20, we just DON'T add it to 'usedDice'".
+        // So checking usedDice.includes(d.value) is correct.
+        if (usedDice.includes(d.value)) {
+          disabled = true;
+          costLabel = "USED";
+        }
+      } else {
+        // Dared Mechanic (Standard Mode)
+        if (isDared && d.value === 8) {
+          cost = 0;
+          costLabel = "FREE";
+        }
       }
 
       return {
         ...d,
         cost,
-        costLabel
+        costLabel,
+        disabled,
+        isCoin: d.value === 2 // Flag for template icon
       };
     });
   }

@@ -46,6 +46,25 @@ export function registerSettings() {
     default: {},
   });
 
+  // V5.14.0: Game Mode Setting ("standard" or "goblin")
+  game.settings.register(MODULE_ID, "gameMode", {
+    name: "Game Mode",
+    hint: "Choose between Standard (Twenty-One) or Goblin Rules (Highest wins, exploding dice).",
+    scope: "world",
+    config: true,
+    type: String,
+    choices: {
+      "standard": "Standard (Twenty-One)",
+      "goblin": "Goblin Rules (Russian Roulette)"
+    },
+    default: "standard",
+    onChange: value => {
+      // Allow GM to execute a reset or mode switch logic if needed
+      // For now, next round will pick it up or UI triggers re-render
+      game.tavernDiceMaster?.app?.render();
+    }
+  });
+
   // V13: Performance Mode - disable heavy visual effects for lower-end hardware
   game.settings.register(MODULE_ID, "performanceMode", {
     name: "Performance Mode",
@@ -88,6 +107,9 @@ export function defaultState() {
       caught: {},           // { [userId]: true } - caught cheaters
       accusation: null,     // { accuserId, targetId, success } - targeted accusation
       failedInspector: null,   // User who made false accusation (forfeits winnings)
+      // V5.14.0: Goblin Mode
+      usedDice: {}, // { [userId]: [4, 6, 8] } - tracks used dice types
+      gameMode: "standard", // Tracked in state for consistency during round
     },
     history: [],
     // V4: NPC Bank

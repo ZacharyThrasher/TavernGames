@@ -8,17 +8,151 @@ import { emptyTableData, VALID_DICE, OPENING_ROLLS_REQUIRED, getDieCost } from "
 import { revealDice } from "./core.js";
 import { showPublicRollFromData } from "../../dice.js";
 
-export async function submitRoll(payload, userId) {
-  const state = getState();
-  if (state.status !== "PLAYING") {
-    ui.notifications.warn("No active round.");
+// V5.14.0: Goblin Rules Branching
+const gameMode = tableData.gameMode ?? "standard";
+const isGoblinMode = gameMode === "goblin";
+
+if (isGoblinMode) {
+  /* -------------------------------------------------------------
+     GOBLIN RULES (Russian Roulette)
+     - High Score Wins (No cap)
+     - Rolls are FREE (Cost is Risk)
+     - Used Dice Tracking (Once per type, except Exploding d20)
+     - Nat 1 = BUST
+     - Coin (d2) = Double Score
+     ------------------------------------------------------------- */
+
+  // Check if die is allowed
+  const usedDice = tableData.usedDice?.[userId] ?? [];
+
+  // Special Exception: If you rolled a Nat 20 on a d20 previously, you can roll d20 again!
+  // But how do we track that? The 'usedDice' list blocks it.
+  // Logic: If '20' is in usedDice, we check if the LAST d20 roll was a Nat 20.
+  // If so, we allow it (and don't block). 
+  // Actually, simpler: If Nat 20, we just DON'T add it to 'usedDice'.
+
+  if (usedDice.includes(die)) {
+    ui.notifications.warn("You have already used this die type!");
     return state;
   }
 
-  let tableData = state.tableData ?? emptyTableData();
-  const ante = game.settings.get(MODULE_ID, "fixedAnte");
-  const isOpeningPhase = tableData.phase === "opening";
+  // Cost is 0 (Risk only)
+  let rollCost = 0;
+  let newPot = state.pot;
 
+  // Roll
+  const roll = await new Roll(`1d${die}`).evaluate();
+  let result = roll.total;
+  const naturalRoll = result;
+
+  // Visuals
+  try {
+    await tavernSocket.executeAsUser("showRoll", userId, {
+      formula: `1d${die}`,
+      die: die,
+      result: result,
+      blind: false // No blind in Goblin Mode? Or maybe allow Hunch? Let's say false for now.
+    });
+  } catch (e) { }
+
+  // Logic Processing
+  let bust = false;
+  let multiplier = 1;
+  let exploded = false;
+
+  if (die === 2) { // Coin
+    if (naturalRoll === 1) {
+      bust = true; // Tails = Death
+    } else {
+      multiplier = 2; // Heads = Double Score
+      result = 0; // The coin itself adds 0 score, just multiplies existing
+    }
+  } else {
+    if (naturalRoll === 1) {
+      bust = true; // Nat 1 = Death
+    } else if (die === 20 && naturalRoll === 20) {
+      exploded = true; // Exploding d20!
+    }
+  }
+
+  // Update State
+  const rolls = { ...tableData.rolls };
+  const totals = { ...tableData.totals };
+  const busts = { ...tableData.busts };
+  const usedDiceMap = { ...tableData.usedDice }; // [userId]: []
+
+  const existingRolls = rolls[userId] ?? [];
+
+  // Add roll to history
+  rolls[userId] = [...existingRolls, { die, result: naturalRoll, public: true }];
+
+  // Update Totals
+  let currentTotal = totals[userId] ?? 0;
+
+  if (multiplier > 1) {
+    currentTotal *= multiplier;
+  } else {
+    currentTotal += result;
+  }
+  totals[userId] = currentTotal;
+
+  // Mark die as used (Unless exploded)
+  if (!exploded) {
+    usedDiceMap[userId] = [...(usedDiceMap[userId] ?? []), die];
+  }
+
+  // Check Bust
+  if (bust) {
+    busts[userId] = true;
+    tavernSocket.executeForEveryone("showBustFanfare", userId);
+  }
+
+  const userName = getActorName(userId);
+  let msg = "";
+  if (die === 2) {
+    if (bust) msg = `${userName} flipped TAILS and DIED! (Bust)`;
+    else msg = `${userName} flipped HEADS and DOUBLED their score to ${currentTotal}!`;
+  } else {
+    if (bust) msg = `${userName} rolled a 1 on d${die} and BUSTED!`;
+    else if (exploded) msg = `${userName} rolled a NAT 20! The d20 explodes and can be rolled again!`;
+    else msg = `${userName} rolled ${result} on d${die}. Total: ${currentTotal}.`;
+  }
+
+  await addLogToAll({
+    title: bust ? "BUST!" : (exploded ? "Explosion!" : "Roll"),
+    message: msg,
+    icon: bust ? "fa-solid fa-skull" : "fa-solid fa-dice",
+    type: bust ? "bust" : "roll",
+    cssClass: bust ? "failure" : (exploded ? "success" : "")
+  });
+
+  await addHistoryEntry({
+    type: bust ? "bust" : "roll",
+    player: userName,
+    die: `d${die}`,
+    result: naturalRoll,
+    total: currentTotal,
+    message: msg
+  });
+
+  let updatedTable = {
+    ...tableData,
+    rolls,
+    totals,
+    busts,
+    usedDice: usedDiceMap,
+    currentPlayer: bust ? getNextActivePlayer(state, { ...tableData, busts }) : userId // Keep turn if not bust?
+    // Wait, "Players take turns, can hold whenever". 
+    // In standard, you roll until you hold or bust. Same here.
+  };
+
+  // If bust, pass turn.
+  if (bust) {
+    updatedTable.currentPlayer = getNextActivePlayer(state, updatedTable);
+  }
+
+  return updateState({ tableData: updatedTable });
+  // Standard Rules Continuation...
   if (tableData.currentPlayer !== userId) {
     await notifyUser(userId, "It's not your turn.");
     return state;

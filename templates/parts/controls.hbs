@@ -144,13 +144,19 @@
 
     <div class="dice-buttons premium">
       {{#each dice}}
-      <button type="button" class="btn-die-premium {{#if this.costLabel}}has-cost{{/if}}" data-action="roll"
-        data-die="{{this.value}}"
+      <button type="button"
+        class="btn-die-premium {{#if this.costLabel}}has-cost{{/if}} {{#if this.isCoin}}btn-die-coin{{/if}}"
+        data-action="roll" data-die="{{this.value}}" {{#if this.disabled}}disabled{{/if}}
         title="{{this.label}} - {{this.strategy}}{{#if this.costLabel}} ({{this.costLabel}}){{/if}}">
+        {{#if this.isCoin}}
+        <i class="fa-solid fa-circle-dollar-to-slot die-icon"></i>
+        {{else}}
         <img src="icons/svg/{{this.icon}}.svg" alt="{{this.label}}" class="die-icon" />
+        {{/if}}
         <span class="die-label">{{this.label}}</span>
         {{#if this.costLabel}}
-        <span class="die-cost {{#if (eq this.costLabel 'FREE')}}free{{/if}}">{{this.costLabel}}</span>
+        <span
+          class="die-cost {{#if (eq this.costLabel 'FREE')}}free{{/if}} {{#if (eq this.costLabel 'USED')}}used{{/if}}">{{this.costLabel}}</span>
         {{/if}}
       </button>
       {{/each}}

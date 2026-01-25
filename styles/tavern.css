@@ -4715,5 +4715,79 @@
   100% {
     transform: scale(1);
     opacity: 1;
+
+  }
+
+  /* ============================================
+   V5.14.0: Goblin Mode Styles
+   ============================================ */
+  @layer components {
+    .btn-die-premium.btn-die-coin {
+      border-color: var(--tavern-gold-dim);
+      background: linear-gradient(135deg, #443322 0%, #221100 100%);
+    }
+
+    .btn-die-premium.btn-die-coin .die-icon {
+      color: var(--tavern-gold);
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+      font-size: 24px;
+      /* Icon font size */
+    }
+
+    /* Used State */
+    .btn-die-premium:disabled {
+      opacity: 0.5;
+      filter: grayscale(1);
+      cursor: not-allowed;
+      border-color: #444;
+    }
+
+    .die-cost.used {
+      background: #333;
+      color: #888;
+      border-color: #555;
+    }
+
+    .die-cost.free {
+      /* Ensure Free looks good in Goblin mode too */
+      background: var(--tavern-success);
+      color: white;
+    }
+  }
+
+  /* ============================================
+   V5.14.0: Goblin Mode Styles
+   ============================================ */
+
+  .btn-die-premium.btn-die-coin {
+    border-color: var(--tavern-gold-dim);
+    background: linear-gradient(135deg, #443322 0%, #221100 100%);
+  }
+
+  .btn-die-premium.btn-die-coin .die-icon {
+    color: var(--tavern-gold);
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+    font-size: 24px;
+    /* Icon font size */
+  }
+
+  /* Used State */
+  .btn-die-premium:disabled {
+    opacity: 0.5;
+    filter: grayscale(1);
+    cursor: not-allowed;
+    border-color: #444;
+  }
+
+  .die-cost.used {
+    background: #333;
+    color: #888;
+    border-color: #555;
+  }
+
+  .die-cost.free {
+    /* Ensure Free looks good in Goblin mode too */
+    background: var(--tavern-success);
+    color: white;
   }
 }
