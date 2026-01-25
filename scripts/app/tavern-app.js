@@ -461,6 +461,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       isDared: tableData.dared?.[userId] ?? false,
       startingHeat: tableData.houseRules?.startingHeat ?? 10,
       uiLocked: TavernApp.uiLocked, // V4.8.56: UI Lock State
+      gameMode: state.tableData?.gameMode ?? "standard", // V5.14.1: Game Mode for UI
       isGoblinMode: state.tableData?.gameMode === "goblin", // V5.14.0
       // Pass usedDice for Goblin Mode
       dice: this._buildDiceArray(ante, isBettingPhase || isCutPhase, tableData.dared?.[userId] ?? false, state.tableData?.gameMode === "goblin", tableData.usedDice?.[userId] ?? [])
@@ -567,6 +568,22 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
           e.target.value = game.settings.get(MODULE_ID, "fixedAnte");
           ui.notifications.warn("Ante must be between 1 and 1000 gp");
         }
+      });
+    }
+
+    // Handle Game Mode Change (GM only) - V5.14.1
+    const modeSelect = this.element.querySelector('#game-mode-select');
+    if (modeSelect) {
+      modeSelect.addEventListener('change', async (e) => {
+        const newMode = e.target.value;
+        const state = getState();
+        const currentTable = state.tableData ?? {};
+
+        // Update state directly - this will trigger re-render via hooks
+        const updatedTable = { ...currentTable, gameMode: newMode };
+        await game.settings.set(MODULE_ID, "gameState", { ...state, tableData: updatedTable });
+
+        ui.notifications.info(`Game Mode changed to ${newMode === "goblin" ? "Goblin Rules" : "Standard Twenty-One"}`);
       });
     }
 

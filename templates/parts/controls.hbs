@@ -27,6 +27,17 @@
       </div>
     </div>
     <div class="setting-row">
+      <label for="game-mode-select">
+        <i class="fa-solid fa-chess-knight"></i> Mode
+      </label>
+      <div class="setting-input">
+        <select id="game-mode-select" name="gameMode" data-action="setGameMode" style="width: 100px; padding: 2px;">
+          <option value="standard" {{#if (eq gameMode 'standard' )}}selected{{/if}}>Standard</option>
+          <option value="goblin" {{#if (eq gameMode 'goblin' )}}selected{{/if}}>Goblin</option>
+        </select>
+      </div>
+    </div>
+    <div class="setting-row">
       <label for="starting-heat">
         <i class="fa-solid fa-fire"></i> Starting Heat
       </label>
