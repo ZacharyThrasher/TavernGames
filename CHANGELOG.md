@@ -1,5 +1,9 @@
 # Changelog
 
+## [5.14.7] - 2026-01-25
+### Hotfix: State Initialization
+- **Fix**: Import `emptyTableData` in `state.js` to prevent startup crash.
+
 ## [5.14.6] - 2026-01-25
 ### Hotfix: Cheat Syntax Error
 - **Fix**: Resolved duplicate `rolls` declaration in `cheat.js` causing a startup syntax error.

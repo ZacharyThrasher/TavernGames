@@ -1,6 +1,7 @@
 export const MODULE_ID = "tavern-dice-master";
 export const STATE_MACRO_NAME = "TavernState"; // Keep for migration
-export { emptyTableData } from "./twenty-one/constants.js";
+import { emptyTableData } from "./twenty-one/constants.js";
+export { emptyTableData };
 
 export function registerSettings() {
   game.settings.register(MODULE_ID, "fixedAnte", {
