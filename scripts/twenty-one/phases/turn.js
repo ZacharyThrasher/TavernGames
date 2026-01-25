@@ -20,6 +20,7 @@ export async function submitRoll(payload, userId) {
   let tableData = state.tableData ?? emptyTableData();
   const ante = game.settings.get(MODULE_ID, "fixedAnte");
   const isOpeningPhase = tableData.phase === "opening";
+  const die = Number(payload?.die);
 
   const gameMode = tableData.gameMode ?? "standard";
   const isGoblinMode = gameMode === "goblin";
@@ -177,7 +178,7 @@ export async function submitRoll(payload, userId) {
     return state;
   }
 
-  const die = Number(payload?.die);
+
   if (!VALID_DICE.includes(die)) {
     ui.notifications.warn("Invalid die selection.");
     return state;
