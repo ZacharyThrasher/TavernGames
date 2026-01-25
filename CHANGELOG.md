@@ -1,5 +1,9 @@
 # Changelog
 
+## [5.14.9] - 2026-01-25
+### Hotfix: Duplicate Declaration
+- **Fix**: Resolved duplicate `gameMode` declaration in `turn.js`.
+
 ## [5.14.8] - 2026-01-25
 ### Hotfix: Goblin Mode Rules + Log Permissions
 - **Goblin Rules**: Skills disabled and roll visibility deferred until cheat resolution.

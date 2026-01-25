@@ -617,8 +617,6 @@ export async function finishTurn(userId) {
 
     const user = game.users.get(userId);
     const userName = getActorName(userId);
-
-    const gameMode = tableData.gameMode ?? "standard";
     // Check cost again for log consistency
     let rollCostMsg = "";
     if (gameMode !== "goblin") {
