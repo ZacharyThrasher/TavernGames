@@ -9,757 +9,769 @@ import { revealDice } from "./core.js";
 import { showPublicRollFromData } from "../../dice.js";
 
 // V5.14.0: Goblin Rules Branching
-const gameMode = tableData.gameMode ?? "standard";
-const isGoblinMode = gameMode === "goblin";
 
-if (isGoblinMode) {
-  /* -------------------------------------------------------------
-     GOBLIN RULES (Russian Roulette)
-     - High Score Wins (No cap)
-     - Rolls are FREE (Cost is Risk)
-     - Used Dice Tracking (Once per type, except Exploding d20)
-     - Nat 1 = BUST
-     - Coin (d2) = Double Score
-     ------------------------------------------------------------- */
-
-  // Check if die is allowed
-  const usedDice = tableData.usedDice?.[userId] ?? [];
-
-  // Special Exception: If you rolled a Nat 20 on a d20 previously, you can roll d20 again!
-  // But how do we track that? The 'usedDice' list blocks it.
-  // Logic: If '20' is in usedDice, we check if the LAST d20 roll was a Nat 20.
-  // If so, we allow it (and don't block). 
-  // Actually, simpler: If Nat 20, we just DON'T add it to 'usedDice'.
-
-  if (usedDice.includes(die)) {
-    ui.notifications.warn("You have already used this die type!");
-    return state;
-  }
-
-  // Cost is 0 (Risk only)
-  let rollCost = 0;
-  let newPot = state.pot;
-
-  // Roll
-  const roll = await new Roll(`1d${die}`).evaluate();
-  let result = roll.total;
-  const naturalRoll = result;
-
-  // Visuals
-  try {
-    await tavernSocket.executeAsUser("showRoll", userId, {
-      formula: `1d${die}`,
-      die: die,
-      result: result,
-      blind: false // No blind in Goblin Mode? Or maybe allow Hunch? Let's say false for now.
-    });
-  } catch (e) { }
-
-  // Logic Processing
-  let bust = false;
-  let multiplier = 1;
-  let exploded = false;
-
-  if (die === 2) { // Coin
-    if (naturalRoll === 1) {
-      bust = true; // Tails = Death
-    } else {
-      multiplier = 2; // Heads = Double Score
-      result = 0; // The coin itself adds 0 score, just multiplies existing
-    }
-  } else {
-    if (naturalRoll === 1) {
-      bust = true; // Nat 1 = Death
-    } else if (die === 20 && naturalRoll === 20) {
-      exploded = true; // Exploding d20!
-    }
-  }
-
-  // Update State
-  const rolls = { ...tableData.rolls };
-  const totals = { ...tableData.totals };
-  const busts = { ...tableData.busts };
-  const usedDiceMap = { ...tableData.usedDice }; // [userId]: []
-
-  const existingRolls = rolls[userId] ?? [];
-
-  // Add roll to history
-  rolls[userId] = [...existingRolls, { die, result: naturalRoll, public: true }];
-
-  // Update Totals
-  let currentTotal = totals[userId] ?? 0;
-
-  if (multiplier > 1) {
-    currentTotal *= multiplier;
-  } else {
-    currentTotal += result;
-  }
-  totals[userId] = currentTotal;
-
-  // Mark die as used (Unless exploded)
-  if (!exploded) {
-    usedDiceMap[userId] = [...(usedDiceMap[userId] ?? []), die];
-  }
-
-  // Check Bust
-  if (bust) {
-    busts[userId] = true;
-    tavernSocket.executeForEveryone("showBustFanfare", userId);
-  }
-
-  const userName = getActorName(userId);
-  let msg = "";
-  if (die === 2) {
-    if (bust) msg = `${userName} flipped TAILS and DIED! (Bust)`;
-    else msg = `${userName} flipped HEADS and DOUBLED their score to ${currentTotal}!`;
-  } else {
-    if (bust) msg = `${userName} rolled a 1 on d${die} and BUSTED!`;
-    else if (exploded) msg = `${userName} rolled a NAT 20! The d20 explodes and can be rolled again!`;
-    else msg = `${userName} rolled ${result} on d${die}. Total: ${currentTotal}.`;
-  }
-
-  await addLogToAll({
-    title: bust ? "BUST!" : (exploded ? "Explosion!" : "Roll"),
-    message: msg,
-    icon: bust ? "fa-solid fa-skull" : "fa-solid fa-dice",
-    type: bust ? "bust" : "roll",
-    cssClass: bust ? "failure" : (exploded ? "success" : "")
-  });
-
-  await addHistoryEntry({
-    type: bust ? "bust" : "roll",
-    player: userName,
-    die: `d${die}`,
-    result: naturalRoll,
-    total: currentTotal,
-    message: msg
-  });
-
-  let updatedTable = {
-    ...tableData,
-    rolls,
-    totals,
-    busts,
-    usedDice: usedDiceMap,
-    currentPlayer: bust ? getNextActivePlayer(state, { ...tableData, busts }) : userId // Keep turn if not bust?
-    // Wait, "Players take turns, can hold whenever". 
-    // In standard, you roll until you hold or bust. Same here.
-  };
-
-  // If bust, pass turn.
-  if (bust) {
-    updatedTable.currentPlayer = getNextActivePlayer(state, updatedTable);
-  }
-
-  return updateState({ tableData: updatedTable });
-  // Standard Rules Continuation...
-  if (tableData.currentPlayer !== userId) {
-    await notifyUser(userId, "It's not your turn.");
-    return state;
-  }
-
-  if (tableData.holds[userId] || tableData.busts[userId]) {
-    ui.notifications.warn("You've already finished this round.");
-    return state;
-  }
-
-  const die = Number(payload?.die);
-  if (!VALID_DICE.includes(die)) {
-    ui.notifications.warn("Invalid die selection.");
-    return state;
-  }
-
-  // V4.9: Dared check - can ONLY buy d8 (Free) if dared
-  // V5.7: Deprecated Dared in favor of Goad Backfire Symmetry, but keeping for legacy safety
-  if (tableData.dared?.[userId] && die !== 8) {
-    ui.notifications.warn("You are Dared! You forced to roll a d8 (Free) or Fold.");
-    return state;
-  }
-
-  // V5.7: Goad Force D20 check
-  if (tableData.goadBackfire?.[userId]?.forceD20 && die !== 20) {
-    ui.notifications.warn("Critically Goaded! You are forced to roll a d20!");
-    return state;
-  }
-
-  // V4.9: Hunch Lock check - can ONLY roll d20 if locked
-  if (tableData.hunchLocked?.[userId] && die !== 20) {
-    ui.notifications.warn("Foresight locked you into rolling a d20!");
-    return state;
-  }
-
-  // V3.5: Bump Retaliation Lock
-  if (tableData.pendingBumpRetaliation?.attackerId === userId) {
-    console.warn("Tavern | Blocked Roll due to Lock:", tableData.pendingBumpRetaliation);
-    ui.notifications.warn("You were caught bumping! Wait for retaliation.");
-    return state;
-  }
-
-  // V2.0: Variable dice costs in betting phase
-  let newPot = state.pot;
-  let rollCost = 0;
-  if (!isOpeningPhase) {
-    const user = game.users.get(userId);
-    // V3.5: GM-as-NPC pays for dice like regular players
-    const playerData = state.players?.[userId];
-    // V3.5: GM-as-NPC pays for dice like regular players (unified via deductFromActor)
-    // Removed !isHouse check to allow NPCs to pay
-    {
-      // V4.9: Dared rolls are FREE
-      if (tableData.dared?.[userId]) {
-        rollCost = 0;
-      } else {
-        rollCost = getDieCost(die, ante);
-      }
-
-      if (rollCost > 0) {
-        if (payload.payWithDrink) {
-          const drinksNeeded = Math.ceil(rollCost / ante);
-          const drinkResult = await drinkForPayment(userId, drinksNeeded, tableData);
-          tableData = drinkResult.tableData;
-
-          if (drinkResult.bust) {
-            return updateState({ tableData });
-          }
-        } else {
-          const canAfford = await deductFromActor(userId, rollCost);
-          if (!canAfford) {
-            await notifyUser(userId, `You need ${rollCost}gp to roll a d${die}.`);
-            return state;
-          }
-          newPot = state.pot + rollCost;
-
-        }
-      }
-    }
-  }
-
-  // V3: Hunch Accuracy - Use pre-rolled value if available
-  let forcedResult = null;
-  console.log("Tavern Debug | Hunch Check:", {
-    userId,
-    die,
-    hunchRolls: tableData.hunchRolls,
-    userHunch: tableData.hunchRolls?.[userId],
-    forcedResult: tableData.hunchRolls?.[userId]?.[die]
-  });
-
-  // V5.8.7: Robust check for 0 or falsey values (though dice are 1+)
-  if (tableData.hunchRolls?.[userId] && tableData.hunchRolls[userId][die] !== undefined) {
-    forcedResult = tableData.hunchRolls[userId][die];
-  }
-
-  let roll;
-  if (forcedResult !== null) {
-    // Construct a roll with the forced result
-    roll = new Roll(`1d${die}`);
-    roll.terms = [
-      new Die({ number: 1, faces: die, results: [{ result: forcedResult, active: true }] })
-    ];
-    roll._total = forcedResult;
-    roll._evaluated = true;
-  } else {
-    roll = await new Roll(`1d${die}`).evaluate();
-  }
-
-  let result = roll.total ?? 0;
-  const naturalRoll = result;
-
-  if (die === 20 && naturalRoll === 20) {
-    // V4.7.1: Instant 21 mechanic requested by user
-    // "A d20 landing on 20 shouldn't ADD 21... it should instantly set your TOTAL to 21"
-    const currentTotal = tableData.totals[userId] ?? 0;
-    // Calculate difference needed to reach exactly 21
-    // If they have 10, result = 11. 10+11=21.
-    // If they have 22 (bust), result = -1. 22-1=21. (Unbust!)
-    result = 21 - currentTotal;
-  }
-
-  try {
-    await tavernSocket.executeAsUser("showRoll", userId, {
-      formula: `1d${die}`,
-      die: die,
-      result: result,
-      blind: isBlind // V5.7: Pass blind status to visual layer
-    });
-  } catch (e) {
-    console.warn("Tavern Twenty-One | Could not show dice to player:", e);
-  }
-
-
-
-  const rolls = { ...tableData.rolls };
-  const totals = { ...tableData.totals };
-  const cleaningFees = { ...tableData.cleaningFees };
-  const visibleTotals = { ...tableData.visibleTotals };
-
-  const existingRolls = rolls[userId] ?? [];
-  const isPublic = isOpeningPhase ? existingRolls.length === 0 : false;
-
-  // V5.7: Check for Blind State (from Foresight failure)
-  let isBlind = false;
-  if (tableData.blindNextRoll?.[userId]) {
-    isBlind = true;
-    // Consume the flag immediately
-    const blindNextRoll = { ...tableData.blindNextRoll };
-    delete blindNextRoll[userId];
-    tableData.blindNextRoll = blindNextRoll;
-
-    // Also clear Hunch Lock if present
-    if (tableData.hunchLocked?.[userId]) {
-      const hunchLocked = { ...tableData.hunchLocked };
-      delete hunchLocked[userId];
-      const hunchLockedDie = { ...tableData.hunchLockedDie };
-      delete hunchLockedDie[userId];
-      tableData.hunchLocked = hunchLocked;
-      tableData.hunchLockedDie = hunchLockedDie;
-    }
-  }
-
-  rolls[userId] = [...existingRolls, { die, result, public: isPublic, blind: isBlind }];
-  totals[userId] = (totals[userId] ?? 0) + result;
-
-  if (isPublic) {
-    visibleTotals[userId] = (visibleTotals[userId] ?? 0) + result;
-  }
-
-  if (naturalRoll === 1) {
-    cleaningFees[userId] = (cleaningFees[userId] ?? 0) + 1;
-  }
-
-  const busts = { ...tableData.busts };
-  const isBust = totals[userId] > 21;
-  // V3.4: Don't immediately mark bust - let cheat dialog appear first
-  // We'll set pendingBust flag instead, which gets resolved after cheat decision
-  let pendingBust = false;
-  if (isBust && !isOpeningPhase) {
-    // In betting phase, delay bust until after cheat dialog
-    pendingBust = true;
-  } else if (isBust) {
-    // In opening phase, bust immediately (no cheat allowed)
-    busts[userId] = true;
-    // Trigger fanfare
-    tavernSocket.executeForEveryone("showBustFanfare", userId);
-  }
-
-  const userName = getActorName(userId);
-
-  // V3.5: Show roll cost message for GM-as-NPC too
-  const msgUser = game.users.get(userId);
-  const msgPlayerData = state.players?.[userId];
-  const isMsgHouse = msgUser?.isGM && !msgPlayerData?.playingAsNpc;
-  let rollCostMsg = "";
-  if (!isOpeningPhase && !isMsgHouse) {
-    if (rollCost === 0) {
-      rollCostMsg = " (FREE)";
-    } else {
-      rollCostMsg = ` (${rollCost}gp)`;
-    }
-  }
-
-  let specialMsg = "";
-  if (die === 20 && naturalRoll === 20) {
-    specialMsg = " **NATURAL 20 = INSTANT 21!**";
-  } else if (naturalRoll === 1) {
-    specialMsg = " *Spilled drink! 1gp cleaning fee.*";
-  }
-
-  // V3.4: Only post bust message if opening phase (no cheat opportunity)
-  // V4.1: Defer betting phase history log until finishTurn (to hide pre-cheat results)
-  if (isOpeningPhase) {
-    if (!pendingBust) {
-      await addHistoryEntry({
-        type: isBust ? "bust" : "roll",
-        player: userName,
-        die: `d${die}`,
-        result,
-        total: totals[userId],
-        message: isBust
-          ? `${userName} rolled d${die} and BUSTED with ${totals[userId]}!${specialMsg}`
-          : `${userName} rolled a d${die}${rollCostMsg}...${specialMsg}`,
-      });
-    } else {
-      // Still log the roll, but not the bust yet (though opening phase shouldn't have pendingBust usually)
-      await addHistoryEntry({
-        type: "roll",
-        player: userName,
-        die: `d${die}`,
-        result,
-        total: totals[userId],
-        message: `${userName} rolled a d${die}${rollCostMsg}...${specialMsg}`,
-      });
-    }
-  }
-
-  const goadBackfire = { ...tableData.goadBackfire };
-  if (goadBackfire[userId]?.mustRoll) {
-    delete goadBackfire[userId];
-  }
-
-  const dared = { ...tableData.dared };
-  if (dared[userId]) {
-    delete dared[userId];
-  }
-
-  // V5.7: Hunch Lock is cleared when the blind roll is consumed above
-  // Checks here are redundant but harmless, keeping for safety if blindNextRoll wasn't set (shouldn't happen)
-  const hunchLocked = { ...tableData.hunchLocked };
-  const hunchLockedDie = { ...tableData.hunchLockedDie };
-  if (hunchLocked[userId]) {
-    // If we are here, it means we rolled but didn't consume the blind flag? 
-    // Or maybe we rolled a non-blind die (e.g. opening?)
-    // Actually, submitRoll logic above handles consumption.
-    // We can just leave this cleanup to ensure no state leaks.
-    delete hunchLocked[userId];
-    delete hunchLockedDie[userId];
-  }
-
-  // V3: Clean up Hunch predictions after rolling
-  let hunchPrediction = tableData.hunchPrediction;
-  let hunchExact = tableData.hunchExact;
-  let hunchRolls = tableData.hunchRolls;
-
-  if (tableData.hunchRolls?.[userId] || tableData.hunchPrediction?.[userId]) {
-    hunchPrediction = { ...tableData.hunchPrediction };
-    hunchExact = { ...tableData.hunchExact };
-    hunchRolls = { ...tableData.hunchRolls };
-
-    delete hunchPrediction[userId];
-    delete hunchExact[userId];
-    delete hunchRolls[userId];
-  }
-
-  let updatedTable = {
-    ...tableData,
-    rolls,
-    totals,
-    busts,
-    cleaningFees,
-    visibleTotals,
-    goadBackfire,
-    dared, // Include updated dared
-    hunchLocked,
-    hunchLockedDie,
-    hunchPrediction,
-    hunchExact,
-    hunchRolls,
-    // V3.4: Track pending bust for cheat decision
-    pendingBust: pendingBust ? userId : null,
-  };
-
-  if (!isOpeningPhase) {
-    updatedTable.hasActed = { ...updatedTable.hasActed, [userId]: true };
-  }
-
-  await updateState((current) => ({
-    tableData: updatedTable,
-    pot: current.pot + rollCost,
-  }));
-
-  if (isOpeningPhase) {
-    const myRolls = rolls[userId] ?? [];
-    if (myRolls.length >= OPENING_ROLLS_REQUIRED || isBust) {
-      if (allPlayersCompletedOpening(state, updatedTable)) {
-        updatedTable.bettingOrder = calculateBettingOrder(state, updatedTable);
-        updatedTable.phase = "betting";
-        updatedTable.currentPlayer = updatedTable.bettingOrder.find(id => !updatedTable.busts[id]) ?? null;
-
-        const orderNames = updatedTable.bettingOrder
-          .filter(id => !updatedTable.busts[id])
-          .map(id => {
-            const name = game.users.get(id)?.name ?? "Unknown";
-            const vt = updatedTable.visibleTotals[id] ?? 0;
-            return `${name} (${vt})`;
-          })
-          .join(" → ");
-
-        // V5.8: Log instead of Chat Card
-        await addLogToAll({
-          title: "Betting Round",
-          message: `Opening complete!<br><strong>Turn order:</strong> ${orderNames}<br><em>d20: FREE | d10: 1/2 Ante | d6/d8: Ante | d4: 2x Ante</em>`,
-          icon: "fa-solid fa-hand-holding-dollar",
-          type: "phase"
-        });
-      } else {
-        updatedTable.currentPlayer = getNextOpeningPlayer(state, updatedTable);
-      }
-    }
-    const rolling = { ...updatedTable.rolling };
-    delete rolling[userId];
-    updatedTable.rolling = rolling;
-
-    return updateState({ tableData: updatedTable });
-  } else {
-    updatedTable.pendingAction = "cheat_decision";
-
-    const rolling = { ...updatedTable.rolling };
-    delete rolling[userId];
-    updatedTable.rolling = rolling;
-
-    return updateState({ tableData: updatedTable });
-  }
-}
-
-export async function finishTurn(userId) {
+export async function submitRoll(payload, userId) {
   const state = getState();
-  const tableData = state.tableData ?? emptyTableData();
-
-  if (tableData.currentPlayer !== userId) {
-    // maybe admin override
+  if (state.status !== "PLAYING") {
+    ui.notifications.warn("No active round.");
+    return state;
   }
 
-  // V4.1: Reveal hidden betting rolls and log them (moved from submitRoll)
+  let tableData = state.tableData ?? emptyTableData();
   const ante = game.settings.get(MODULE_ID, "fixedAnte");
-  const rolls = tableData.rolls[userId] ?? [];
-  const lastRollIndex = rolls.length - 1;
-  const lastRoll = rolls[lastRollIndex];
+  const isOpeningPhase = tableData.phase === "opening";
 
-  if (lastRoll && tableData.phase === "betting" && !lastRoll.public && !lastRoll.blind) {
-    // It was hidden for cheat opportunity - time to reveal
-    const updatedRolls = [...rolls];
-    updatedRolls[lastRollIndex] = { ...lastRoll, public: true };
+  const gameMode = tableData.gameMode ?? "standard";
+  const isGoblinMode = gameMode === "goblin";
 
-    const updatedVisibleTotals = { ...tableData.visibleTotals };
-    updatedVisibleTotals[userId] = (updatedVisibleTotals[userId] ?? 0) + lastRoll.result;
+  if (isGoblinMode) {
+    /* -------------------------------------------------------------
+       GOBLIN RULES (Russian Roulette)
+       - High Score Wins (No cap)
+       - Rolls are FREE (Cost is Risk)
+       - Used Dice Tracking (Once per type, except Exploding d20)
+       - Nat 1 = BUST
+       - Coin (d2) = Double Score
+       ------------------------------------------------------------- */
 
-    tableData.rolls = { ...tableData.rolls, [userId]: updatedRolls };
-    tableData.visibleTotals = updatedVisibleTotals;
+    // Check if die is allowed
+    const usedDice = tableData.usedDice?.[userId] ?? [];
 
-    // V5.8: We don't need to log this revealing action if we already logged the roll privately or we are about to log result
-    // Actually the logic was to log it NOW that it's public.
-    // The player saw "You rolled X" privately (maybe?).
-    // Let's log the "Finalized Roll" to everyone.
+    // Special Exception: If you rolled a Nat 20 on a d20 previously, you can roll d20 again!
+    // But how do we track that? The 'usedDice' list blocks it.
+    // Logic: If '20' is in usedDice, we check if the LAST d20 roll was a Nat 20.
+    // If so, we allow it (and don't block). 
+    // Actually, simpler: If Nat 20, we just DON'T add it to 'usedDice'.
 
-    const user = game.users.get(userId);
+    if (usedDice.includes(die)) {
+      ui.notifications.warn("You have already used this die type!");
+      return state;
+    }
+
+    // Cost is 0 (Risk only)
+    let rollCost = 0;
+    let newPot = state.pot;
+
+    // Roll
+    const roll = await new Roll(`1d${die}`).evaluate();
+    let result = roll.total;
+    const naturalRoll = result;
+
+    // Visuals
+    try {
+      await tavernSocket.executeAsUser("showRoll", userId, {
+        formula: `1d${die}`,
+        die: die,
+        result: result,
+        blind: false // No blind in Goblin Mode? Or maybe allow Hunch? Let's say false for now.
+      });
+    } catch (e) { }
+
+    // Logic Processing
+    let bust = false;
+    let multiplier = 1;
+    let exploded = false;
+
+    if (die === 2) { // Coin
+      if (naturalRoll === 1) {
+        bust = true; // Tails = Death
+      } else {
+        multiplier = 2; // Heads = Double Score
+        result = 0; // The coin itself adds 0 score, just multiplies existing
+      }
+    } else {
+      if (naturalRoll === 1) {
+        bust = true; // Nat 1 = Death
+      } else if (die === 20 && naturalRoll === 20) {
+        exploded = true; // Exploding d20!
+      }
+    }
+
+    // Update State
+    const rolls = { ...tableData.rolls };
+    const totals = { ...tableData.totals };
+    const busts = { ...tableData.busts };
+    const usedDiceMap = { ...tableData.usedDice }; // [userId]: []
+
+    const existingRolls = rolls[userId] ?? [];
+
+    // Add roll to history
+    rolls[userId] = [...existingRolls, { die, result: naturalRoll, public: true }];
+
+    // Update Totals
+    let currentTotal = totals[userId] ?? 0;
+
+    if (multiplier > 1) {
+      currentTotal *= multiplier;
+    } else {
+      currentTotal += result;
+    }
+    totals[userId] = currentTotal;
+
+    // Mark die as used (Unless exploded)
+    if (!exploded) {
+      usedDiceMap[userId] = [...(usedDiceMap[userId] ?? []), die];
+    }
+
+    // Check Bust
+    if (bust) {
+      busts[userId] = true;
+      tavernSocket.executeForEveryone("showBustFanfare", userId);
+    }
+
     const userName = getActorName(userId);
+    let msg = "";
+    if (die === 2) {
+      if (bust) msg = `${userName} flipped TAILS and DIED! (Bust)`;
+      else msg = `${userName} flipped HEADS and DOUBLED their score to ${currentTotal}!`;
+    } else {
+      if (bust) msg = `${userName} rolled a 1 on d${die} and BUSTED!`;
+      else if (exploded) msg = `${userName} rolled a NAT 20! The d20 explodes and can be rolled again!`;
+      else msg = `${userName} rolled ${result} on d${die}. Total: ${currentTotal}.`;
+    }
 
-    // Check cost again for log consistency
-    let rollCostMsg = "";
-    // Simplified cost check
-    const cost = getDieCost(lastRoll.die, ante);
-    if (cost === 0) rollCostMsg = " (FREE)";
-    else rollCostMsg = ` (${cost}gp)`;
-
-    let specialMsg = "";
-    if (lastRoll.die === 20 && lastRoll.result === 21) specialMsg = " **NATURAL 20 = INSTANT 21!**";
-    else if (lastRoll.die !== 20 && lastRoll.result === 1) specialMsg = " *Spilled drink! 1gp cleaning fee.*";
-
-    // V5.8: Add Log to All
     await addLogToAll({
-      title: `${userName} rolled d${lastRoll.die}`,
-      message: `Result: <strong>${lastRoll.result}</strong>${rollCostMsg}${specialMsg}`,
-      icon: "fa-solid fa-dice",
-      type: "roll"
+      title: bust ? "BUST!" : (exploded ? "Explosion!" : "Roll"),
+      message: msg,
+      icon: bust ? "fa-solid fa-skull" : "fa-solid fa-dice",
+      type: bust ? "bust" : "roll",
+      cssClass: bust ? "failure" : (exploded ? "success" : "")
     });
 
     await addHistoryEntry({
-      type: "roll",
+      type: bust ? "bust" : "roll",
       player: userName,
-      die: `d${lastRoll.die}`,
-      result: lastRoll.result,
-      total: tableData.totals[userId],
-      message: `${userName} rolled a d${lastRoll.die}${rollCostMsg}...${specialMsg}`,
+      die: `d${die}`,
+      result: naturalRoll,
+      total: currentTotal,
+      message: msg
     });
 
-    // V5.9: Show Public Roll (DSN) for the reveal
-    // This runs on the client effectively (triggered by state update usually, but here likely GM/Actor owner)
-    // If triggered by GM, DSN sync handles it.
+    let updatedTable = {
+      ...tableData,
+      rolls,
+      totals,
+      busts,
+      usedDice: usedDiceMap,
+      currentPlayer: bust ? getNextActivePlayer(state, { ...tableData, busts }) : userId // Keep turn if not bust?
+      // Wait, "Players take turns, can hold whenever". 
+      // In standard, you roll until you hold or bust. Same here.
+    };
+
+    // If bust, pass turn.
+    if (bust) {
+      updatedTable.currentPlayer = getNextActivePlayer(state, updatedTable);
+    }
+
+    return updateState({ tableData: updatedTable });
+    // Standard Rules Continuation...
+    if (tableData.currentPlayer !== userId) {
+      await notifyUser(userId, "It's not your turn.");
+      return state;
+    }
+
+    if (tableData.holds[userId] || tableData.busts[userId]) {
+      ui.notifications.warn("You've already finished this round.");
+      return state;
+    }
+
+    const die = Number(payload?.die);
+    if (!VALID_DICE.includes(die)) {
+      ui.notifications.warn("Invalid die selection.");
+      return state;
+    }
+
+    // V4.9: Dared check - can ONLY buy d8 (Free) if dared
+    // V5.7: Deprecated Dared in favor of Goad Backfire Symmetry, but keeping for legacy safety
+    if (tableData.dared?.[userId] && die !== 8) {
+      ui.notifications.warn("You are Dared! You forced to roll a d8 (Free) or Fold.");
+      return state;
+    }
+
+    // V5.7: Goad Force D20 check
+    if (tableData.goadBackfire?.[userId]?.forceD20 && die !== 20) {
+      ui.notifications.warn("Critically Goaded! You are forced to roll a d20!");
+      return state;
+    }
+
+    // V4.9: Hunch Lock check - can ONLY roll d20 if locked
+    if (tableData.hunchLocked?.[userId] && die !== 20) {
+      ui.notifications.warn("Foresight locked you into rolling a d20!");
+      return state;
+    }
+
+    // V3.5: Bump Retaliation Lock
+    if (tableData.pendingBumpRetaliation?.attackerId === userId) {
+      console.warn("Tavern | Blocked Roll due to Lock:", tableData.pendingBumpRetaliation);
+      ui.notifications.warn("You were caught bumping! Wait for retaliation.");
+      return state;
+    }
+
+    // V2.0: Variable dice costs in betting phase
+    let newPot = state.pot;
+    let rollCost = 0;
+    if (!isOpeningPhase) {
+      const user = game.users.get(userId);
+      // V3.5: GM-as-NPC pays for dice like regular players
+      const playerData = state.players?.[userId];
+      // V3.5: GM-as-NPC pays for dice like regular players (unified via deductFromActor)
+      // Removed !isHouse check to allow NPCs to pay
+      {
+        // V4.9: Dared rolls are FREE
+        if (tableData.dared?.[userId]) {
+          rollCost = 0;
+        } else {
+          rollCost = getDieCost(die, ante);
+        }
+
+        if (rollCost > 0) {
+          if (payload.payWithDrink) {
+            const drinksNeeded = Math.ceil(rollCost / ante);
+            const drinkResult = await drinkForPayment(userId, drinksNeeded, tableData);
+            tableData = drinkResult.tableData;
+
+            if (drinkResult.bust) {
+              return updateState({ tableData });
+            }
+          } else {
+            const canAfford = await deductFromActor(userId, rollCost);
+            if (!canAfford) {
+              await notifyUser(userId, `You need ${rollCost}gp to roll a d${die}.`);
+              return state;
+            }
+            newPot = state.pot + rollCost;
+
+          }
+        }
+      }
+    }
+
+    // V3: Hunch Accuracy - Use pre-rolled value if available
+    let forcedResult = null;
+    console.log("Tavern Debug | Hunch Check:", {
+      userId,
+      die,
+      hunchRolls: tableData.hunchRolls,
+      userHunch: tableData.hunchRolls?.[userId],
+      forcedResult: tableData.hunchRolls?.[userId]?.[die]
+    });
+
+    // V5.8.7: Robust check for 0 or falsey values (though dice are 1+)
+    if (tableData.hunchRolls?.[userId] && tableData.hunchRolls[userId][die] !== undefined) {
+      forcedResult = tableData.hunchRolls[userId][die];
+    }
+
+    let roll;
+    if (forcedResult !== null) {
+      // Construct a roll with the forced result
+      roll = new Roll(`1d${die}`);
+      roll.terms = [
+        new Die({ number: 1, faces: die, results: [{ result: forcedResult, active: true }] })
+      ];
+      roll._total = forcedResult;
+      roll._evaluated = true;
+    } else {
+      roll = await new Roll(`1d${die}`).evaluate();
+    }
+
+    let result = roll.total ?? 0;
+    const naturalRoll = result;
+
+    if (die === 20 && naturalRoll === 20) {
+      // V4.7.1: Instant 21 mechanic requested by user
+      // "A d20 landing on 20 shouldn't ADD 21... it should instantly set your TOTAL to 21"
+      const currentTotal = tableData.totals[userId] ?? 0;
+      // Calculate difference needed to reach exactly 21
+      // If they have 10, result = 11. 10+11=21.
+      // If they have 22 (bust), result = -1. 22-1=21. (Unbust!)
+      result = 21 - currentTotal;
+    }
+
     try {
-      await showPublicRollFromData(Number(lastRoll.die), Number(lastRoll.result), userId);
-    } catch (e) { console.warn("Tavern | DSN Error:", e); }
+      await tavernSocket.executeAsUser("showRoll", userId, {
+        formula: `1d${die}`,
+        die: die,
+        result: result,
+        blind: isBlind // V5.7: Pass blind status to visual layer
+      });
+    } catch (e) {
+      console.warn("Tavern Twenty-One | Could not show dice to player:", e);
+    }
+
+
+
+    const rolls = { ...tableData.rolls };
+    const totals = { ...tableData.totals };
+    const cleaningFees = { ...tableData.cleaningFees };
+    const visibleTotals = { ...tableData.visibleTotals };
+
+    const existingRolls = rolls[userId] ?? [];
+    const isPublic = isOpeningPhase ? existingRolls.length === 0 : false;
+
+    // V5.7: Check for Blind State (from Foresight failure)
+    let isBlind = false;
+    if (tableData.blindNextRoll?.[userId]) {
+      isBlind = true;
+      // Consume the flag immediately
+      const blindNextRoll = { ...tableData.blindNextRoll };
+      delete blindNextRoll[userId];
+      tableData.blindNextRoll = blindNextRoll;
+
+      // Also clear Hunch Lock if present
+      if (tableData.hunchLocked?.[userId]) {
+        const hunchLocked = { ...tableData.hunchLocked };
+        delete hunchLocked[userId];
+        const hunchLockedDie = { ...tableData.hunchLockedDie };
+        delete hunchLockedDie[userId];
+        tableData.hunchLocked = hunchLocked;
+        tableData.hunchLockedDie = hunchLockedDie;
+      }
+    }
+
+    rolls[userId] = [...existingRolls, { die, result, public: isPublic, blind: isBlind }];
+    totals[userId] = (totals[userId] ?? 0) + result;
+
+    if (isPublic) {
+      visibleTotals[userId] = (visibleTotals[userId] ?? 0) + result;
+    }
+
+    if (naturalRoll === 1) {
+      cleaningFees[userId] = (cleaningFees[userId] ?? 0) + 1;
+    }
+
+    const busts = { ...tableData.busts };
+    const isBust = totals[userId] > 21;
+    // V3.4: Don't immediately mark bust - let cheat dialog appear first
+    // We'll set pendingBust flag instead, which gets resolved after cheat decision
+    let pendingBust = false;
+    if (isBust && !isOpeningPhase) {
+      // In betting phase, delay bust until after cheat dialog
+      pendingBust = true;
+    } else if (isBust) {
+      // In opening phase, bust immediately (no cheat allowed)
+      busts[userId] = true;
+      // Trigger fanfare
+      tavernSocket.executeForEveryone("showBustFanfare", userId);
+    }
+
+    const userName = getActorName(userId);
+
+    // V3.5: Show roll cost message for GM-as-NPC too
+    const msgUser = game.users.get(userId);
+    const msgPlayerData = state.players?.[userId];
+    const isMsgHouse = msgUser?.isGM && !msgPlayerData?.playingAsNpc;
+    let rollCostMsg = "";
+    if (!isOpeningPhase && !isMsgHouse) {
+      if (rollCost === 0) {
+        rollCostMsg = " (FREE)";
+      } else {
+        rollCostMsg = ` (${rollCost}gp)`;
+      }
+    }
+
+    let specialMsg = "";
+    if (die === 20 && naturalRoll === 20) {
+      specialMsg = " **NATURAL 20 = INSTANT 21!**";
+    } else if (naturalRoll === 1) {
+      specialMsg = " *Spilled drink! 1gp cleaning fee.*";
+    }
+
+    // V3.4: Only post bust message if opening phase (no cheat opportunity)
+    // V4.1: Defer betting phase history log until finishTurn (to hide pre-cheat results)
+    if (isOpeningPhase) {
+      if (!pendingBust) {
+        await addHistoryEntry({
+          type: isBust ? "bust" : "roll",
+          player: userName,
+          die: `d${die}`,
+          result,
+          total: totals[userId],
+          message: isBust
+            ? `${userName} rolled d${die} and BUSTED with ${totals[userId]}!${specialMsg}`
+            : `${userName} rolled a d${die}${rollCostMsg}...${specialMsg}`,
+        });
+      } else {
+        // Still log the roll, but not the bust yet (though opening phase shouldn't have pendingBust usually)
+        await addHistoryEntry({
+          type: "roll",
+          player: userName,
+          die: `d${die}`,
+          result,
+          total: totals[userId],
+          message: `${userName} rolled a d${die}${rollCostMsg}...${specialMsg}`,
+        });
+      }
+    }
+
+    const goadBackfire = { ...tableData.goadBackfire };
+    if (goadBackfire[userId]?.mustRoll) {
+      delete goadBackfire[userId];
+    }
+
+    const dared = { ...tableData.dared };
+    if (dared[userId]) {
+      delete dared[userId];
+    }
+
+    // V5.7: Hunch Lock is cleared when the blind roll is consumed above
+    // Checks here are redundant but harmless, keeping for safety if blindNextRoll wasn't set (shouldn't happen)
+    const hunchLocked = { ...tableData.hunchLocked };
+    const hunchLockedDie = { ...tableData.hunchLockedDie };
+    if (hunchLocked[userId]) {
+      // If we are here, it means we rolled but didn't consume the blind flag? 
+      // Or maybe we rolled a non-blind die (e.g. opening?)
+      // Actually, submitRoll logic above handles consumption.
+      // We can just leave this cleanup to ensure no state leaks.
+      delete hunchLocked[userId];
+      delete hunchLockedDie[userId];
+    }
+
+    // V3: Clean up Hunch predictions after rolling
+    let hunchPrediction = tableData.hunchPrediction;
+    let hunchExact = tableData.hunchExact;
+    let hunchRolls = tableData.hunchRolls;
+
+    if (tableData.hunchRolls?.[userId] || tableData.hunchPrediction?.[userId]) {
+      hunchPrediction = { ...tableData.hunchPrediction };
+      hunchExact = { ...tableData.hunchExact };
+      hunchRolls = { ...tableData.hunchRolls };
+
+      delete hunchPrediction[userId];
+      delete hunchExact[userId];
+      delete hunchRolls[userId];
+    }
+
+    let updatedTable = {
+      ...tableData,
+      rolls,
+      totals,
+      busts,
+      cleaningFees,
+      visibleTotals,
+      goadBackfire,
+      dared, // Include updated dared
+      hunchLocked,
+      hunchLockedDie,
+      hunchPrediction,
+      hunchExact,
+      hunchRolls,
+      // V3.4: Track pending bust for cheat decision
+      pendingBust: pendingBust ? userId : null,
+    };
+
+    if (!isOpeningPhase) {
+      updatedTable.hasActed = { ...updatedTable.hasActed, [userId]: true };
+    }
+
+    await updateState((current) => ({
+      tableData: updatedTable,
+      pot: current.pot + rollCost,
+    }));
+
+    if (isOpeningPhase) {
+      const myRolls = rolls[userId] ?? [];
+      if (myRolls.length >= OPENING_ROLLS_REQUIRED || isBust) {
+        if (allPlayersCompletedOpening(state, updatedTable)) {
+          updatedTable.bettingOrder = calculateBettingOrder(state, updatedTable);
+          updatedTable.phase = "betting";
+          updatedTable.currentPlayer = updatedTable.bettingOrder.find(id => !updatedTable.busts[id]) ?? null;
+
+          const orderNames = updatedTable.bettingOrder
+            .filter(id => !updatedTable.busts[id])
+            .map(id => {
+              const name = game.users.get(id)?.name ?? "Unknown";
+              const vt = updatedTable.visibleTotals[id] ?? 0;
+              return `${name} (${vt})`;
+            })
+            .join(" → ");
+
+          // V5.8: Log instead of Chat Card
+          await addLogToAll({
+            title: "Betting Round",
+            message: `Opening complete!<br><strong>Turn order:</strong> ${orderNames}<br><em>d20: FREE | d10: 1/2 Ante | d6/d8: Ante | d4: 2x Ante</em>`,
+            icon: "fa-solid fa-hand-holding-dollar",
+            type: "phase"
+          });
+        } else {
+          updatedTable.currentPlayer = getNextOpeningPlayer(state, updatedTable);
+        }
+      }
+      const rolling = { ...updatedTable.rolling };
+      delete rolling[userId];
+      updatedTable.rolling = rolling;
+
+      return updateState({ tableData: updatedTable });
+    } else {
+      updatedTable.pendingAction = "cheat_decision";
+
+      const rolling = { ...updatedTable.rolling };
+      delete rolling[userId];
+      updatedTable.rolling = rolling;
+
+      return updateState({ tableData: updatedTable });
+    }
   }
 
-  const updatedTable = { ...tableData, pendingAction: null };
+  export async function finishTurn(userId) {
+    const state = getState();
+    const tableData = state.tableData ?? emptyTableData();
 
-  // V3.4: Resolve pending bust after cheat decision
-  if (tableData.pendingBust === userId) {
-    const currentTotal = tableData.totals[userId] ?? 0;
-    if (currentTotal > 21) {
-      // Still busted after cheat decision
-      updatedTable.busts = { ...updatedTable.busts, [userId]: true };
+    if (tableData.currentPlayer !== userId) {
+      // maybe admin override
+    }
+
+    // V4.1: Reveal hidden betting rolls and log them (moved from submitRoll)
+    const ante = game.settings.get(MODULE_ID, "fixedAnte");
+    const rolls = tableData.rolls[userId] ?? [];
+    const lastRollIndex = rolls.length - 1;
+    const lastRoll = rolls[lastRollIndex];
+
+    if (lastRoll && tableData.phase === "betting" && !lastRoll.public && !lastRoll.blind) {
+      // It was hidden for cheat opportunity - time to reveal
+      const updatedRolls = [...rolls];
+      updatedRolls[lastRollIndex] = { ...lastRoll, public: true };
+
+      const updatedVisibleTotals = { ...tableData.visibleTotals };
+      updatedVisibleTotals[userId] = (updatedVisibleTotals[userId] ?? 0) + lastRoll.result;
+
+      tableData.rolls = { ...tableData.rolls, [userId]: updatedRolls };
+      tableData.visibleTotals = updatedVisibleTotals;
+
+      // V5.8: We don't need to log this revealing action if we already logged the roll privately or we are about to log result
+      // Actually the logic was to log it NOW that it's public.
+      // The player saw "You rolled X" privately (maybe?).
+      // Let's log the "Finalized Roll" to everyone.
+
+      const user = game.users.get(userId);
       const userName = getActorName(userId);
 
-      // V5.8: Log Bust
+      // Check cost again for log consistency
+      let rollCostMsg = "";
+      // Simplified cost check
+      const cost = getDieCost(lastRoll.die, ante);
+      if (cost === 0) rollCostMsg = " (FREE)";
+      else rollCostMsg = ` (${cost}gp)`;
+
+      let specialMsg = "";
+      if (lastRoll.die === 20 && lastRoll.result === 21) specialMsg = " **NATURAL 20 = INSTANT 21!**";
+      else if (lastRoll.die !== 20 && lastRoll.result === 1) specialMsg = " *Spilled drink! 1gp cleaning fee.*";
+
+      // V5.8: Add Log to All
       await addLogToAll({
-        title: "BUST!",
-        message: `${userName} busted with ${currentTotal}!`,
-        icon: "fa-solid fa-skull",
-        type: "bust",
-        cssClass: "failure"
+        title: `${userName} rolled d${lastRoll.die}`,
+        message: `Result: <strong>${lastRoll.result}</strong>${rollCostMsg}${specialMsg}`,
+        icon: "fa-solid fa-dice",
+        type: "roll"
       });
 
       await addHistoryEntry({
-        type: "bust",
+        type: "roll",
         player: userName,
-        total: currentTotal,
-        message: `${userName} BUSTED with ${currentTotal}!`,
+        die: `d${lastRoll.die}`,
+        result: lastRoll.result,
+        total: tableData.totals[userId],
+        message: `${userName} rolled a d${lastRoll.die}${rollCostMsg}...${specialMsg}`,
       });
-      // Trigger fanfare
-      await tavernSocket.executeForEveryone("showBustFanfare", userId);
+
+      // V5.9: Show Public Roll (DSN) for the reveal
+      // This runs on the client effectively (triggered by state update usually, but here likely GM/Actor owner)
+      // If triggered by GM, DSN sync handles it.
+      try {
+        await showPublicRollFromData(Number(lastRoll.die), Number(lastRoll.result), userId);
+      } catch (e) { console.warn("Tavern | DSN Error:", e); }
     }
-    // Clear the pending bust flag
-    updatedTable.pendingBust = null;
+
+    const updatedTable = { ...tableData, pendingAction: null };
+
+    // V3.4: Resolve pending bust after cheat decision
+    if (tableData.pendingBust === userId) {
+      const currentTotal = tableData.totals[userId] ?? 0;
+      if (currentTotal > 21) {
+        // Still busted after cheat decision
+        updatedTable.busts = { ...updatedTable.busts, [userId]: true };
+        const userName = getActorName(userId);
+
+        // V5.8: Log Bust
+        await addLogToAll({
+          title: "BUST!",
+          message: `${userName} busted with ${currentTotal}!`,
+          icon: "fa-solid fa-skull",
+          type: "bust",
+          cssClass: "failure"
+        });
+
+        await addHistoryEntry({
+          type: "bust",
+          player: userName,
+          total: currentTotal,
+          message: `${userName} BUSTED with ${currentTotal}!`,
+        });
+        // Trigger fanfare
+        await tavernSocket.executeForEveryone("showBustFanfare", userId);
+      }
+      // Clear the pending bust flag
+      updatedTable.pendingBust = null;
+    }
+
+    const isBust = updatedTable.busts?.[userId];
+
+    if (isBust) {
+      updatedTable.currentPlayer = getNextActivePlayer(state, updatedTable);
+    } else {
+      updatedTable.currentPlayer = getNextActivePlayer(state, updatedTable);
+    }
+
+    // V3: Reset skill usage flag for the new player
+    updatedTable.skillUsedThisTurn = false;
+
+    const next = await updateState({ tableData: updatedTable });
+
+    if (allPlayersFinished(state, updatedTable)) {
+      return revealDice();
+    }
+
+    return next;
   }
 
-  const isBust = updatedTable.busts?.[userId];
+  export async function hold(userId) {
+    const state = getState();
+    if (state.status !== "PLAYING") {
+      ui.notifications.warn("No active round.");
+      return state;
+    }
 
-  if (isBust) {
+    const tableData = state.tableData ?? emptyTableData();
+
+    if (tableData.currentPlayer !== userId) {
+      await notifyUser(userId, "It's not your turn.");
+      return state;
+    }
+
+    if (tableData.holds[userId] || tableData.busts[userId] || tableData.folded?.[userId]) {
+      ui.notifications.warn("You've already finished this round.");
+      return state;
+    }
+
+    if (tableData.phase === "opening" || tableData.phase === "cut") {
+      await notifyUser(userId, "Cannot hold during opening phase.");
+      return state;
+    }
+
+    if (tableData.goadBackfire?.[userId]?.mustRoll) {
+      await notifyUser(userId, "You were goaded! You must roll instead.");
+      return state;
+    }
+
+    if (tableData.hunchLocked?.[userId]) {
+      await notifyUser(userId, "Your Foresight locked you into rolling!");
+      return state;
+    }
+
+    // V4: Dared check - cannot hold if dared
+    if (tableData.dared?.[userId]) {
+      await notifyUser(userId, "You are Dared! You forced to roll a d8 (Free) or Fold.");
+      return state;
+    }
+
+    // V3.5: Bump Retaliation Lock
+    if (tableData.pendingBumpRetaliation?.attackerId === userId) {
+      await notifyUser(userId, "You were caught bumping! Wait for retaliation.");
+      return state;
+    }
+
+    const holds = { ...tableData.holds, [userId]: true };
+    const updatedTable = { ...tableData, holds };
     updatedTable.currentPlayer = getNextActivePlayer(state, updatedTable);
-  } else {
-    updatedTable.currentPlayer = getNextActivePlayer(state, updatedTable);
+    updatedTable.skillUsedThisTurn = false;
+
+    const userName = getActorName(userId);
+
+    // V5.8: Log Hold
+    await addLogToAll({
+      title: "Hold",
+      message: `${userName} holds.`, // Don't show total yet? Or visible total?
+      icon: "fa-solid fa-hand",
+      type: "hold"
+    });
+
+    await addHistoryEntry({
+      type: "hold",
+      player: userName,
+      total: tableData.totals[userId],
+      message: `${userName} holds at ${tableData.totals[userId]}.`,
+    });
+
+    const next = await updateState({ tableData: updatedTable });
+
+    if (allPlayersFinished(state, updatedTable)) {
+      return revealDice();
+    }
+
+    return next;
   }
 
-  // V3: Reset skill usage flag for the new player
-  updatedTable.skillUsedThisTurn = false;
+  export async function fold(userId) {
+    const state = getState();
+    if (state.status !== "PLAYING") {
+      ui.notifications.warn("No active round.");
+      return state;
+    }
 
-  const next = await updateState({ tableData: updatedTable });
+    const tableData = state.tableData ?? emptyTableData();
+    const ante = game.settings.get(MODULE_ID, "fixedAnte");
 
-  if (allPlayersFinished(state, updatedTable)) {
-    return revealDice();
+    if (tableData.currentPlayer !== userId) {
+      await notifyUser(userId, "It's not your turn.");
+      return state;
+    }
+
+    if (tableData.phase === "opening" || tableData.phase === "cut") {
+      await notifyUser(userId, "Cannot fold during opening phase.");
+      return state;
+    }
+
+    if (tableData.folded?.[userId] || tableData.busts?.[userId]) {
+      ui.notifications.warn("You've already finished this round.");
+      return state;
+    }
+
+    const hasActed = tableData.hasActed?.[userId] ?? false;
+    const refund = hasActed ? 0 : Math.floor(ante / 2);
+
+    const actor = getActorForUser(userId);
+    const userName = getActorName(userId);
+
+    if (refund > 0) {
+      await payOutWinners({ [userId]: refund });
+      tableData.foldedEarly = { ...tableData.foldedEarly, [userId]: true };
+    }
+
+    tableData.folded = { ...tableData.folded, [userId]: true };
+    tableData.currentPlayer = getNextActivePlayer(state, tableData);
+    tableData.skillUsedThisTurn = false;
+
+    // V5.8: Log Fold
+    await addLogToAll({
+      title: "Fold",
+      message: `${userName} folds.${refund > 0 ? ` (Refund: ${refund}gp)` : ""}`,
+      icon: "fa-solid fa-door-open",
+      type: "fold"
+    });
+
+    await addHistoryEntry({
+      type: "fold",
+      player: userName,
+      refund,
+      message: refund > 0
+        ? `${userName} folded early and received ${refund}gp back.`
+        : `${userName} folded (no refund).`,
+    });
+
+    const next = await updateState({ tableData });
+
+    if (allPlayersFinished(state, tableData)) {
+      return revealDice();
+    }
+
+    return next;
   }
-
-  return next;
-}
-
-export async function hold(userId) {
-  const state = getState();
-  if (state.status !== "PLAYING") {
-    ui.notifications.warn("No active round.");
-    return state;
-  }
-
-  const tableData = state.tableData ?? emptyTableData();
-
-  if (tableData.currentPlayer !== userId) {
-    await notifyUser(userId, "It's not your turn.");
-    return state;
-  }
-
-  if (tableData.holds[userId] || tableData.busts[userId] || tableData.folded?.[userId]) {
-    ui.notifications.warn("You've already finished this round.");
-    return state;
-  }
-
-  if (tableData.phase === "opening" || tableData.phase === "cut") {
-    await notifyUser(userId, "Cannot hold during opening phase.");
-    return state;
-  }
-
-  if (tableData.goadBackfire?.[userId]?.mustRoll) {
-    await notifyUser(userId, "You were goaded! You must roll instead.");
-    return state;
-  }
-
-  if (tableData.hunchLocked?.[userId]) {
-    await notifyUser(userId, "Your Foresight locked you into rolling!");
-    return state;
-  }
-
-  // V4: Dared check - cannot hold if dared
-  if (tableData.dared?.[userId]) {
-    await notifyUser(userId, "You are Dared! You forced to roll a d8 (Free) or Fold.");
-    return state;
-  }
-
-  // V3.5: Bump Retaliation Lock
-  if (tableData.pendingBumpRetaliation?.attackerId === userId) {
-    await notifyUser(userId, "You were caught bumping! Wait for retaliation.");
-    return state;
-  }
-
-  const holds = { ...tableData.holds, [userId]: true };
-  const updatedTable = { ...tableData, holds };
-  updatedTable.currentPlayer = getNextActivePlayer(state, updatedTable);
-  updatedTable.skillUsedThisTurn = false;
-
-  const userName = getActorName(userId);
-
-  // V5.8: Log Hold
-  await addLogToAll({
-    title: "Hold",
-    message: `${userName} holds.`, // Don't show total yet? Or visible total?
-    icon: "fa-solid fa-hand",
-    type: "hold"
-  });
-
-  await addHistoryEntry({
-    type: "hold",
-    player: userName,
-    total: tableData.totals[userId],
-    message: `${userName} holds at ${tableData.totals[userId]}.`,
-  });
-
-  const next = await updateState({ tableData: updatedTable });
-
-  if (allPlayersFinished(state, updatedTable)) {
-    return revealDice();
-  }
-
-  return next;
-}
-
-export async function fold(userId) {
-  const state = getState();
-  if (state.status !== "PLAYING") {
-    ui.notifications.warn("No active round.");
-    return state;
-  }
-
-  const tableData = state.tableData ?? emptyTableData();
-  const ante = game.settings.get(MODULE_ID, "fixedAnte");
-
-  if (tableData.currentPlayer !== userId) {
-    await notifyUser(userId, "It's not your turn.");
-    return state;
-  }
-
-  if (tableData.phase === "opening" || tableData.phase === "cut") {
-    await notifyUser(userId, "Cannot fold during opening phase.");
-    return state;
-  }
-
-  if (tableData.folded?.[userId] || tableData.busts?.[userId]) {
-    ui.notifications.warn("You've already finished this round.");
-    return state;
-  }
-
-  const hasActed = tableData.hasActed?.[userId] ?? false;
-  const refund = hasActed ? 0 : Math.floor(ante / 2);
-
-  const actor = getActorForUser(userId);
-  const userName = getActorName(userId);
-
-  if (refund > 0) {
-    await payOutWinners({ [userId]: refund });
-    tableData.foldedEarly = { ...tableData.foldedEarly, [userId]: true };
-  }
-
-  tableData.folded = { ...tableData.folded, [userId]: true };
-  tableData.currentPlayer = getNextActivePlayer(state, tableData);
-  tableData.skillUsedThisTurn = false;
-
-  // V5.8: Log Fold
-  await addLogToAll({
-    title: "Fold",
-    message: `${userName} folds.${refund > 0 ? ` (Refund: ${refund}gp)` : ""}`,
-    icon: "fa-solid fa-door-open",
-    type: "fold"
-  });
-
-  await addHistoryEntry({
-    type: "fold",
-    player: userName,
-    refund,
-    message: refund > 0
-      ? `${userName} folded early and received ${refund}gp back.`
-      : `${userName} folded (no refund).`,
-  });
-
-  const next = await updateState({ tableData });
-
-  if (allPlayersFinished(state, tableData)) {
-    return revealDice();
-  }
-
-  return next;
-}
