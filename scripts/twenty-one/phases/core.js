@@ -61,6 +61,8 @@ export async function startRound(startingHeat = 10) {
     tableData.phase = "betting";
     tableData.bettingOrder = [...state.turnOrder];
     tableData.currentPlayer = tableData.bettingOrder[0] ?? null;
+    tableData.sideBetRound = 1;
+    tableData.sideBetRoundStart = tableData.currentPlayer;
     tableData.theCutPlayer = null;
     tableData.theCutUsed = false;
 
@@ -145,6 +147,8 @@ export async function startRound(startingHeat = 10) {
   } else {
     tableData.phase = "betting";
     tableData.currentPlayer = tableData.bettingOrder.find(id => !tableData.busts[id]) ?? null;
+    tableData.sideBetRound = 1;
+    tableData.sideBetRoundStart = tableData.currentPlayer;
   }
 
   const next = await updateState({
@@ -185,6 +189,11 @@ export async function startRound(startingHeat = 10) {
 export async function revealDice() {
   const state = getState();
   const tableData = state.tableData ?? emptyTableData();
+  const gameMode = tableData.gameMode ?? state.tableData?.gameMode ?? "standard";
+
+  if (gameMode === "goblin") {
+    return finishRound();
+  }
 
   // Mark as revealing
   await updateState({ status: "REVEALING" });

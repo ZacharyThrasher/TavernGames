@@ -137,6 +137,7 @@ If players tie for the highest score:
 ---
 
 ## 5. Side Bets
-- **Timing**: Anytime during betting phase.
-- **Payout**: **1:1** (Pays 2× Stake).
-- **Condition**: If Champion wins, you get paid. If Champion loses, house keeps stake.
+- **Timing**: Locked after two full betting rounds (two full loops of turn order).
+- **Pool**: All side bets go into a shared pool.
+- **Payout**: Winners split the pool **proportionally** to their bet size.
+- **Condition**: If your champion wins, you are paid from the pool. If not, you lose your stake.

@@ -1,5 +1,13 @@
 # Changelog
 
+## [5.16.0] - 2026-01-25
+### Refactor + Stability
+- **Rulesets**: Split Standard and Goblin roll logic into dedicated ruleset modules for maintainability.
+- **Goblin**: Full-set reset tracking fixed to prevent infinite rolls after reset.
+- **Side Bets**: Two-round betting window + pooled payouts with winner flair.
+- **State**: Stronger tableData normalization + GM-only state writes to prevent permissions errors.
+- **Diagnostics**: Added a `runDiagnostics` helper for quick integrity checks.
+
 ## [5.15.2] - 2026-01-25
 ### Hotfix: Duplicate Dice Visuals
 - **Fix**: Prevented double dice rolls in Goblin mode by using a single public DSN call.

@@ -83,6 +83,8 @@ export async function useCut(userId, reroll = false) {
   tableData.phase = "betting";
   tableData.theCutUsed = true;
   tableData.currentPlayer = tableData.bettingOrder.find(id => !tableData.busts[id]) ?? null;
+  tableData.sideBetRound = 1;
+  tableData.sideBetRoundStart = tableData.currentPlayer;
   // V3.5.2: Reset skill usage for first player after cut phase
   tableData.skillUsedThisTurn = false;
 
@@ -275,6 +277,10 @@ export async function accuse(payload, userId) {
   const state = getState();
   if (state.status === "LOBBY" || state.status === "PAYOUT") {
     ui.notifications.warn("Accusations can only be made during an active round.");
+    return state;
+  }
+  if (state.tableData?.gameMode === "goblin") {
+    ui.notifications.warn("Accusations are disabled in Goblin Rules.");
     return state;
   }
 

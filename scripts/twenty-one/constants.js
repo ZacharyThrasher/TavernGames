@@ -120,6 +120,9 @@ export function emptyTableData() {
         blindNextRoll: {},
         // V3: Side bets
         sideBets: {},
+        sideBetPool: 0,
+        sideBetRound: 1,
+        sideBetRoundStart: null,
         // V3: Hit tracking for Duel
         hitCount: {},
         // V3: The Cut
@@ -135,6 +138,7 @@ export function emptyTableData() {
         usedSkills: {}, // { [userId]: { bump: true, goad: true, hunch: true, profile: true } }
         // V5.14: Goblin Mode
         usedDice: {}, // { [userId]: [4, 6, 8] } - tracks used dice types
+        goblinSetProgress: {}, // { [userId]: [4, 6, 8, 10, 20] } - full-set tracking
         gameMode: "standard",
         // V5.14: House Rules
         houseRules: { startingHeat: 10 },

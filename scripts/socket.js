@@ -1,6 +1,6 @@
 import { MODULE_ID } from "./state.js";
 import { handleJoinTable, handleLeaveTable, handleStartRound, handlePlayerAction, handleResetTable, handleMarkLogsAsSeen } from "./tavern-actions.js";
-import { showRollToUser } from "./dice.js";
+import { showRollToUser, showPublicRollFromData } from "./dice.js";
 import { showVictoryFanfare, showBustFanfare, showCoinFlip, playBumpEffect, showFloatingText, showSkillCutIn, showSkillResult, showPrivateFeedback } from "./ui/fx.js";
 
 export let tavernSocket;
@@ -21,6 +21,7 @@ export function setupSockets() {
 
   // Register client-side function for showing dice rolls
   tavernSocket.register("showRoll", showRollToUser);
+  tavernSocket.register("showPublicRollFromData", ({ die, result, userId }) => showPublicRollFromData(Number(die), Number(result), userId));
 
   // Register client-side function for showing notifications to specific users
   tavernSocket.register("showNotification", showNotification);

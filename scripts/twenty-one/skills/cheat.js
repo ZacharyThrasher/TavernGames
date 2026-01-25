@@ -297,7 +297,5 @@ export async function cheat(payload, userId) {
         pendingBust
     };
 
-    console.log(`Tavern Twenty-One | ${userName} cheated: d${targetDie.die} ${oldValue} → ${newValue}, ${skillName}: ${rollTotal} (fumbled: ${fumbled})`);
-
     return updateState({ tableData: updatedTable, pot: newPot });
 }

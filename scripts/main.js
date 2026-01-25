@@ -3,6 +3,7 @@ import { LogsWindow } from "./app/dialogs/logs-window.js"; // V5.11.5
 import { CinematicOverlay } from "./ui/cinematic-overlay.js";
 import { MODULE_ID, STATE_MACRO_NAME, preloadTemplates, registerSettings, ensureStateMacro } from "./state.js";
 import { setupSockets } from "./socket.js";
+import { runDiagnostics } from "./diagnostics.js";
 import {
   showVictoryFanfare,
   showBustFanfare,
@@ -90,7 +91,8 @@ Hooks.once("ready", async () => {
     toggleLogs: () => { // Helper for button
       if (logs.rendered) logs.close();
       else logs.render(true);
-    }
+    },
+    runDiagnostics
   };
 
   // V13 Premium Pattern: Expose module API for interoperability
@@ -103,6 +105,7 @@ Hooks.once("ready", async () => {
       showFloatingText,
       // Utility access for other modules
       isPerformanceMode,
+      runDiagnostics,
     };
   }
 

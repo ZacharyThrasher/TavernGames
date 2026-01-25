@@ -90,6 +90,7 @@
       "Instruction": "Pick your Champion:",
       "Amount": "Bet Amount",
       "Win": "If they win",
+      "WinEffect": "Winners split the pool proportionally",
       "Lose": "If they lose",
       "LoseEffect": "You lose your bet"
     },

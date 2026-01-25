@@ -304,16 +304,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
     // V4.8.20: Improved Accuse visibility - show during all active phases if you have targets
     const isRoundPhase = ["PLAYING", "INSPECTION", "REVEALING", "DUEL"].includes(state.status);
-    const canAccuse = isInGame && !accusedThisRound && !isBusted && accuseTargets.length > 0 && isRoundPhase && !isHouse;
-
-    // DEBUG: ALWAYS log Accuse state status to find why it's hidden
-    if (isInGame) {
-      console.log("Tavern | Accuse Status:", {
-        visible: canAccuse,
-        checks: { isInGame, notAccused: !accusedThisRound, notBusted: !isBusted, hasTargets: accuseTargets.length > 0, isRoundPhase, notHouse: !isHouse },
-        state: { status: state.status, busted: tableData.busts?.[userId], accused: tableData.accusedThisRound?.[userId] }
-      });
-    }
+    const canAccuse = !isGoblinMode && isInGame && !accusedThisRound && !isBusted && accuseTargets.length > 0 && isRoundPhase && !isHouse;
 
     // Hunch Context
     const isHolding = tableData.holds?.[userId] ?? false;
@@ -585,6 +576,11 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const modeSelect = this.element.querySelector('#game-mode-select');
     if (modeSelect) {
       modeSelect.addEventListener('change', async (e) => {
+        if (!game.user.isGM) {
+          ui.notifications.warn("Only the GM can change game mode.");
+          e.target.value = game.settings.get(MODULE_ID, "gameMode");
+          return;
+        }
         const newMode = e.target.value;
         const state = getState();
         const currentTable = state.tableData ?? {};
@@ -602,6 +598,12 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const heatInput = this.element.querySelector('#starting-heat');
     if (heatInput) {
       heatInput.addEventListener('change', async (e) => {
+        if (!game.user.isGM) {
+          ui.notifications.warn("Only the GM can change starting heat.");
+          const state = getState();
+          e.target.value = state.tableData?.houseRules?.startingHeat ?? 10;
+          return;
+        }
         const newHeat = parseInt(e.target.value) || 10;
         if (newHeat >= 5 && newHeat <= 30) {
           // Direct State Update as GM
@@ -633,18 +635,6 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   static onToggleLogs() {
-    // Mark logs as seen when opening
-    // We do this optimistically here.
-    // If we want to do it ONLY when it wasn't open, we need to check window state.
-    // But markLogsAsSeen is idempotent (except for the update).
-    // Let's import markLogsAsSeen.
-    /*
-      Since this is static and modules might be loaded differently, 
-      we should probably access it via the module api if possible, 
-      but for now we'll assume imports.
-      Wait, we need to import `markLogsAsSeen` at the top.
-    */
-    // For now, toggle behavior:
     game.tavernDiceMaster?.toggleLogs();
 
     // V5.13: Mark as seen
@@ -807,12 +797,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       const ante = game.settings.get(MODULE_ID, "fixedAnte");
       const isBettingPhase = state.tableData?.phase === "betting";
       const isGoblinMode = state.tableData?.gameMode === "goblin";
-      const isHouse = isActingAsHouse(game.user.id, state); // Helpers imported? No, need to verify imports or use static
-      // Actually tavern-app.js imports these.
-
-      // V4 NPC Wallet Fix: Use centralized wallet helper
-      // We need to import getPlayerGold or duplicate logic because imports might be tricky in this class scope if not top-level
-      // Assuming getPlayerGold is available or we check isPlayingAsNpc
+      const isHouse = isActingAsHouse(game.user.id, state);
 
       const isPlayingAsNpc = state.players?.[game.user.id]?.playingAsNpc;
       const isNpc = isPlayingAsNpc;
@@ -836,8 +821,6 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
             title: "Insufficient Gold",
             content: `<p>You don't have enough gold (${cost}gp).</p><p><strong>Put it on the Tab?</strong></p>`
           });
-          if (!confirm) return; // Wait, handle unlock!
-          // No, I need to unlock here manually
           if (!confirm) {
             TavernApp.uiLocked = false; // Early unlock if cancelled
             if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
@@ -865,8 +848,6 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
     if (canCheat) {
       const heatDC = updatedState.tableData?.heatDC ?? 10;
-
-        console.log("Tavern | Triggering Cheat Dialog", { lastDie, heatDC, actor: game.user.character });
 
         try {
           const result = await CheatDialog.show({

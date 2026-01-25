@@ -1,5 +1,6 @@
 import { MODULE_ID } from "../state.js";
 import { CinematicOverlay } from "./cinematic-overlay.js";
+import { ParticleFactory } from "./particle-fx.js";
 
 /* ============================================
    V13 Best Practices: Utility Functions
@@ -89,10 +90,7 @@ export const shake = (element, className, duration) => {
 export function showVictoryFanfare(winnerId, amount) {
   try {
     // V13: Skip heavy effects in performance mode
-    if (isPerformanceMode()) {
-      console.log("Tavern Twenty-One | Skipping victory fanfare (performance mode)");
-      return;
-    }
+    if (isPerformanceMode()) return;
 
     const winnerName = game.users.get(winnerId)?.name ?? "Winner";
 
@@ -129,10 +127,7 @@ export function showVictoryFanfare(winnerId, amount) {
  */
 export function showBustFanfare(userId) {
   try {
-    if (isPerformanceMode()) {
-      console.log("Tavern Twenty-One | Skipping bust fanfare (performance mode)");
-      return;
-    }
+    if (isPerformanceMode()) return;
 
     const userName = game.users.get(userId)?.name ?? "Player";
 
@@ -149,6 +144,45 @@ export function showBustFanfare(userId) {
 
   } catch (error) {
     console.error("Tavern Twenty-One | Bust fanfare error:", error);
+  }
+}
+
+/**
+ * Goblin Coin Flip Effect (No audio)
+ * @param {string} userId
+ * @param {number} result - 1 (tails) or 2 (heads)
+ */
+export function showCoinFlip(userId, result) {
+  try {
+    if (isPerformanceMode()) return;
+
+    const appWindow = document.querySelector(".tavern-dice-master.application");
+    if (!appWindow) return;
+
+    const isHeads = result === 2;
+    const banner = createElement("div", {
+      className: `coin-flip-banner ${isHeads ? "heads" : "tails"}`,
+      innerHTML: isHeads ? "COIN FLIP: HEADS x2" : "COIN FLIP: TAILS — BUST"
+    });
+
+    appWindow.appendChild(banner);
+    requestAnimationFrame(() => banner.classList.add("show"));
+    setTimeout(() => fadeOutAndRemove(banner, 500), 1200);
+
+    const particleLayer = createElement("div", { className: "cinematic-particles" });
+    appWindow.appendChild(particleLayer);
+    ParticleFactory.spawnCoinShower(particleLayer, isHeads ? 40 : 20);
+    setTimeout(() => particleLayer.remove(), 2500);
+
+    // Add a little tension: light shake on tails, celebratory shake on heads
+    if (isHeads) {
+      shake(appWindow, "tavern-shake-victory", 450);
+    } else {
+      shake(appWindow, "tavern-shake", 350);
+    }
+
+  } catch (error) {
+    console.error("Tavern Twenty-One | Coin flip effect error:", error);
   }
 }
 

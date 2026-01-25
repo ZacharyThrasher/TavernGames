@@ -81,8 +81,6 @@ export class CinematicOverlay extends HandlebarsApplicationMixin(ApplicationV2) 
         const actorInfo = resolveActorInfo(options.userId);
         const targetInfo = options.targetId ? resolveActorInfo(options.targetId) : null;
 
-        console.log(`Tavern | Cinematic Show: ${options.type}`, { actorInfo, targetInfo });
-
         // 3. Instantiate & Render
         const overlay = new CinematicOverlay({
             window: { title: "Cinematic" }

@@ -174,14 +174,73 @@ export async function ensureStateMacro() {
 /**
  * V4: Get current game state from World Settings
  */
+function isPlainObject(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function coerceObject(value) {
+  return isPlainObject(value) ? value : {};
+}
+
+export function normalizeTableData(tableData) {
+  const base = emptyTableData();
+  const incoming = isPlainObject(tableData) ? tableData : {};
+  const normalized = { ...base, ...incoming };
+
+  const mapKeys = [
+    "totals",
+    "visibleTotals",
+    "holds",
+    "busts",
+    "rolls",
+    "cheaters",
+    "caught",
+    "disqualified",
+    "goadedThisRound",
+    "goadBackfire",
+    "bumpedThisRound",
+    "cleaningFees",
+    "profiledBy",
+    "drinkCount",
+    "sloppy",
+    "playerHeat",
+    "folded",
+    "foldedEarly",
+    "hasActed",
+    "hunchPrediction",
+    "hunchLocked",
+    "hunchLockedDie",
+    "hunchExact",
+    "blindNextRoll",
+    "sideBets",
+    "hitCount",
+    "dared",
+    "blindDice",
+    "accusedThisRound",
+    "usedSkills",
+    "usedDice",
+    "goblinSetProgress"
+  ];
+
+  for (const key of mapKeys) {
+    normalized[key] = coerceObject(normalized[key]);
+  }
+
+  normalized.houseRules = coerceObject(normalized.houseRules);
+  if (normalized.gameMode !== "standard" && normalized.gameMode !== "goblin") {
+    normalized.gameMode = "standard";
+  }
+
+  return normalized;
+}
+
 export function getState() {
   const state = game.settings.get(MODULE_ID, "gameState");
   if (!state || Object.keys(state).length === 0) {
     return defaultState();
   }
   // Ensure tableData has all expected fields
-  const tableData = state.tableData ?? {};
-  return { ...state, tableData: { ...emptyTableData(), ...tableData } };
+  return { ...state, tableData: normalizeTableData(state.tableData) };
 }
 
 /**
@@ -191,6 +250,10 @@ export async function updateState(patchOrFn) {
   // Use a transaction-like pattern by fetching fresh state explicitly
   // Note: Foundry settings are not truly transactional, but this helps with async race conditions
   const current = getState();
+  if (!game.user.isGM) {
+    console.warn("Tavern Twenty-One | updateState called by non-GM user. Skipping update.");
+    return current;
+  }
 
   // Resolve patch if it's a function
   const patch = typeof patchOrFn === 'function' ? patchOrFn(current) : patchOrFn;
@@ -221,7 +284,7 @@ export async function updateState(patchOrFn) {
       : current.privateLogs,
   };
 
-  console.log("Tavern Twenty-One | Updating state:", { current, patch, next });
+  next.tableData = normalizeTableData(next.tableData);
 
   await game.settings.set(MODULE_ID, "gameState", next);
   return next;
