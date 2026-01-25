@@ -1,5 +1,10 @@
 # Changelog
 
+## [5.17.1] - 2026-01-25
+### UI: Skill Result Banners
+- **Skills**: Private, stylized result banners for Foresight, Profile, Goad, and Bump.
+- **Cheat**: Added private success/failure banner for cheating results.
+
 ## [5.17.0] - 2026-01-25
 ### UI Polish: Flair Pass
 - **Turn Halo**: Current player seat + avatar glow with pulse.

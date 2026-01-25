@@ -174,6 +174,17 @@ export async function profile(payload, userId) {
             cssClass: "success"
         });
 
+        try {
+            await tavernSocket.executeAsUser("showSkillBanner", userId, {
+                title: "Profile - Nat 20",
+                message: targetCheated
+                    ? `Cheater: YES (die ${targetCheatDice.join(", ")})`
+                    : "Cheater: NO",
+                tone: "success",
+                icon: "fa-solid fa-user-secret"
+            });
+        } catch (e) { }
+
         // Public Log
         await addLogToAll({
             title: "Perfect Profile",
@@ -194,6 +205,15 @@ export async function profile(payload, userId) {
             cssClass: "success" // Good for target
         });
 
+        try {
+            await tavernSocket.executeAsUser("showSkillBanner", targetId, {
+                title: "Counter-Profile",
+                message: `Hole: ${myHoleValue} | Cheated: ${myCheated ? "YES" : "NO"}`,
+                tone: "success",
+                icon: "fa-solid fa-eye"
+            });
+        } catch (e) { }
+
         // Log failure to self
         await addPrivateLog(userId, {
             title: "Profile: BACKFIRE",
@@ -202,6 +222,15 @@ export async function profile(payload, userId) {
             type: "profile",
             cssClass: "failure"
         });
+
+        try {
+            await tavernSocket.executeAsUser("showSkillBanner", userId, {
+                title: "Profile Backfire",
+                message: `${targetName} read you.`,
+                tone: "failure",
+                icon: "fa-solid fa-user-injured"
+            });
+        } catch (e) { }
 
         // Public Log
         await addLogToAll({
@@ -223,6 +252,15 @@ export async function profile(payload, userId) {
             cssClass: "success"
         });
 
+        try {
+            await tavernSocket.executeAsUser("showSkillBanner", userId, {
+                title: "Profile",
+                message: `Cheater: ${targetCheated ? "YES" : "NO"}`,
+                tone: "success",
+                icon: "fa-solid fa-user-secret"
+            });
+        } catch (e) { }
+
         // Public Log
         await addLogToAll({
             title: "Profile Success",
@@ -242,6 +280,15 @@ export async function profile(payload, userId) {
             type: "profile",
             cssClass: "failure"
         });
+
+        try {
+            await tavernSocket.executeAsUser("showSkillBanner", userId, {
+                title: "Profile Failed",
+                message: `No read on ${targetName}.`,
+                tone: "failure",
+                icon: "fa-solid fa-question"
+            });
+        } catch (e) { }
 
         // Public Log
         await addLogToAll({

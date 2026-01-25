@@ -143,6 +143,15 @@ export async function hunch(userId) {
             cssClass: "success"
         });
 
+        try {
+            await tavernSocket.executeAsUser("showSkillBanner", userId, {
+                title: "Foresight - Nat 20",
+                message: `Exact values: ${Object.entries(predictions).map(([d, v]) => `d${d} ${v}`).join(", ")}`,
+                tone: "success",
+                icon: "fa-solid fa-eye"
+            });
+        } catch (e) { }
+
         // Public Log for Effect
         await addLogToAll({
             title: "Foresight",
@@ -164,6 +173,15 @@ export async function hunch(userId) {
             type: "hunch",
             cssClass: "failure"
         });
+
+        try {
+            await tavernSocket.executeAsUser("showSkillBanner", userId, {
+                title: "Foresight Backfire",
+                message: "Locked into a blind d20.",
+                tone: "failure",
+                icon: "fa-solid fa-eye-slash"
+            });
+        } catch (e) { }
 
         await addLogToAll({
             title: "Foresight Backfire",
@@ -194,6 +212,15 @@ export async function hunch(userId) {
             cssClass: "success"
         });
 
+        try {
+            await tavernSocket.executeAsUser("showSkillBanner", userId, {
+                title: "Foresight",
+                message: `Predictions: ${Object.entries(predictions).map(([d, v]) => `d${d} ${v}`).join(", ")}`,
+                tone: "success",
+                icon: "fa-solid fa-eye"
+            });
+        } catch (e) { }
+
         await addLogToAll({
             title: "Foresight",
             message: `<strong>${userName}</strong> senses the flow of probability.<br><em>They have a hunch...</em>`,
@@ -217,6 +244,15 @@ export async function hunch(userId) {
             type: "hunch",
             cssClass: "failure"
         });
+
+        try {
+            await tavernSocket.executeAsUser("showSkillBanner", userId, {
+                title: "Foresight Failed",
+                message: "Next roll is blind.",
+                tone: "failure",
+                icon: "fa-solid fa-eye-slash"
+            });
+        } catch (e) { }
 
         await addLogToAll({
             title: "Foresight Failed",

@@ -308,6 +308,21 @@ export async function bumpTable(payload, userId) {
                 cssClass: "warning"
             });
 
+            try {
+                await tavernSocket.executeAsUser("showSkillBanner", userId, {
+                    title: "Bump Landed",
+                    message: `You bumped ${targetName}'s die.`,
+                    tone: "success",
+                    icon: "fa-solid fa-hand-fist"
+                });
+                await tavernSocket.executeAsUser("showSkillBanner", targetId, {
+                    title: "You Were Bumped",
+                    message: `Your die was changed.`,
+                    tone: "failure",
+                    icon: "fa-solid fa-hand-fist"
+                });
+            } catch (e) { }
+
             // Target Private Log
             await addPrivateLog(targetId, {
                 title: "You were Bumped!",
@@ -370,6 +385,21 @@ export async function bumpTable(payload, userId) {
             type: "bump",
             cssClass: "failure"
         });
+
+        try {
+            await tavernSocket.executeAsUser("showSkillBanner", userId, {
+                title: "Bump Caught",
+                message: "Your bump was caught.",
+                tone: "failure",
+                icon: "fa-solid fa-hand-fist"
+            });
+            await tavernSocket.executeAsUser("showSkillBanner", targetId, {
+                title: "Retaliation Ready",
+                message: `Choose a die to reroll.`,
+                tone: "info",
+                icon: "fa-solid fa-hand-back-fist"
+            });
+        } catch (e) { }
 
         // Log Retaliation Pending to Target
         await addPrivateLog(targetId, {

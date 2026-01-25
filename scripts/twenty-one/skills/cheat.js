@@ -14,6 +14,7 @@
 import { MODULE_ID, getState, updateState, addHistoryEntry, addLogToAll, addPrivateLog } from "../../state.js"; // V5.8
 import { deductFromActor } from "../../wallet.js"; // V5.9: Use wallet.js for proper NPC support
 import { getActorForUser, notifyUser, getActorName } from "../utils/actors.js"; // V5.9
+import { tavernSocket } from "../../socket.js";
 // import { createChatCard } from "../../ui/chat.js"; // Removed
 import { emptyTableData } from "../constants.js";
 
@@ -187,6 +188,11 @@ export async function cheat(payload, userId) {
             cssClass: success ? "success" : "failure"
         });
     }
+
+    // Private toast-like banner for cheat result (outside logs)
+    try {
+        await tavernSocket.executeAsUser("showCheatResult", userId, success);
+    } catch (e) { }
 
 
     const userName = getActorName(userId);

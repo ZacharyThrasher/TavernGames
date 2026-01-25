@@ -187,6 +187,64 @@ export function showCoinFlip(userId, result) {
 }
 
 /**
+ * Cheat result banner (private)
+ * @param {string} userId
+ * @param {boolean} success
+ */
+export function showCheatResult(success) {
+  try {
+    if (isPerformanceMode()) return;
+
+    const appWindow = document.querySelector(".tavern-dice-master.application");
+    if (!appWindow) return;
+
+    const banner = createElement("div", {
+      className: `cheat-result-banner ${success ? "success" : "failure"}`,
+      innerHTML: success ? "CHEAT SUCCESS" : "CHEAT FAILED"
+    });
+
+    appWindow.appendChild(banner);
+    requestAnimationFrame(() => banner.classList.add("show"));
+    setTimeout(() => fadeOutAndRemove(banner, 500), 1400);
+  } catch (error) {
+    console.error("Tavern Twenty-One | Cheat banner error:", error);
+  }
+}
+
+/**
+ * Skill result banner (private)
+ * @param {string} userId
+ * @param {object} payload - { title, message, tone, icon }
+ */
+export function showSkillBanner(payload = {}) {
+  try {
+    if (isPerformanceMode()) return;
+
+    const appWindow = document.querySelector(".tavern-dice-master.application");
+    if (!appWindow) return;
+
+    const title = payload.title ?? "Skill Result";
+    const message = payload.message ?? "";
+    const tone = payload.tone ?? "info";
+    const icon = payload.icon ? `<i class="${payload.icon}"></i>` : "";
+
+    const banner = createElement("div", {
+      className: `skill-banner ${tone}`,
+      innerHTML: `
+        <div class="skill-banner-title">${icon}${title}</div>
+        <div class="skill-banner-message">${message}</div>
+      `
+    });
+
+    appWindow.appendChild(banner);
+    requestAnimationFrame(() => banner.classList.add("show"));
+    setTimeout(() => fadeOutAndRemove(banner, 500), 1800);
+  } catch (error) {
+    console.error("Tavern Twenty-One | Skill banner error:", error);
+  }
+}
+
+/**
  * Impact ring for skill effects
  * @param {string} userId
  * @param {string} type - "goad" | "bump"

@@ -258,6 +258,21 @@ export async function goad(payload, userId) {
             cssClass: "success"
         });
 
+        try {
+            await tavernSocket.executeAsUser("showSkillBanner", userId, {
+                title: "Goad Success",
+                message: isForceD20 ? `${defenderName} must roll d20.` : `${defenderName} is dared.`,
+                tone: "success",
+                icon: "fa-solid fa-comments"
+            });
+            await tavernSocket.executeAsUser("showSkillBanner", targetId, {
+                title: "You Were Goaded",
+                message: isForceD20 ? "Forced to roll d20." : "Must roll or fold.",
+                tone: "failure",
+                icon: "fa-solid fa-comments"
+            });
+        } catch (e) { }
+
         await addHistoryEntry({
             type: "goad",
             attacker: attackerName,
@@ -323,6 +338,21 @@ export async function goad(payload, userId) {
             type: "goad",
             cssClass: "failure"
         });
+
+        try {
+            await tavernSocket.executeAsUser("showSkillBanner", userId, {
+                title: "Goad Backfire",
+                message: isForceD20 ? "You must roll d20." : "You must roll.",
+                tone: "failure",
+                icon: "fa-solid fa-comments"
+            });
+            await tavernSocket.executeAsUser("showSkillBanner", targetId, {
+                title: "Goad Resisted",
+                message: `You resisted ${attackerName}.`,
+                tone: "success",
+                icon: "fa-solid fa-comments"
+            });
+        } catch (e) { }
 
         await addHistoryEntry({
             type: "goad",
