@@ -1,5 +1,9 @@
 # Changelog
 
+## [5.14.6] - 2026-01-25
+### Hotfix: Cheat Syntax Error
+- **Fix**: Resolved duplicate `rolls` declaration in `cheat.js` causing a startup syntax error.
+
 ## [5.14.5] - 2026-01-25
 ### Hotfix + Refactor: Goblin Rules & Stability
 - **Goblin Rules**: Start at 0, skip opening/cut, coin unlimited, Nat 1 bust, Nat 20 explode, highest total wins.

@@ -200,8 +200,8 @@ export async function cheat(payload, userId) {
     });
 
     // Apply the cheat to state
-    const rolls = tableData.rolls?.[userId] ?? [];
-    const updatedRolls = [...rolls];
+    const playerRolls = tableData.rolls?.[userId] ?? [];
+    const updatedRolls = [...playerRolls];
     updatedRolls[dieIndex] = { ...targetDie, result: newValue };
 
     const rollDelta = newValue - oldValue;
