@@ -41,4 +41,41 @@ export class ParticleFactory {
             }, (duration + delay) * 1000);
         }
     }
+
+    /**
+     * Spawns a short arcane burst (purple motes)
+     * @param {HTMLElement} container
+     * @param {number} amount
+     */
+    static spawnArcaneBurst(container, amount = 30) {
+        if (!container) return;
+
+        const count = Math.min(amount, 60);
+        for (let i = 0; i < count; i++) {
+            const mote = document.createElement("div");
+            mote.classList.add("tavern-arcane");
+
+            const startX = 40 + Math.random() * 20;
+            const startY = 40 + Math.random() * 20;
+            const driftX = (Math.random() - 0.5) * 60;
+            const driftY = (Math.random() - 0.5) * 60;
+            const delay = Math.random() * 0.2;
+            const duration = 0.8 + Math.random() * 0.6;
+            const scale = 0.6 + Math.random() * 0.6;
+
+            mote.style.left = `${startX}%`;
+            mote.style.top = `${startY}%`;
+            mote.style.setProperty("--arcane-x", `${driftX}px`);
+            mote.style.setProperty("--arcane-y", `${driftY}px`);
+            mote.style.animationDelay = `${delay}s`;
+            mote.style.animationDuration = `${duration}s`;
+            mote.style.transform = `scale(${scale})`;
+
+            container.appendChild(mote);
+
+            setTimeout(() => {
+                mote.remove();
+            }, (duration + delay) * 1000);
+        }
+    }
 }

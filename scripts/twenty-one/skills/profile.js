@@ -275,6 +275,7 @@ export async function profile(payload, userId) {
     });
 
     tableData.skillUsedThisTurn = true;
+    tableData.lastSkillUsed = "profile";
 
     // V4.8.40: Mark usage
     const usedSkills = { ...tableData.usedSkills };

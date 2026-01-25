@@ -39,6 +39,9 @@
       {{!-- Player info --}}
       <div class="player-info">
         <span class="player-name" title="{{this.userName}}">{{this.name}}</span>
+        {{#if this.isSideBetWinner}}
+        <span class="sidebet-laurel" title="Side Bet Winner"><i class="fa-solid fa-leaf"></i></span>
+        {{/if}}
         <span class="player-status-label {{this.status}}">{{this.statusLabel}}</span>
       </div>
 
@@ -55,7 +58,7 @@
         </div>
         {{else}}
         <div
-          class="die-face d{{this.die}} {{#if this.isHole}}hole-die revealed{{/if}} {{#if this.isPublic}}public-die{{/if}}"
+          class="die-face d{{this.die}} {{#if this.isHole}}hole-die revealed{{/if}} {{#if this.isPublic}}public-die{{/if}} {{#if this.isOmen}}omen{{/if}}"
           title="d{{this.die}}: {{this.result}}{{#if this.isHole}} (Hole){{/if}}">
           <span class="die-type">d{{this.die}}</span>
           <span class="die-result">{{this.result}}</span>

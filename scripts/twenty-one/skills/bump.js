@@ -331,9 +331,7 @@ export async function bumpTable(payload, userId) {
             // Let's safe side: Log value to target only.
         }
 
-
-
-        return updateState({ tableData: { ...updatedTableData, skillUsedThisTurn: true } });
+        return updateState({ tableData: { ...updatedTableData, skillUsedThisTurn: true, lastSkillUsed: "bump" } });
 
     } else {
         // FAILURE: Set pending retaliation state - target chooses attacker's die
@@ -382,7 +380,7 @@ export async function bumpTable(payload, userId) {
             cssClass: "success"
         });
 
-        return updateState({ tableData: { ...updatedTableData, skillUsedThisTurn: true }, pot: newPot });
+        return updateState({ tableData: { ...updatedTableData, skillUsedThisTurn: true, lastSkillUsed: "bump" }, pot: newPot });
     }
 }
 

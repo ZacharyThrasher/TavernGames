@@ -6,6 +6,7 @@ import { getActorForUser, getActorName } from "../utils/actors.js"; // V5.9
 import { notifyUser } from "../utils/game-logic.js";
 import { emptyTableData, OPENING_ROLLS_REQUIRED } from "../constants.js";
 import { finishRound } from "./core.js";
+import { processSideBetPayouts } from "./side-bets.js";
 
 export async function useCut(userId, reroll = false) {
   const state = getState();
@@ -262,9 +263,13 @@ async function resolveDuel() {
   // V4.8.61: Trigger Victory Fanfare for Duel Winner
   tavernSocket.executeForEveryone("showVictoryFanfare", winner.playerId);
 
+  const sideBetWinnerIds = await processSideBetPayouts(winner.playerId);
+  const sideBetWinners = {};
+  for (const id of sideBetWinnerIds) sideBetWinners[id] = true;
+
   return updateState({
     status: "PAYOUT",
-    tableData: { ...tableData, duel: null },
+    tableData: { ...tableData, duel: null, sideBetWinners },
   });
 }
 

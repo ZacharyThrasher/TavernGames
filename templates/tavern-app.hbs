@@ -31,7 +31,7 @@
       {{#if isPlaying}}
       <div class="pot-display">
         <i class="fa-solid fa-coins"></i>
-        <span class="pot-amount">{{pot}} gp</span>
+        <span class="pot-amount {{#if pot}}pot-pulse{{/if}}">{{pot}} gp</span>
         <span class="pot-label">in the pot</span>
       </div>
       {{else}}

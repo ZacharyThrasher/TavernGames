@@ -281,6 +281,15 @@
   text-shadow: 0 0 10px var(--tavern-glow);
 }
 
+.pot-amount.pot-pulse {
+  animation: potPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes potPulse {
+  0%, 100% { transform: scale(1); text-shadow: 0 0 6px rgba(255, 215, 0, 0.3); }
+  50% { transform: scale(1.06); text-shadow: 0 0 12px rgba(255, 215, 0, 0.6); }
+}
+
 .pot-label,
 .ante-label {
   font-size: 11px;
@@ -412,6 +421,37 @@
     inset 0 0 30px rgba(212, 160, 74, 0.1);
 }
 
+.player-seat.is-current .player-avatar {
+  box-shadow: 0 0 18px rgba(212, 160, 74, 0.7), 0 0 30px rgba(255, 215, 0, 0.35);
+  animation: turnHalo 1.8s ease-in-out infinite;
+}
+
+.player-seat.is-current::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 215, 0, 0.4);
+  box-shadow: 0 0 18px rgba(255, 215, 0, 0.35);
+  pointer-events: none;
+  animation: turnHalo 1.8s ease-in-out infinite;
+}
+
+@keyframes turnHalo {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.sidebet-laurel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 6px;
+  color: #f7d36b;
+  text-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
+  font-size: 12px;
+}
+
 .player-seat.is-me {
   background: linear-gradient(135deg, var(--tavern-wood-medium) 0%, var(--tavern-wood-dark) 100%);
 }
@@ -430,6 +470,32 @@
   filter: grayscale(0.8);
   border-color: #666;
   background: var(--tavern-wood-dark);
+}
+
+.impact-ring {
+  position: absolute;
+  inset: 8px;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 215, 0, 0.6);
+  box-shadow: 0 0 18px rgba(255, 215, 0, 0.5);
+  animation: impactRing 0.6s ease-out;
+  pointer-events: none;
+}
+
+.impact-ring.goad {
+  border-color: rgba(155, 110, 255, 0.7);
+  box-shadow: 0 0 18px rgba(155, 110, 255, 0.6);
+}
+
+.impact-ring.bump {
+  border-color: rgba(255, 160, 90, 0.7);
+  box-shadow: 0 0 18px rgba(255, 160, 90, 0.6);
+}
+
+@keyframes impactRing {
+  0% { transform: scale(0.9); opacity: 0; }
+  50% { opacity: 1; }
+  100% { transform: scale(1.05); opacity: 0; }
 }
 
 .player-status-label.folded {
@@ -565,6 +631,27 @@
   font-weight: 700;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   transition: transform 0.2s ease;
+}
+
+.die-face.omen {
+  position: relative;
+  box-shadow: 0 0 10px rgba(255, 60, 60, 0.5);
+  animation: omenFlash 0.6s ease-out;
+}
+
+.die-face.omen::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: var(--tavern-radius-sm);
+  background: radial-gradient(circle at 30% 30%, rgba(255, 120, 120, 0.6), transparent 60%);
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+@keyframes omenFlash {
+  0% { transform: scale(1.08); }
+  100% { transform: scale(1); }
 }
 
 .die-face:hover {
@@ -902,6 +989,60 @@
   color: #8fdf8f;
 }
 
+/* Risk heat glow */
+.dice-buttons.risk-warm .btn-die-premium {
+  box-shadow: 0 0 14px rgba(255, 170, 90, 0.25);
+}
+
+.dice-buttons.risk-hot .btn-die-premium {
+  box-shadow: 0 0 18px rgba(255, 120, 60, 0.35);
+}
+
+.dice-buttons.risk-critical .btn-die-premium {
+  box-shadow: 0 0 22px rgba(255, 60, 60, 0.5), inset 0 0 18px rgba(255, 80, 80, 0.15);
+}
+
+/* Turn stagger */
+.dice-buttons.turn-stagger .btn-die-premium {
+  animation: diceStagger 0.5s ease both;
+}
+.dice-buttons.turn-stagger .btn-die-premium:nth-child(1) { animation-delay: 0.05s; }
+.dice-buttons.turn-stagger .btn-die-premium:nth-child(2) { animation-delay: 0.1s; }
+.dice-buttons.turn-stagger .btn-die-premium:nth-child(3) { animation-delay: 0.15s; }
+.dice-buttons.turn-stagger .btn-die-premium:nth-child(4) { animation-delay: 0.2s; }
+.dice-buttons.turn-stagger .btn-die-premium:nth-child(5) { animation-delay: 0.25s; }
+.dice-buttons.turn-stagger .btn-die-premium:nth-child(6) { animation-delay: 0.3s; }
+
+@keyframes diceStagger {
+  from { transform: translateY(8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Used stamp for Goblin dice */
+.btn-die-premium.is-used::after {
+  content: "USED";
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #ffdfdf;
+  background: rgba(140, 10, 10, 0.85);
+  border: 1px solid rgba(255, 120, 120, 0.8);
+  padding: 2px 6px;
+  border-radius: 6px;
+  transform: rotate(-10deg) scale(0.9);
+  box-shadow: 0 0 10px rgba(180, 20, 20, 0.6);
+  animation: usedStamp 0.35s ease-out;
+  pointer-events: none;
+}
+
+@keyframes usedStamp {
+  from { transform: rotate(-18deg) scale(1.3); opacity: 0; }
+  to { transform: rotate(-10deg) scale(0.9); opacity: 1; }
+}
+
 /* Foresight indicators */
 .btn-die-premium .hunch-indicator {
   position: absolute;
@@ -1053,6 +1194,18 @@
 .btn-hold:hover {
   background: var(--tavern-wood-highlight);
   border-color: var(--tavern-gold);
+  animation: decisionShake 0.3s ease-in-out;
+}
+
+.btn-fold:hover {
+  animation: decisionShake 0.3s ease-in-out;
+}
+
+@keyframes decisionShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  50% { transform: translateX(2px); }
+  75% { transform: translateX(-1px); }
 }
 
 /* Waiting section */
@@ -1361,6 +1514,30 @@
   color: var(--tavern-parchment);
   line-height: 1.4;
 }
+
+.history-chip {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: #f4ead2;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.history-chip.roll { border-color: rgba(90, 170, 255, 0.5); color: #b9e0ff; }
+.history-chip.hold { border-color: rgba(255, 200, 90, 0.5); color: #ffe0a1; }
+.history-chip.fold { border-color: rgba(180, 180, 180, 0.5); color: #e1e1e1; }
+.history-chip.bust { border-color: rgba(255, 90, 90, 0.6); color: #ffc4c4; }
+.history-chip.start { border-color: rgba(90, 220, 140, 0.5); color: #c1ffd6; }
+.history-chip.end { border-color: rgba(255, 215, 90, 0.6); color: #ffe9a8; }
+.history-chip.duel { border-color: rgba(180, 120, 255, 0.6); color: #e0ccff; }
+.history-chip.bet { border-color: rgba(255, 210, 120, 0.5); color: #ffe7b5; }
+.history-chip.caught { border-color: rgba(255, 80, 80, 0.7); color: #ffd0d0; }
 
 .entry-time {
   display: block;
@@ -2752,6 +2929,19 @@
 .btn-skill i {
   font-size: 14px;
   opacity: 0.8;
+}
+
+.btn-skill .skill-sigil {
+  margin-left: 4px;
+  font-size: 12px;
+  color: #caa7ff;
+  text-shadow: 0 0 8px rgba(202, 167, 255, 0.8);
+  animation: sigilGlow 1.2s ease-in-out infinite;
+}
+
+@keyframes sigilGlow {
+  0%, 100% { opacity: 0.6; transform: scale(0.95); }
+  50% { opacity: 1; transform: scale(1.05); }
 }
 
 /* Specific skill accents (optional/subtle) */
@@ -4712,6 +4902,25 @@
   animation-name: coin-fall;
   animation-timing-function: linear;
   animation-fill-mode: forwards;
+}
+
+.tavern-arcane {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: radial-gradient(circle, #d9c2ff 0%, #8a4bd1 60%, #4b1f74 100%);
+  box-shadow: 0 0 10px rgba(156, 98, 255, 0.8);
+  opacity: 0;
+  animation-name: arcane-burst;
+  animation-timing-function: ease-out;
+  animation-fill-mode: forwards;
+}
+
+@keyframes arcane-burst {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.8); }
+  30% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--arcane-x), var(--arcane-y)) scale(0.2); }
 }
 
 .coin-flip-banner {

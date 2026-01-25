@@ -242,6 +242,7 @@ export async function goad(payload, userId) {
             usedSkills: updatedUsedSkills,
             goadBackfire: updatedGoadBackfire,
             skillUsedThisTurn: true,
+            lastSkillUsed: "goad",
         };
 
         // V5.7: Update Dared for target if Nat 20 (Forces d20)
@@ -270,6 +271,10 @@ export async function goad(payload, userId) {
                 ? `${attackerName} CRITICALLY goaded ${defenderName}! They MUST roll a d20!`
                 : `${attackerName} goaded ${defenderName}! they must roll!`,
         });
+
+        try {
+            await tavernSocket.executeForEveryone("showImpactRing", targetId, "goad");
+        } catch (e) { }
 
         return updateState({ tableData: updatedTableData });
 
@@ -307,6 +312,7 @@ export async function goad(payload, userId) {
             goadBackfire: updatedGoadBackfire,
             dared: updatedDared,
             skillUsedThisTurn: true,
+            lastSkillUsed: "goad",
         };
 
         // V5.8: Log Goad Backfire
@@ -331,6 +337,10 @@ export async function goad(payload, userId) {
                 ? `${attackerName}'s goad CRITICALLY backfired! They MUST roll a d20!`
                 : `${attackerName}'s goad backfired! They are forced to roll!`,
         });
+
+        try {
+            await tavernSocket.executeForEveryone("showImpactRing", userId, "goad");
+        } catch (e) { }
 
         return updateState({ tableData: updatedTableData }); // No pot change
     }

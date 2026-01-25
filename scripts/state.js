@@ -213,6 +213,7 @@ export function normalizeTableData(tableData) {
     "hunchExact",
     "blindNextRoll",
     "sideBets",
+    "sideBetWinners",
     "hitCount",
     "dared",
     "blindDice",
@@ -229,6 +230,9 @@ export function normalizeTableData(tableData) {
   normalized.houseRules = coerceObject(normalized.houseRules);
   if (normalized.gameMode !== "standard" && normalized.gameMode !== "goblin") {
     normalized.gameMode = "standard";
+  }
+  if (typeof normalized.lastSkillUsed !== "string") {
+    normalized.lastSkillUsed = null;
   }
 
   return normalized;

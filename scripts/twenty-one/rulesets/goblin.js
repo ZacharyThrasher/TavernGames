@@ -179,6 +179,10 @@ export async function submitGoblinRoll({ state, tableData, userId, die }) {
       cssClass: "success"
     });
 
+    try {
+      await tavernSocket.executeForEveryone("showFullSetBurst", userId);
+    } catch (e) { }
+
     await addHistoryEntry({
       type: "roll",
       player: userName,

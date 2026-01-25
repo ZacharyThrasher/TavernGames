@@ -1,5 +1,20 @@
 # Changelog
 
+## [5.17.0] - 2026-01-25
+### UI Polish: Flair Pass
+- **Turn Halo**: Current player seat + avatar glow with pulse.
+- **Risk Heat**: Dice tray glow intensifies at 16/18/20+ totals.
+- **Omen Crack**: Subtle bust omen on any die showing a 1 (owner only).
+- **Skill Sigils**: Glowing sigils show the last skill used this turn.
+- **Impact Rings**: Goad/Bump targets get a quick impact ring.
+- **Goblin Stamp**: Used dice get a stamped "USED" badge.
+- **Full‑Set Burst**: Arcane particle burst on Goblin full‑set reset.
+- **Side Bet Laurel**: Winner laurel icon on player name.
+- **Pot Pulse**: Pot total gently pulses during play.
+- **History Chips**: Outcome chips (ROLL/HOLD/BUST/etc) in the game log.
+- **Dice Stagger**: Dice buttons stagger in on your turn.
+- **Hold/Fold Shake**: Subtle shake on hover for high‑stakes buttons.
+
 ## [5.16.1] - 2026-01-25
 ### UI: Foresight Clarity
 - **Foresight**: Added purple high/low arrow indicators on dice buttons.

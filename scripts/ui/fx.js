@@ -187,6 +187,30 @@ export function showCoinFlip(userId, result) {
 }
 
 /**
+ * Impact ring for skill effects
+ * @param {string} userId
+ * @param {string} type - "goad" | "bump"
+ */
+export function showImpactRing(userId, type = "goad") {
+  try {
+    if (!game.tavernDiceMaster?.app?.rendered) return;
+    if (isPerformanceMode()) return;
+
+    const appWindow = document.querySelector(".tavern-dice-master.application");
+    if (!appWindow) return;
+
+    const seat = appWindow.querySelector(`.player-seat[data-user-id="${userId}"]`);
+    if (!seat) return;
+
+    const ring = createElement("div", { className: `impact-ring ${type}` });
+    seat.appendChild(ring);
+    setTimeout(() => ring.remove(), 700);
+  } catch (error) {
+    console.error("Tavern Twenty-One | Impact ring error:", error);
+  }
+}
+
+/**
  * V4.2: Bump Impact Effect
  * Shows impact flash on target player's seat with shake
  * @param {string} targetId - User ID of bump target
@@ -202,6 +226,7 @@ export function playBumpEffect(targetId) {
     const seat = appWindow.querySelector(`.player-seat[data-user-id="${targetId}"]`);
     if (seat) {
       seat.classList.add("tavern-shake-heavy");
+      showImpactRing(targetId, "bump");
 
       // V13: Native DOM for impact flash
       const flash = createElement("div", { className: "bump-impact" });
@@ -212,6 +237,28 @@ export function playBumpEffect(targetId) {
     }
   } catch (error) {
     console.error("Tavern Twenty-One | Bump effect error:", error);
+  }
+}
+
+/**
+ * Goblin full-set reset burst
+ * @param {string} userId
+ */
+export function showFullSetBurst(userId) {
+  try {
+    if (isPerformanceMode()) return;
+    const appWindow = document.querySelector(".tavern-dice-master.application");
+    if (!appWindow) return;
+
+    const tray = appWindow.querySelector(".dice-buttons");
+    if (!tray) return;
+
+    const particleLayer = createElement("div", { className: "cinematic-particles" });
+    tray.appendChild(particleLayer);
+    ParticleFactory.spawnArcaneBurst(particleLayer, 30);
+    setTimeout(() => particleLayer.remove(), 1200);
+  } catch (error) {
+    console.error("Tavern Twenty-One | Full-set burst error:", error);
   }
 }
 

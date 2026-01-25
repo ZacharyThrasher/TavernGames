@@ -274,6 +274,7 @@ export async function hunch(userId) {
     }
 
     updates.skillUsedThisTurn = true;
+    updates.lastSkillUsed = "hunch";
 
     // Merge usedSkills carefully
     const currentUsedSkills = latestTable.usedSkills ?? {};

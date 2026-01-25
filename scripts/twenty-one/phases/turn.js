@@ -210,6 +210,7 @@ export async function finishTurn(userId) {
 
   // V3: Reset skill usage flag for the new player
   updatedTable.skillUsedThisTurn = false;
+  updatedTable.lastSkillUsed = null;
 
   const next = await updateState({ tableData: updatedTable });
 
@@ -270,6 +271,7 @@ export async function hold(userId) {
   const updatedTable = { ...tableData, holds };
   updatedTable.currentPlayer = getNextActivePlayer(state, updatedTable);
   updatedTable.skillUsedThisTurn = false;
+  updatedTable.lastSkillUsed = null;
 
   const userName = getActorName(userId);
 
@@ -335,6 +337,7 @@ export async function fold(userId) {
   tableData.folded = { ...tableData.folded, [userId]: true };
   tableData.currentPlayer = getNextActivePlayer(state, tableData);
   tableData.skillUsedThisTurn = false;
+  tableData.lastSkillUsed = null;
 
   // V5.8: Log Fold
   await addLogToAll({

@@ -123,6 +123,7 @@ export function emptyTableData() {
         sideBetPool: 0,
         sideBetRound: 1,
         sideBetRoundStart: null,
+        sideBetWinners: {}, // { [userId]: true }
         // V3: Hit tracking for Duel
         hitCount: {},
         // V3: The Cut
@@ -136,6 +137,7 @@ export function emptyTableData() {
         accusedThisRound: {},
         // V4.8.40: Unified skill usage tracking (Once per Round/Match limit)
         usedSkills: {}, // { [userId]: { bump: true, goad: true, hunch: true, profile: true } }
+        lastSkillUsed: null,
         // V5.14: Goblin Mode
         usedDice: {}, // { [userId]: [4, 6, 8] } - tracks used dice types
         goblinSetProgress: {}, // { [userId]: [4, 6, 8, 10, 20] } - full-set tracking

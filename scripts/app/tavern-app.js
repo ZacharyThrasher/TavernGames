@@ -111,6 +111,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       const isCaught = tableData.caught?.[player.id] ?? false;
       const isCurrent = tableData.currentPlayer === player.id;
       const isMe = player.id === userId;
+      const isSideBetWinner = tableData.sideBetWinners?.[player.id] ?? false;
       // V3.5: Check for folded status
       const isFolded = tableData.folded?.[player.id] ?? false;
 
@@ -173,6 +174,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         const isPublicDie = r.public ?? false;
         const isBlindDie = r.blind ?? false;
         const canSeeThisDie = isMe || isRevealPhase || isPublicDie;
+        const isOmen = isMe && !isBlindDie && (r.result === 1);
 
         if (isBlindDie && !isRevealPhase) {
           return {
@@ -183,6 +185,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
             isPublic: isPublicDie,
             isHole: !isPublicDie,
             isBlind: true,
+            isOmen: false,
           };
         }
 
@@ -194,9 +197,10 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
             index: idx,
             isPublic: isPublicDie,
             isHole: !isPublicDie,
+            isOmen,
           };
         } else {
-          return { hidden: true, isHole: true };
+          return { hidden: true, isHole: true, isOmen: false };
         }
       });
 
@@ -247,6 +251,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         isDared: tableData.dared?.[player.id] ?? false,
         isBumpLocked: tableData.pendingBumpRetaliation?.attackerId === player.id,
         isProfiled: (tableData.profiledBy?.[player.id] ?? []).length > 0,
+        isSideBetWinner,
         // For cheating: can cheat if it's playing, you're in the game, have at least 1 die, and haven't busted
       };
     });
@@ -274,6 +279,13 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const hasActed = tableData.hasActed?.[userId] ?? false;
     const canHold = myTurn && isBettingPhase && !isCutPhase && !tableData.hunchLocked?.[userId];
     const openingRollsRemaining = Math.max(0, 2 - myRolls.length);
+    const myTotal = tableData.totals?.[userId] ?? 0;
+    let riskLevel = null;
+    if (myTurn && isBettingPhase) {
+      if (myTotal >= 20) riskLevel = "critical";
+      else if (myTotal >= 18) riskLevel = "hot";
+      else if (myTotal >= 16) riskLevel = "warm";
+    }
 
     // Hunch
     const hunchLocked = tableData.hunchLocked?.[userId] ?? false;
@@ -341,11 +353,27 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       : null;
 
     // History
-    const history = (state.history ?? []).slice().reverse().map(entry => ({
-      ...entry,
-      timeAgo: this._formatTimeAgo(entry.timestamp),
-      icon: this._getHistoryIcon(entry.type),
-    }));
+    const history = (state.history ?? []).slice().reverse().map(entry => {
+      const chipMap = {
+        roll: { label: "ROLL", class: "roll" },
+        hold: { label: "HOLD", class: "hold" },
+        fold: { label: "FOLD", class: "fold" },
+        bust: { label: "BUST", class: "bust" },
+        round_start: { label: "START", class: "start" },
+        round_end: { label: "END", class: "end" },
+        duel_start: { label: "DUEL", class: "duel" },
+        side_bet: { label: "BET", class: "bet" },
+        cheat_caught: { label: "CAUGHT", class: "caught" },
+      };
+      const chip = chipMap[entry.type] ?? null;
+      return {
+        ...entry,
+        timeAgo: this._formatTimeAgo(entry.timestamp),
+        icon: this._getHistoryIcon(entry.type),
+        chipLabel: chip?.label ?? null,
+        chipClass: chip?.class ?? null,
+      };
+    });
 
     // V5.8: Private Logs Context
     // Only show MY logs. GM cannot see others logs here.
@@ -417,6 +445,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       isOpeningPhase,
       isBettingPhase,
       openingRollsRemaining,
+      riskLevel,
       history,
       privateLogs: myPrivateLogs, // V5.8
       unreadLogsCount: unreadCount, // V5.13
@@ -435,6 +464,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       theCutPlayerName,
       isFolded,
       hasActed,
+      lastSkillUsed: tableData.lastSkillUsed ?? null,
       canHunch,
       hunchLocked,
       hunchLockedDie,
@@ -525,11 +555,13 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       const exactValue = hunchExact?.[d.value];
       const hunchDirection = prediction === "HIGH" ? "up" : (prediction === "LOW" ? "down" : null);
 
+      const isUsed = isGoblinMode && d.value !== 2 && usedDice.includes(d.value);
       return {
         ...d,
         cost,
         costLabel,
         disabled,
+        isUsed,
         isCoin: d.value === 2, // Flag for template icon
         hunchDirection,
         hunchExactValue: Number.isFinite(exactValue) ? exactValue : null

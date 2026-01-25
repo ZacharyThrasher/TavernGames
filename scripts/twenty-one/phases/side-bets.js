@@ -113,7 +113,7 @@ export async function processSideBetPayouts(winnerId) {
     const losses = [];
 
     if (!winnerId || pool <= 0) {
-        return;
+        return [];
     }
 
     // Aggregate winner bets
@@ -130,7 +130,7 @@ export async function processSideBetPayouts(winnerId) {
     }
 
     if (totalWinnerBet <= 0) {
-        return;
+        return [];
     }
 
     for (const { betterId, amount } of winnerBets) {
@@ -174,4 +174,6 @@ export async function processSideBetPayouts(winnerId) {
             cssClass: "success"
         });
     }
+
+    return payouts.map(p => p.userId);
 }

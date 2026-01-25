@@ -438,10 +438,14 @@ export async function finishRound() {
     }
 
     // V4: Process side bet payouts
-    await processSideBetPayouts(winners[0]);
+    const sideBetWinnerIds = await processSideBetPayouts(winners[0]);
+    const sideBetWinners = {};
+    for (const id of sideBetWinnerIds) sideBetWinners[id] = true;
+    tableData.sideBetWinners = sideBetWinners;
   } else if (winners.length === 0) {
 
     // V4: No winner - side bets lost
+    tableData.sideBetWinners = {};
     await processSideBetPayouts(null);
   }
 

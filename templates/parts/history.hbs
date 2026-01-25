@@ -10,6 +10,9 @@
           </div>
           <div class="entry-content">
             <span class="entry-message">{{this.message}}</span>
+            {{#if this.chipLabel}}
+            <span class="history-chip {{this.chipClass}}">{{this.chipLabel}}</span>
+            {{/if}}
             <span class="entry-time">{{this.timeAgo}}</span>
           </div>
         </div>

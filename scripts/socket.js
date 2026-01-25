@@ -1,7 +1,7 @@
 import { MODULE_ID } from "./state.js";
 import { handleJoinTable, handleLeaveTable, handleStartRound, handlePlayerAction, handleResetTable, handleMarkLogsAsSeen } from "./tavern-actions.js";
 import { showRollToUser, showPublicRollFromData } from "./dice.js";
-import { showVictoryFanfare, showBustFanfare, showCoinFlip, playBumpEffect, showFloatingText, showSkillCutIn, showSkillResult, showPrivateFeedback } from "./ui/fx.js";
+import { showVictoryFanfare, showBustFanfare, showCoinFlip, playBumpEffect, showFloatingText, showSkillCutIn, showSkillResult, showPrivateFeedback, showImpactRing, showFullSetBurst } from "./ui/fx.js";
 
 export let tavernSocket;
 
@@ -28,7 +28,9 @@ export function setupSockets() {
   tavernSocket.register("showVictoryFanfare", showVictoryFanfare);
   tavernSocket.register("showBustFanfare", showBustFanfare);
   tavernSocket.register("showCoinFlip", showCoinFlip);
+  tavernSocket.register("showImpactRing", showImpactRing);
   tavernSocket.register("playBumpEffect", playBumpEffect);
+  tavernSocket.register("showFullSetBurst", showFullSetBurst);
   tavernSocket.register("showFloatingText", showFloatingText);
   tavernSocket.register("showSkillCutIn", showSkillCutIn);
   // V4.7.6: Result Overlay
