@@ -446,7 +446,15 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       gameMode, // V5.14.1: Game Mode for UI
       isGoblinMode, // V5.14.0
       // Pass usedDice for Goblin Mode
-      dice: this._buildDiceArray(ante, isBettingPhase || isCutPhase, tableData.dared?.[userId] ?? false, state.tableData?.gameMode === "goblin", tableData.usedDice?.[userId] ?? [])
+      dice: this._buildDiceArray(
+        ante,
+        isBettingPhase || isCutPhase,
+        tableData.dared?.[userId] ?? false,
+        state.tableData?.gameMode === "goblin",
+        tableData.usedDice?.[userId] ?? [],
+        tableData.hunchPrediction?.[userId] ?? null,
+        tableData.hunchExact?.[userId] ?? null
+      )
     };
   }
 
@@ -472,7 +480,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     return { total, hasBlind };
   }
 
-  _buildDiceArray(ante, isBettingPhase, isDared, isGoblinMode = false, usedDice = []) {
+  _buildDiceArray(ante, isBettingPhase, isDared, isGoblinMode = false, usedDice = [], hunchPrediction = null, hunchExact = null) {
     const diceConfig = [
       { value: 20, label: "d20", icon: "d20-grey", strategy: "Hail Mary" },
       { value: 10, label: "d10", icon: "d10-grey", strategy: "Builder" },
@@ -513,12 +521,18 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         }
       }
 
+      const prediction = hunchPrediction?.[d.value];
+      const exactValue = hunchExact?.[d.value];
+      const hunchDirection = prediction === "HIGH" ? "up" : (prediction === "LOW" ? "down" : null);
+
       return {
         ...d,
         cost,
         costLabel,
         disabled,
-        isCoin: d.value === 2 // Flag for template icon
+        isCoin: d.value === 2, // Flag for template icon
+        hunchDirection,
+        hunchExactValue: Number.isFinite(exactValue) ? exactValue : null
       };
     });
   }

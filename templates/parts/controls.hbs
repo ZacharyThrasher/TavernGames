@@ -159,6 +159,14 @@
         class="btn-die-premium {{#if this.costLabel}}has-cost{{/if}} {{#if this.isCoin}}btn-die-coin{{/if}}"
         data-action="roll" data-die="{{this.value}}" {{#if this.disabled}}disabled{{/if}}
         title="{{this.label}} - {{this.strategy}}{{#if this.costLabel}} ({{this.costLabel}}){{/if}}">
+        {{#if this.hunchDirection}}
+        <span class="hunch-indicator {{this.hunchDirection}}" title="Foresight: {{this.hunchDirection}}">
+          <i class="fa-solid fa-arrow-{{this.hunchDirection}}"></i>
+        </span>
+        {{/if}}
+        {{#if this.hunchExactValue}}
+        <span class="hunch-exact" title="Foresight: exact value">{{this.hunchExactValue}}</span>
+        {{/if}}
         {{#if this.isCoin}}
         <i class="fa-solid fa-circle-dollar-to-slot die-icon"></i>
         {{else}}

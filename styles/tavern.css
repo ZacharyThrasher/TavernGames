@@ -902,6 +902,56 @@
   color: #8fdf8f;
 }
 
+/* Foresight indicators */
+.btn-die-premium .hunch-indicator {
+  position: absolute;
+  top: -10px;
+  left: -8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 30% 30%, #caa7ff 0%, #7a3fb8 55%, #4a1f74 100%);
+  border: 1px solid rgba(202, 167, 255, 0.8);
+  box-shadow: 0 0 10px rgba(142, 84, 255, 0.6), inset 0 0 6px rgba(255, 255, 255, 0.2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #f2e7ff;
+  font-size: 12px;
+  text-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
+  animation: hunchPulse 1.6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.btn-die-premium .hunch-exact {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 6px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(169, 98, 255, 0.9), rgba(90, 35, 150, 0.95));
+  border: 1px solid rgba(202, 167, 255, 0.7);
+  color: #f6efff;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.3px;
+  box-shadow: 0 4px 12px rgba(120, 60, 200, 0.5);
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+  animation: hunchFloat 1.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes hunchPulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 10px rgba(142, 84, 255, 0.6); }
+  50% { transform: scale(1.08); box-shadow: 0 0 14px rgba(180, 120, 255, 0.8); }
+}
+
+@keyframes hunchFloat {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(-4px); }
+}
+
 /* Center the last row if it has fewer items (5 dice = 3 + 2) */
 .dice-buttons.premium .btn-die-premium:nth-child(4) {
   grid-column: 1;

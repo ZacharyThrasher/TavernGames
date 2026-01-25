@@ -1,5 +1,10 @@
 # Changelog
 
+## [5.16.1] - 2026-01-25
+### UI: Foresight Clarity
+- **Foresight**: Added purple high/low arrow indicators on dice buttons.
+- **Nat 20**: Added floating exact-value badges on dice buttons.
+
 ## [5.16.0] - 2026-01-25
 ### Refactor + Stability
 - **Rulesets**: Split Standard and Goblin roll logic into dedicated ruleset modules for maintainability.
