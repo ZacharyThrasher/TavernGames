@@ -1,5 +1,9 @@
 # Changelog
 
+## [5.15.1] - 2026-01-25
+### Side Bets: Winner Flair
+- **Payout Feedback**: Side‑bet winners now get floating gold text and a private win log.
+
 ## [5.15.0] - 2026-01-25
 ### UI: Goblin Rules Help Page
 - **Help Dialog**: Added a dedicated Goblin Rules page to the in‑game help UI.

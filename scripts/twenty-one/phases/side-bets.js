@@ -1,4 +1,5 @@
 import { MODULE_ID, getState, updateState, addHistoryEntry, addLogToAll, addPrivateLog } from "../../state.js"; // V5.8
+import { tavernSocket } from "../../socket.js";
 import { deductFromActor, getPlayerGold } from "../../wallet.js";
 // import { createChatCard } from "../../ui/chat.js"; // Removed
 
@@ -22,6 +23,13 @@ export async function placeSideBet(payload, userId) {
     const tableData = state.tableData ?? {};
     const { championId, amount } = payload;
     const ante = game.settings.get(MODULE_ID, "fixedAnte");
+
+    // Lock window: allow first two full betting rounds
+    const sideBetRound = tableData.sideBetRound ?? 1;
+    if (sideBetRound > 2) {
+        await notifyUser(userId, "Side bets are locked after two betting rounds.");
+        return state;
+    }
 
     // Validate amount (minimum 1 ante)
     if (!amount || amount < ante) {
@@ -67,6 +75,7 @@ export async function placeSideBet(payload, userId) {
         sideBets[userId] = [];
     }
     sideBets[userId].push({ championId, amount });
+    const sideBetPool = (tableData.sideBetPool ?? 0) + amount;
 
     // V5.9: Use getActorName
     const betterName = getActorName(userId);
@@ -87,7 +96,7 @@ export async function placeSideBet(payload, userId) {
         message: `${betterName} bet ${amount}gp on ${championName}.`,
     });
 
-    return updateState({ tableData: { ...tableData, sideBets } });
+    return updateState({ tableData: { ...tableData, sideBets, sideBetPool } });
 }
 
 /**
@@ -98,37 +107,71 @@ export async function processSideBetPayouts(winnerId) {
     const state = getState();
     const tableData = state.tableData ?? {};
     const sideBets = tableData.sideBets ?? {};
+    const pool = tableData.sideBetPool ?? 0;
 
     const payouts = [];
     const losses = [];
 
-    for (const [betterId, bets] of Object.entries(sideBets)) {
-        for (const bet of bets) {
-            const betterName = getActorName(betterId); // V5.9
+    if (!winnerId || pool <= 0) {
+        return;
+    }
 
-            if (bet.championId === winnerId) {
-                // Winner! Configurable payout (Default 2:1)
-                const multiplier = game.settings.get(MODULE_ID, "sideBetPayout");
-                const payout = Math.floor(bet.amount * multiplier);
-                await deductFromActor(betterId, -payout); // Negative deduction = add
-                payouts.push({ name: betterName, amount: payout, bet: bet.amount });
-            } else {
-                // Loser - bet was already deducted
-                losses.push({ name: betterName, amount: bet.amount });
-            }
+    // Aggregate winner bets
+    const winnerBets = [];
+    let totalWinnerBet = 0;
+    for (const [betterId, bets] of Object.entries(sideBets)) {
+        const totalBetOnWinner = bets
+            .filter(b => b.championId === winnerId)
+            .reduce((sum, b) => sum + b.amount, 0);
+        if (totalBetOnWinner > 0) {
+            winnerBets.push({ betterId, amount: totalBetOnWinner });
+            totalWinnerBet += totalBetOnWinner;
         }
     }
 
-    if (payouts.length > 0 || losses.length > 0) {
-        const payoutMsg = payouts.map(p => `${p.name}: +${p.payout}gp (bet ${p.bet}gp)`).join("<br>");
-        const lossMsg = losses.map(l => `${l.name}: -${l.amount}gp`).join("<br>");
+    if (totalWinnerBet <= 0) {
+        return;
+    }
 
-        await addLogToAll({
-            title: "Side Bet Results",
-            message: `${payouts.length > 0 ? `<strong>Big Winners:</strong><br>${payoutMsg}<br>` : ""}${losses.length > 0 ? `<strong>Losses:</strong><br>${lossMsg}` : ""}`,
-            icon: "fa-solid fa-coins",
+    for (const { betterId, amount } of winnerBets) {
+        const betterName = getActorName(betterId);
+        const payout = Math.floor((amount / totalWinnerBet) * pool);
+        await deductFromActor(betterId, -payout);
+        payouts.push({ name: betterName, payout, bet: amount, userId: betterId });
+        try {
+            await tavernSocket.executeForEveryone("showFloatingText", betterId, payout);
+        } catch (e) { }
+    }
+
+    for (const [betterId, bets] of Object.entries(sideBets)) {
+        const betterName = getActorName(betterId);
+        const totalBet = bets.reduce((sum, b) => sum + b.amount, 0);
+        const betOnWinner = bets
+            .filter(b => b.championId === winnerId)
+            .reduce((sum, b) => sum + b.amount, 0);
+        const lost = totalBet - betOnWinner;
+        if (lost > 0) losses.push({ name: betterName, amount: lost });
+    }
+
+    const payoutMsg = payouts.map(p => `${p.name}: +${p.payout}gp (bet ${p.bet}gp)`).join("<br>");
+    const lossMsg = losses.map(l => `${l.name}: -${l.amount}gp`).join("<br>");
+
+    await addLogToAll({
+        title: "Side Bet Results",
+        message: `${payouts.length > 0 ? `<strong>Pool Winners:</strong><br>${payoutMsg}<br>` : ""}${losses.length > 0 ? `<strong>Losses:</strong><br>${lossMsg}` : ""}<em>Side Bet Pool: ${pool}gp</em>`,
+        icon: "fa-solid fa-coins",
+        type: "system",
+        cssClass: payouts.length > 0 ? "success" : "failure"
+    });
+
+    // Winner flair (private)
+    for (const p of payouts) {
+        await addPrivateLog(p.userId, {
+            title: "Side Bet Win!",
+            message: `You won <strong>${p.payout}gp</strong> from the side‑bet pool.`,
+            icon: "fa-solid fa-sack-dollar",
             type: "system",
-            cssClass: payouts.length > 0 ? "success" : "failure"
+            cssClass: "success"
         });
     }
 }
