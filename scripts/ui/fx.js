@@ -3,9 +3,6 @@ import { CinematicOverlay } from "./cinematic-overlay.js";
 import { ParticleFactory } from "./particle-fx.js";
 
 const POT_COIN_SFX = `modules/${MODULE_ID}/Sounds/coin_on_coins_06_wav.ogg`;
-const BUST_SFX = `modules/${MODULE_ID}/Sounds/game_fail_fanfare.ogg`;
-const VICTORY_SFX = `modules/${MODULE_ID}/Sounds/game_success_fanfare.ogg`;
-const FORESIGHT_SFX = `modules/${MODULE_ID}/Sounds/magic_mallet_wav.ogg`;
 
 /* ============================================
    V13 Best Practices: Utility Functions
@@ -34,7 +31,7 @@ export function isPerformanceMode() {
   }
 }
 
-export function playSfx(src, volume = 0.8) {
+function playSfx(src, volume = 0.8) {
   try {
     if (!src) return;
     if (globalThis.AudioHelper?.play) {
@@ -113,7 +110,6 @@ export function showVictoryFanfare(winnerId, amount) {
     if (isPerformanceMode()) return;
 
     const winnerName = game.users.get(winnerId)?.name ?? "Winner";
-    playSfx(VICTORY_SFX, 0.7);
 
     // 1. Screen shake - using debounced version
     const appWindow = game.tavernDiceMaster?.app?.element;
@@ -151,7 +147,6 @@ export function showBustFanfare(userId) {
     if (isPerformanceMode()) return;
 
     const userName = game.users.get(userId)?.name ?? "Player";
-    playSfx(BUST_SFX, 0.7);
 
     // 1. Screen shake
     const appWindow = game.tavernDiceMaster?.app?.element;
@@ -634,10 +629,6 @@ export function showSkillCutIn(type, userId, targetId) {
     else if (type === "ACCUSE") text = "ACCUSATION!"; // V4.8.47
     else if (type === "STAREDOWN") text = "THE STAREDOWN"; // V4.8.47
     else if (type === "DUEL") text = "DUEL!"; // V4.8.47
-
-    if (type === "FORESIGHT") {
-      playSfx(FORESIGHT_SFX, 0.6);
-    }
 
     CinematicOverlay.show({
       type,

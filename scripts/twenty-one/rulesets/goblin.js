@@ -137,6 +137,10 @@ export async function submitGoblinRoll({ state, tableData, userId, die }) {
     } catch (e) { }
   }
 
+  try {
+    await tavernSocket.executeForEveryone("showPotPulse");
+  } catch (e) { }
+
   const userName = getActorName(userId);
   let msg = "";
   if (die === 2) {

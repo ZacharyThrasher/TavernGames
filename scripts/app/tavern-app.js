@@ -2,7 +2,6 @@ import { MODULE_ID, getState, updateState } from "../state.js";
 import { tavernSocket } from "../socket.js";
 import { getDieCost } from "../twenty-one/constants.js";
 import { getNpcWallet } from "../wallet.js"; // V4: Import NPC wallet helper
-import { playSfx } from "../ui/fx.js";
 import {
   getValidProfileTargets,
   getValidGoadTargets,
@@ -24,7 +23,6 @@ import { PaymentDialog } from "./dialogs/payment-dialog.js";
 import { HelpDialog } from "./dialogs/help-dialog.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
-const DISABLED_SFX = `modules/${MODULE_ID}/Sounds/button2_mp3.ogg`;
 
 export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
   static DEFAULT_OPTIONS = {
@@ -631,24 +629,6 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   _onRender(context, options) {
     super._onRender(context, options);
-
-    if (this._disabledClickHandler) {
-      this.element.removeEventListener("pointerdown", this._disabledClickHandler, true);
-    }
-
-    this._disabledClickHandler = (event) => {
-      const button = event.target.closest("button");
-      if (!button) return;
-      const isDisabled = button.disabled
-        || button.getAttribute("aria-disabled") === "true"
-        || button.classList.contains("is-disabled")
-        || button.classList.contains("disabled");
-      if (isDisabled) {
-        playSfx(DISABLED_SFX, 0.5);
-      }
-    };
-
-    this.element.addEventListener("pointerdown", this._disabledClickHandler, true);
 
     // Handle ante input changes (GM only)
     const anteInput = this.element.querySelector('#ante-input');
