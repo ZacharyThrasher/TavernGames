@@ -2,8 +2,6 @@ import { MODULE_ID } from "../state.js";
 import { CinematicOverlay } from "./cinematic-overlay.js";
 import { ParticleFactory } from "./particle-fx.js";
 
-const POT_COIN_SFX = `modules/${MODULE_ID}/Sounds/coin_on_coins_06_wav.ogg`;
-
 /* ============================================
    V13 Best Practices: Utility Functions
    ============================================ */
@@ -28,21 +26,6 @@ export function isPerformanceMode() {
     return game.settings.get(MODULE_ID, "performanceMode") ?? false;
   } catch {
     return false;
-  }
-}
-
-function playSfx(src, volume = 0.8) {
-  try {
-    if (!src) return;
-    if (globalThis.AudioHelper?.play) {
-      AudioHelper.play({ src, volume, autoplay: true, loop: false }, true);
-      return;
-    }
-    const audio = new Audio(src);
-    audio.volume = volume;
-    audio.play().catch(() => {});
-  } catch (error) {
-    console.warn("Tavern Twenty-One | SFX error:", error);
   }
 }
 
@@ -491,7 +474,6 @@ export function showPotPulse() {
   try {
     if (!game.tavernDiceMaster?.app?.rendered) return;
     if (isPerformanceMode()) return;
-    playSfx(POT_COIN_SFX, 0.9);
     setTimeout(() => {
       const appWindow = document.querySelector(".tavern-dice-master.application");
       if (!appWindow) return;
