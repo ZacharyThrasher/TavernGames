@@ -1,5 +1,9 @@
 # Changelog
 
+## [5.18.1] - 2026-01-25
+### Visual Timing Fix
+- **Impact FX**: Delayed DOM effects slightly to apply after re-render (prevents missing animations).
+
 ## [5.18.0] - 2026-01-25
 ### Impact Pass (Visual Only)
 - **Score Impact**: Squash/stretch + seat pulse on score increases.

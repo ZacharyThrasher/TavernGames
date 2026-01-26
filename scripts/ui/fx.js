@@ -340,37 +340,38 @@ export function showScoreSurge(userId, payload = {}) {
   try {
     if (!game.tavernDiceMaster?.app?.rendered) return;
     if (isPerformanceMode()) return;
+    setTimeout(() => {
+      const appWindow = document.querySelector(".tavern-dice-master.application");
+      if (!appWindow) return;
 
-    const appWindow = document.querySelector(".tavern-dice-master.application");
-    if (!appWindow) return;
+      const seat = appWindow.querySelector(`.player-seat[data-user-id="${userId}"]`);
+      if (!seat) return;
 
-    const seat = appWindow.querySelector(`.player-seat[data-user-id="${userId}"]`);
-    if (!seat) return;
+      const totalEl = seat.querySelector(".player-total .total-value");
+      const surgeClass = payload.multiplied ? "score-surge-multi" : "score-surge";
 
-    const totalEl = seat.querySelector(".player-total .total-value");
-    const surgeClass = payload.multiplied ? "score-surge-multi" : "score-surge";
+      seat.classList.remove("score-surge-seat", "score-surge-seat-multi");
+      void seat.offsetWidth;
+      seat.classList.add(payload.multiplied ? "score-surge-seat-multi" : "score-surge-seat");
+      setTimeout(() => seat.classList.remove("score-surge-seat", "score-surge-seat-multi"), 900);
 
-    seat.classList.remove("score-surge-seat", "score-surge-seat-multi");
-    void seat.offsetWidth;
-    seat.classList.add(payload.multiplied ? "score-surge-seat-multi" : "score-surge-seat");
-    setTimeout(() => seat.classList.remove("score-surge-seat", "score-surge-seat-multi"), 900);
+      if (totalEl) {
+        totalEl.classList.remove("score-surge", "score-surge-multi");
+        void totalEl.offsetWidth;
+        totalEl.classList.add(surgeClass);
+        setTimeout(() => totalEl.classList.remove(surgeClass), 800);
+      }
 
-    if (totalEl) {
-      totalEl.classList.remove("score-surge", "score-surge-multi");
-      void totalEl.offsetWidth;
-      totalEl.classList.add(surgeClass);
-      setTimeout(() => totalEl.classList.remove(surgeClass), 800);
-    }
-
-    // Floating pop value
-    const delta = payload.delta ?? 0;
-    const popText = payload.multiplied ? "x2!" : (delta > 0 ? `+${delta}` : "");
-    if (popText) {
-      const pop = createElement("div", { className: "score-pop", innerHTML: popText });
-      seat.appendChild(pop);
-      requestAnimationFrame(() => pop.classList.add("show"));
-      setTimeout(() => pop.remove(), 900);
-    }
+      // Floating pop value
+      const delta = payload.delta ?? 0;
+      const popText = payload.multiplied ? "x2!" : (delta > 0 ? `+${delta}` : "");
+      if (popText) {
+        const pop = createElement("div", { className: "score-pop", innerHTML: popText });
+        seat.appendChild(pop);
+        requestAnimationFrame(() => pop.classList.add("show"));
+        setTimeout(() => pop.remove(), 900);
+      }
+    }, 60);
   } catch (error) {
     console.error("Tavern Twenty-One | Score surge error:", error);
   }
@@ -383,14 +384,16 @@ export function showPotPulse() {
   try {
     if (!game.tavernDiceMaster?.app?.rendered) return;
     if (isPerformanceMode()) return;
-    const appWindow = document.querySelector(".tavern-dice-master.application");
-    if (!appWindow) return;
-    const potEl = appWindow.querySelector(".pot-amount");
-    if (!potEl) return;
-    potEl.classList.remove("pot-breathe");
-    void potEl.offsetWidth;
-    potEl.classList.add("pot-breathe");
-    setTimeout(() => potEl.classList.remove("pot-breathe"), 700);
+    setTimeout(() => {
+      const appWindow = document.querySelector(".tavern-dice-master.application");
+      if (!appWindow) return;
+      const potEl = appWindow.querySelector(".pot-amount");
+      if (!potEl) return;
+      potEl.classList.remove("pot-breathe");
+      void potEl.offsetWidth;
+      potEl.classList.add("pot-breathe");
+      setTimeout(() => potEl.classList.remove("pot-breathe"), 700);
+    }, 60);
   } catch (error) {
     console.error("Tavern Twenty-One | Pot pulse error:", error);
   }
@@ -403,14 +406,16 @@ export function showJackpotInlay() {
   try {
     if (!game.tavernDiceMaster?.app?.rendered) return;
     if (isPerformanceMode()) return;
-    const appWindow = document.querySelector(".tavern-dice-master.application");
-    if (!appWindow) return;
-    const potDisplay = appWindow.querySelector(".pot-display");
-    if (!potDisplay) return;
-    potDisplay.classList.remove("pot-jackpot");
-    void potDisplay.offsetWidth;
-    potDisplay.classList.add("pot-jackpot");
-    setTimeout(() => potDisplay.classList.remove("pot-jackpot"), 1200);
+    setTimeout(() => {
+      const appWindow = document.querySelector(".tavern-dice-master.application");
+      if (!appWindow) return;
+      const potDisplay = appWindow.querySelector(".pot-display");
+      if (!potDisplay) return;
+      potDisplay.classList.remove("pot-jackpot");
+      void potDisplay.offsetWidth;
+      potDisplay.classList.add("pot-jackpot");
+      setTimeout(() => potDisplay.classList.remove("pot-jackpot"), 1200);
+    }, 60);
   } catch (error) {
     console.error("Tavern Twenty-One | Jackpot inlay error:", error);
   }
@@ -423,12 +428,14 @@ export function showVignetteFlash() {
   try {
     if (!game.tavernDiceMaster?.app?.rendered) return;
     if (isPerformanceMode()) return;
-    const appWindow = document.querySelector(".tavern-dice-master.application");
-    if (!appWindow) return;
-    const flash = createElement("div", { className: "tavern-vignette-flash" });
-    appWindow.appendChild(flash);
-    requestAnimationFrame(() => flash.classList.add("show"));
-    setTimeout(() => flash.remove(), 350);
+    setTimeout(() => {
+      const appWindow = document.querySelector(".tavern-dice-master.application");
+      if (!appWindow) return;
+      const flash = createElement("div", { className: "tavern-vignette-flash" });
+      appWindow.appendChild(flash);
+      requestAnimationFrame(() => flash.classList.add("show"));
+      setTimeout(() => flash.remove(), 350);
+    }, 60);
   } catch (error) {
     console.error("Tavern Twenty-One | Vignette flash error:", error);
   }

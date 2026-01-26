@@ -1,5 +1,2 @@
-### Impact Pass (Visual Only)
-- **Score Impact**: Squash/stretch + seat pulse on score increases.
-- **Pot Pulse**: Breathing animation after rolls.
-- **Jackpot Inlay**: Pot glow on big wins.
-- **Bust Flash**: Red vignette impact on busts.
+### Visual Timing Fix
+- **Impact FX**: Delayed DOM effects slightly to apply after re-render (prevents missing animations).
