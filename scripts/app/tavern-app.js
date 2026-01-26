@@ -100,7 +100,9 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const gameMode = tableData.gameMode ?? "standard";
     const isGoblinMode = gameMode === "goblin";
     const ante = game.settings.get(MODULE_ID, "fixedAnte");
-    const liquidMode = game.settings.get(MODULE_ID, "liquidMode");
+    const liquidModeSetting = game.settings.get(MODULE_ID, "liquidMode");
+    const isSloppy = tableData.sloppy?.[userId] ?? false;
+    const liquidMode = liquidModeSetting && !isSloppy;
 
     // Build rich player data for display
     const playerSeats = players.map((player) => {
@@ -413,7 +415,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       userId,
       ante,
       liquidMode,
-      isSloppy: tableData.sloppy?.[userId] ?? false,
+      isSloppy,
       pot: state.pot,
       accusationCost,
       status: state.status,
@@ -484,7 +486,8 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         state.tableData?.gameMode === "goblin",
         tableData.usedDice?.[userId] ?? [],
         tableData.hunchPrediction?.[userId] ?? null,
-        tableData.hunchExact?.[userId] ?? null
+        tableData.hunchExact?.[userId] ?? null,
+        liquidMode
       )
     };
   }
@@ -511,7 +514,16 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     return { total, hasBlind };
   }
 
-  _buildDiceArray(ante, isBettingPhase, isDared, isGoblinMode = false, usedDice = [], hunchPrediction = null, hunchExact = null) {
+  _buildDiceArray(
+    ante,
+    isBettingPhase,
+    isDared,
+    isGoblinMode = false,
+    usedDice = [],
+    hunchPrediction = null,
+    hunchExact = null,
+    liquidMode = false
+  ) {
     const diceConfig = [
       { value: 20, label: "d20", icon: "d20-grey", strategy: "Hail Mary" },
       { value: 10, label: "d10", icon: "d10-grey", strategy: "Builder" },
@@ -546,6 +558,11 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       } else {
         // Dared Mechanic (Standard Mode)
         if (isDared && d.value === 8) {
+          cost = 0;
+          costLabel = "FREE";
+        }
+        // Liquid Mode: all dice are free on the tab
+        if (liquidMode) {
           cost = 0;
           costLabel = "FREE";
         }
@@ -838,11 +855,12 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     try {
 
       // Payment Logic (Iron Liver)
-      const liquidMode = game.settings.get(MODULE_ID, "liquidMode");
+      const liquidModeSetting = game.settings.get(MODULE_ID, "liquidMode");
       // const state = getState(); // Reuse existing state variable from above
       const ante = game.settings.get(MODULE_ID, "fixedAnte");
       const isBettingPhase = state.tableData?.phase === "betting";
       const isGoblinMode = state.tableData?.gameMode === "goblin";
+      const isSloppy = state.tableData?.sloppy?.[game.user.id] ?? false;
       const isHouse = isActingAsHouse(game.user.id, state);
 
       const isPlayingAsNpc = state.players?.[game.user.id]?.playingAsNpc;
@@ -851,7 +869,11 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       const cost = (isBettingPhase && !isHouse && !isGoblinMode) ? getDieCost(parseInt(die), ante) : 0;
       let payWithDrink = false;
 
-      if (liquidMode) {
+      if (liquidModeSetting && isSloppy) {
+        ui.notifications.warn("You're cut off. Pay with gold instead.");
+      }
+
+      if (liquidModeSetting && !isSloppy) {
         payWithDrink = true;
       } else {
         let currentGold = 0;
@@ -862,6 +884,12 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         }
 
         if (cost > 0 && currentGold < cost) {
+          if (isSloppy) {
+            ui.notifications.warn("You're cut off and can't put it on the tab.");
+            TavernApp.uiLocked = false;
+            if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
+            return;
+          }
           // Should we allow NPC to put on tab? Maybe.
           const confirm = await Dialog.confirm({
             title: "Insufficient Gold",

@@ -212,6 +212,14 @@ export async function drinkForPayment(userId, drinksNeeded, tableData) {
             cssClass: "failure"
         }, [], userId);
 
+        try {
+            await tavernSocket.executeAsUser("showDrinkResult", userId, {
+                title: "Put It On The Tab",
+                tone: "failure",
+                message: `Con Save: ${d20} + ${conMod} = ${total} vs DC ${dc}<br><strong>Passed out.</strong>`
+            });
+        } catch (e) { }
+
     } else if (!success) {
         // Failed save - gain Sloppy condition
         sloppy = true;
@@ -253,6 +261,14 @@ export async function drinkForPayment(userId, drinksNeeded, tableData) {
             cssClass: "warning"
         }, [], userId);
 
+        try {
+            await tavernSocket.executeAsUser("showDrinkResult", userId, {
+                title: "Put It On The Tab",
+                tone: "warning",
+                message: `Con Save: ${d20} + ${conMod} = ${total} vs DC ${dc}<br><strong>Sloppy.</strong> Cut off.`
+            });
+        } catch (e) { }
+
     } else {
         // Success - handled it like a champ
         await addLogToAll({
@@ -263,6 +279,14 @@ export async function drinkForPayment(userId, drinksNeeded, tableData) {
             type: "system",
             cssClass: "success"
         }, [], userId);
+
+        try {
+            await tavernSocket.executeAsUser("showDrinkResult", userId, {
+                title: "Put It On The Tab",
+                tone: "success",
+                message: `Con Save: ${d20} + ${conMod} = ${total} vs DC ${dc}<br><strong>On the house.</strong>`
+            });
+        } catch (e) { }
 
     }
 

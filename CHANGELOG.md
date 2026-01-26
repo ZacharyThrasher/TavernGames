@@ -1,5 +1,10 @@
 # Changelog
 
+## [5.18.5] - 2026-01-26
+### Tab Clarity
+- **UI**: “Put it on the Tab” now displays a private banner with the CON check result.
+- **Sockets**: Added client FX hook for drink checks.
+
 ## [5.18.4] - 2026-01-26
 ### Cheat Integrity
 - **Bug Fix**: Failed cheat attempts no longer change the die value.

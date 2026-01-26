@@ -5278,6 +5278,65 @@
   transform: translateX(-50%) scale(1);
 }
 
+.drink-banner {
+  position: absolute;
+  top: 28%;
+  left: 50%;
+  transform: translateX(-50%) scale(0.96);
+  min-width: 240px;
+  max-width: 340px;
+  padding: 12px 16px;
+  font-family: "Cinzel", serif;
+  letter-spacing: 0.5px;
+  border-radius: 12px;
+  opacity: 0;
+  z-index: 6;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+
+.drink-banner-title {
+  font-size: 15px;
+  text-transform: uppercase;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.drink-banner-message {
+  font-size: 12px;
+  font-family: var(--font-sc-body);
+  letter-spacing: 0;
+  color: #f3ead6;
+}
+
+.drink-banner.success {
+  background: linear-gradient(135deg, rgba(120, 90, 30, 0.95), rgba(70, 50, 20, 0.95));
+  color: #ffe7a8;
+  border-color: rgba(255, 215, 120, 0.55);
+  text-shadow: 0 0 10px rgba(255, 200, 90, 0.35);
+}
+
+.drink-banner.warning {
+  background: linear-gradient(135deg, rgba(150, 90, 20, 0.95), rgba(90, 50, 20, 0.95));
+  color: #ffe0b3;
+  border-color: rgba(255, 170, 80, 0.5);
+}
+
+.drink-banner.failure {
+  background: linear-gradient(135deg, rgba(140, 40, 40, 0.95), rgba(80, 25, 25, 0.95));
+  color: #ffd9d9;
+  border-color: rgba(255, 110, 110, 0.55);
+}
+
+.drink-banner.show {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+
 .coin-flip-banner.heads {
   color: #ffe9a3;
   background: linear-gradient(135deg, rgba(64, 43, 0, 0.9), rgba(154, 101, 0, 0.85));

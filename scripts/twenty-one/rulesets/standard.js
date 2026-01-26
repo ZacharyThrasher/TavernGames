@@ -10,6 +10,7 @@ export async function submitStandardRoll({ state, tableData, userId, die, isOpen
   // V2.0: Variable dice costs in betting phase
   let newPot = state.pot;
   let rollCost = 0;
+  let drinksNeeded = 0;
   if (!isOpeningPhase) {
     // V4.9: Dared rolls are FREE
     if (tableData.dared?.[userId]) {
@@ -18,23 +19,22 @@ export async function submitStandardRoll({ state, tableData, userId, die, isOpen
       rollCost = getDieCost(die, ante);
     }
 
-    if (rollCost > 0) {
-      if (payload.payWithDrink) {
-        const drinksNeeded = Math.ceil(rollCost / ante);
-        const drinkResult = await drinkForPayment(userId, drinksNeeded, tableData);
-        tableData = drinkResult.tableData;
+    const wantsDrink = !!payload.payWithDrink && !(tableData.sloppy?.[userId]);
+    if (wantsDrink) {
+      drinksNeeded = Math.max(1, Math.ceil(rollCost / ante));
+      const drinkResult = await drinkForPayment(userId, drinksNeeded, tableData);
+      tableData = drinkResult.tableData;
 
-        if (drinkResult.bust) {
-          return updateState({ tableData });
-        }
-      } else {
+      if (drinkResult.bust) {
+        return updateState({ tableData });
+      }
+    } else if (rollCost > 0) {
         const canAfford = await deductFromActor(userId, rollCost);
         if (!canAfford) {
           await notifyUser(userId, `You need ${rollCost}gp to roll a d${die}.`);
           return state;
         }
         newPot = state.pot + rollCost;
-      }
     }
   }
 
@@ -130,8 +130,13 @@ export async function submitStandardRoll({ state, tableData, userId, die, isOpen
 
   let rollCostMsg = "";
   if (!isOpeningPhase) {
-    if (rollCost === 0) rollCostMsg = " (FREE)";
-    else rollCostMsg = ` (${rollCost}gp)`;
+    if (payload.payWithDrink && !(tableData.sloppy?.[userId])) {
+      rollCostMsg = " (TAB)";
+    } else if (rollCost === 0) {
+      rollCostMsg = " (FREE)";
+    } else {
+      rollCostMsg = ` (${rollCost}gp)`;
+    }
   }
 
   let specialMsg = "";

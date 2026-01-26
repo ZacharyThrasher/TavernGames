@@ -256,6 +256,46 @@ export function showSkillBanner(payload = {}) {
 }
 
 /**
+ * Drink result banner (private)
+ * @param {object} payload - { title, message, tone, icon }
+ */
+export function showDrinkResult(payload = {}) {
+  try {
+    if (isPerformanceMode()) return;
+
+    const appWindow = document.querySelector(".tavern-dice-master.application");
+    if (!appWindow) return;
+
+    const title = payload.title ?? "Put It On The Tab";
+    const message = payload.message ?? "";
+    const tone = payload.tone ?? "info";
+    const icon = payload.icon ? `<i class="${payload.icon}"></i>` : `<i class="fa-solid fa-beer-mug-empty"></i>`;
+
+    const banner = createElement("div", {
+      className: `drink-banner ${tone}`,
+      innerHTML: `
+        <div class="drink-banner-title">${icon}${title}</div>
+        <div class="drink-banner-message">${message}</div>
+      `
+    });
+
+    appWindow.appendChild(banner);
+    requestAnimationFrame(() => banner.classList.add("show"));
+
+    if (tone === "success") {
+      const particleLayer = createElement("div", { className: "cinematic-particles" });
+      banner.appendChild(particleLayer);
+      ParticleFactory.spawnCoinShower(particleLayer, 18);
+      setTimeout(() => particleLayer.remove(), 1400);
+    }
+
+    setTimeout(() => fadeOutAndRemove(banner, 500), 2800);
+  } catch (error) {
+    console.error("Tavern Twenty-One | Drink banner error:", error);
+  }
+}
+
+/**
  * Impact ring for skill effects
  * @param {string} userId
  * @param {string} type - "goad" | "bump"
