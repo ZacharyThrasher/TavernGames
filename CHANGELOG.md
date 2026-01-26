@@ -1,5 +1,9 @@
 # Changelog
 
+## [5.18.10] - 2026-01-26
+### Revert: POP Pack 2
+- **Revert**: Removed the experimental POP Pack 2 visuals per feedback.
+
 ## [5.18.8] - 2026-01-26
 ### Visual POP Pack
 - **Impact**: Added impact frame flashes on jackpots/coin heads.
