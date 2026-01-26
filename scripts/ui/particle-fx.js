@@ -78,4 +78,41 @@ export class ParticleFactory {
             }, (duration + delay) * 1000);
         }
     }
+
+    /**
+     * Spawns an ale splash (amber droplets)
+     * @param {HTMLElement} container
+     * @param {number} amount
+     */
+    static spawnAleSplash(container, amount = 24) {
+        if (!container) return;
+
+        const count = Math.min(amount, 60);
+        for (let i = 0; i < count; i++) {
+            const drop = document.createElement("div");
+            drop.classList.add("tavern-ale");
+
+            const startX = 45 + Math.random() * 10;
+            const startY = 45 + Math.random() * 10;
+            const driftX = (Math.random() - 0.5) * 120;
+            const driftY = (Math.random() - 0.7) * 120;
+            const delay = Math.random() * 0.15;
+            const duration = 0.6 + Math.random() * 0.6;
+            const scale = 0.5 + Math.random() * 0.8;
+
+            drop.style.left = `${startX}%`;
+            drop.style.top = `${startY}%`;
+            drop.style.setProperty("--ale-x", `${driftX}px`);
+            drop.style.setProperty("--ale-y", `${driftY}px`);
+            drop.style.animationDelay = `${delay}s`;
+            drop.style.animationDuration = `${duration}s`;
+            drop.style.transform = `scale(${scale})`;
+
+            container.appendChild(drop);
+
+            setTimeout(() => {
+                drop.remove();
+            }, (duration + delay) * 1000);
+        }
+    }
 }

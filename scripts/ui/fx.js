@@ -180,6 +180,7 @@ export function showCoinFlip(userId, result) {
     // Add a little tension: light shake on tails, celebratory shake on heads
     if (isHeads) {
       shake(appWindow, "tavern-shake-victory", 450);
+      showImpactFrame();
     } else {
       shake(appWindow, "tavern-shake", 350);
     }
@@ -287,6 +288,11 @@ export function showDrinkResult(payload = {}) {
       banner.appendChild(particleLayer);
       ParticleFactory.spawnCoinShower(particleLayer, 18);
       setTimeout(() => particleLayer.remove(), 1400);
+    } else if (tone === "warning") {
+      const particleLayer = createElement("div", { className: "cinematic-particles" });
+      banner.appendChild(particleLayer);
+      ParticleFactory.spawnAleSplash(particleLayer, 26);
+      setTimeout(() => particleLayer.remove(), 1200);
     }
 
     setTimeout(() => fadeOutAndRemove(banner, 500), 2800);
@@ -319,6 +325,11 @@ export function showCutOffBanner(payload = {}) {
     appWindow.appendChild(banner);
     requestAnimationFrame(() => banner.classList.add("show"));
     shake(appWindow, "tavern-shake", 350);
+
+    const glare = createElement("div", { className: "tavern-cutoff-glare" });
+    appWindow.appendChild(glare);
+    requestAnimationFrame(() => glare.classList.add("show"));
+    setTimeout(() => glare.remove(), 700);
 
     setTimeout(() => fadeOutAndRemove(banner, 500), 2600);
   } catch (error) {
@@ -433,6 +444,14 @@ export function showScoreSurge(userId, payload = {}) {
         setTimeout(() => totalEl.classList.remove(surgeClass), 800);
       }
 
+      const totalPanel = seat.querySelector(".player-total");
+      if (totalPanel) {
+        totalPanel.classList.remove("total-slam");
+        void totalPanel.offsetWidth;
+        totalPanel.classList.add("total-slam");
+        setTimeout(() => totalPanel.classList.remove("total-slam"), 450);
+      }
+
       // Floating pop value
       const delta = payload.delta ?? 0;
       const popText = payload.multiplied ? "x2!" : (delta > 0 ? `+${delta}` : "");
@@ -485,10 +504,28 @@ export function showJackpotInlay() {
       potDisplay.classList.remove("pot-jackpot");
       void potDisplay.offsetWidth;
       potDisplay.classList.add("pot-jackpot");
+      showImpactFrame();
       setTimeout(() => potDisplay.classList.remove("pot-jackpot"), 1200);
     }, 60);
   } catch (error) {
     console.error("Tavern Twenty-One | Jackpot inlay error:", error);
+  }
+}
+
+/**
+ * Impact frame (RGB split feel without CRT)
+ */
+export function showImpactFrame() {
+  try {
+    if (isPerformanceMode()) return;
+    const appWindow = document.querySelector(".tavern-dice-master.application");
+    if (!appWindow) return;
+    const frame = createElement("div", { className: "tavern-impact-frame" });
+    appWindow.appendChild(frame);
+    requestAnimationFrame(() => frame.classList.add("show"));
+    setTimeout(() => frame.remove(), 260);
+  } catch (error) {
+    console.error("Tavern Twenty-One | Impact frame error:", error);
   }
 }
 

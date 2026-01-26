@@ -769,6 +769,17 @@
   100% { transform: scale(1); }
 }
 
+.player-total.total-slam {
+  animation: totalSlam 0.35s ease-out;
+}
+
+@keyframes totalSlam {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.12, 0.94); }
+  70% { transform: scale(0.98, 1.08); }
+  100% { transform: scale(1); }
+}
+
 .score-pop {
   position: absolute;
   top: -22px;
@@ -884,6 +895,41 @@
 }
 
 .tavern-vignette-flash.show {
+  opacity: 1;
+}
+
+.tavern-impact-frame {
+  position: absolute;
+  inset: 8px;
+  border-radius: 14px;
+  opacity: 0;
+  pointer-events: none;
+  border: 2px solid rgba(255, 215, 120, 0.7);
+  box-shadow:
+    0 0 18px rgba(255, 215, 120, 0.7),
+    0 0 28px rgba(255, 90, 90, 0.45),
+    0 0 28px rgba(90, 190, 255, 0.45);
+  transform: scale(0.98);
+  transition: opacity 120ms ease, transform 120ms ease;
+  z-index: 6;
+}
+
+.tavern-impact-frame.show {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.tavern-cutoff-glare {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 40%, rgba(255, 120, 80, 0.08), rgba(120, 20, 10, 0.35) 55%, rgba(20, 8, 6, 0.6) 100%);
+  transition: opacity 140ms ease;
+  z-index: 2;
+}
+
+.tavern-cutoff-glare.show {
   opacity: 1;
 }
 
@@ -1244,6 +1290,7 @@
 
 .btn-die-premium:hover {
   transform: translateY(-4px) scale(1.05);
+  animation: dieHoverJitter 0.25s linear infinite;
   border-color: var(--tavern-gold);
   box-shadow:
     0 8px 20px rgba(0, 0, 0, 0.4),
@@ -1259,6 +1306,14 @@
 
 .btn-die-premium:hover .die-label {
   color: var(--tavern-gold);
+}
+
+@keyframes dieHoverJitter {
+  0% { transform: translateY(-4px) scale(1.05) translate(0, 0) rotate(0deg); }
+  25% { transform: translateY(-4px) scale(1.05) translate(0.5px, -0.5px) rotate(-0.4deg); }
+  50% { transform: translateY(-4px) scale(1.05) translate(-0.6px, 0.4px) rotate(0.4deg); }
+  75% { transform: translateY(-4px) scale(1.05) translate(0.6px, 0.2px) rotate(-0.3deg); }
+  100% { transform: translateY(-4px) scale(1.05) translate(0, 0) rotate(0deg); }
 }
 
 .btn-die-premium:active {
@@ -5180,6 +5235,25 @@
   0% { opacity: 0; transform: translate(0, 0) scale(0.8); }
   30% { opacity: 1; }
   100% { opacity: 0; transform: translate(var(--arcane-x), var(--arcane-y)) scale(0.2); }
+}
+
+.tavern-ale {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: radial-gradient(circle, #ffd08a 0%, #b86a2b 70%, rgba(80, 40, 10, 0.8) 100%);
+  box-shadow: 0 0 8px rgba(255, 170, 80, 0.6);
+  opacity: 0;
+  animation-name: ale-splash;
+  animation-timing-function: ease-out;
+  animation-fill-mode: forwards;
+}
+
+@keyframes ale-splash {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.7); }
+  20% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--ale-x), var(--ale-y)) scale(0.2); }
 }
 
 .coin-flip-banner {

@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.18.8] - 2026-01-26
+### Visual POP Pack
+- **Impact**: Added impact frame flashes on jackpots/coin heads.
+- **Dice**: Hover charge jitter + glow on dice buttons.
+- **Totals**: Slam animation on score surges.
+- **Tab**: Ale splash particles and cut‑off glare.
+
 ## [5.18.7] - 2026-01-26
 ### Tab + Retaliation Polish
 - **Tab**: Cut‑off banner now triggers the moment a player becomes sloppy.
