@@ -877,13 +877,6 @@
   animation: jackpotGlow 1.2s ease-out;
 }
 
-.pot-sparkle-layer {
-  position: absolute;
-  inset: -8px;
-  pointer-events: none;
-  z-index: 4;
-}
-
 @keyframes jackpotGlow {
   0% { opacity: 0; transform: scale(0.9); }
   40% { opacity: 1; transform: scale(1); }
@@ -938,101 +931,6 @@
 
 .tavern-cutoff-glare.show {
   opacity: 1;
-}
-
-.tavern-ambient-motes {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 1;
-  overflow: hidden;
-}
-
-.tavern-ambient-mote {
-  position: absolute;
-  width: 4px;
-  height: 4px;
-  border-radius: 999px;
-  background: radial-gradient(circle, rgba(255, 210, 140, 0.7), rgba(90, 50, 20, 0.0));
-  opacity: 0.4;
-  animation: moteFloat 8s ease-in-out infinite;
-}
-
-.tavern-ambient-mote:nth-child(1) { left: 10%; top: 20%; animation-delay: 0s; }
-.tavern-ambient-mote:nth-child(2) { left: 30%; top: 60%; animation-delay: 1s; }
-.tavern-ambient-mote:nth-child(3) { left: 55%; top: 35%; animation-delay: 2s; }
-.tavern-ambient-mote:nth-child(4) { left: 70%; top: 15%; animation-delay: 3s; }
-.tavern-ambient-mote:nth-child(5) { left: 85%; top: 55%; animation-delay: 4s; }
-.tavern-ambient-mote:nth-child(6) { left: 20%; top: 80%; animation-delay: 5s; }
-.tavern-ambient-mote:nth-child(7) { left: 40%; top: 10%; animation-delay: 6s; }
-.tavern-ambient-mote:nth-child(8) { left: 65%; top: 75%; animation-delay: 7s; }
-.tavern-ambient-mote:nth-child(9) { left: 78%; top: 35%; animation-delay: 2.5s; }
-.tavern-ambient-mote:nth-child(10){ left: 50%; top: 90%; animation-delay: 1.5s; }
-
-@keyframes moteFloat {
-  0% { transform: translate(0, 0) scale(0.8); opacity: 0.25; }
-  50% { transform: translate(6px, -10px) scale(1.1); opacity: 0.5; }
-  100% { transform: translate(-4px, -20px) scale(0.7); opacity: 0.2; }
-}
-
-.skill-crest {
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  width: 30px;
-  height: 30px;
-  border-radius: 999px;
-  background: radial-gradient(circle, rgba(255, 215, 120, 0.95), rgba(140, 90, 30, 0.95));
-  border: 1px solid rgba(255, 215, 120, 0.7);
-  box-shadow: 0 0 12px rgba(255, 215, 120, 0.6);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transform: scale(0.6);
-  pointer-events: none;
-  z-index: 6;
-  transition: opacity 140ms ease, transform 140ms ease;
-}
-
-.skill-crest i {
-  color: #3e2723;
-  font-size: 12px;
-}
-
-.skill-crest.show {
-  opacity: 1;
-  transform: scale(1);
-}
-
-.tavern-wax-stamp {
-  position: absolute;
-  bottom: -6px;
-  right: -4px;
-  padding: 4px 8px;
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 1px;
-  color: #ffd6d6;
-  background: rgba(120, 20, 20, 0.9);
-  border: 1px solid rgba(255, 120, 120, 0.7);
-  border-radius: 6px;
-  text-transform: uppercase;
-  transform: rotate(-12deg) scale(0.7);
-  opacity: 0;
-  box-shadow: 0 0 10px rgba(180, 30, 30, 0.6);
-  pointer-events: none;
-}
-
-.tavern-wax-stamp.show {
-  opacity: 1;
-  transform: rotate(-10deg) scale(1);
-  animation: stampPop 0.5s ease-out;
-}
-
-@keyframes stampPop {
-  0% { transform: rotate(-16deg) scale(1.3); }
-  100% { transform: rotate(-10deg) scale(1); }
 }
 
 .player-total .total-value {
@@ -1236,18 +1134,6 @@
   pointer-events: none;
 }
 
-.btn-die-premium::after {
-  content: "";
-  position: absolute;
-  inset: 6px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 215, 120, 0.25);
-  opacity: 0;
-  pointer-events: none;
-  box-shadow: inset 0 0 8px rgba(255, 215, 120, 0.2);
-  transition: opacity 120ms ease;
-}
-
 .btn-die-premium .die-icon {
   width: 42px;
   height: 42px;
@@ -1412,14 +1298,6 @@
     inset 0 0 20px rgba(212, 160, 74, 0.1);
 }
 
-.btn-die-premium:hover::after {
-  opacity: 1;
-  background:
-    radial-gradient(circle at 50% 50%, rgba(255, 215, 120, 0.2), transparent 65%),
-    conic-gradient(from 0deg, rgba(255, 215, 120, 0.15), rgba(255, 215, 120, 0.0), rgba(255, 215, 120, 0.15));
-  animation: runeSpin 1.6s linear infinite;
-}
-
 .btn-die-premium:hover .die-icon {
   filter:
     drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 15px rgba(212, 160, 74, 0.6)) brightness(1.2);
@@ -1436,11 +1314,6 @@
   50% { transform: translateY(-4px) scale(1.05) translate(-0.6px, 0.4px) rotate(0.4deg); }
   75% { transform: translateY(-4px) scale(1.05) translate(0.6px, 0.2px) rotate(-0.3deg); }
   100% { transform: translateY(-4px) scale(1.05) translate(0, 0) rotate(0deg); }
-}
-
-@keyframes runeSpin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
 }
 
 .btn-die-premium:active {
@@ -5362,25 +5235,6 @@
   0% { opacity: 0; transform: translate(0, 0) scale(0.8); }
   30% { opacity: 1; }
   100% { opacity: 0; transform: translate(var(--arcane-x), var(--arcane-y)) scale(0.2); }
-}
-
-.tavern-spark {
-  position: absolute;
-  width: 5px;
-  height: 5px;
-  border-radius: 999px;
-  background: radial-gradient(circle, #fff2c4 0%, #ffcc66 60%, rgba(120, 80, 20, 0.6) 100%);
-  box-shadow: 0 0 8px rgba(255, 210, 120, 0.8);
-  opacity: 0;
-  animation-name: spark-pop;
-  animation-timing-function: ease-out;
-  animation-fill-mode: forwards;
-}
-
-@keyframes spark-pop {
-  0% { opacity: 0; transform: translateY(4px) scale(0.4); }
-  30% { opacity: 1; }
-  100% { opacity: 0; transform: translateY(-6px) scale(0.2); }
 }
 
 .tavern-ale {

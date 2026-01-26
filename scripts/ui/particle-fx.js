@@ -80,39 +80,6 @@ export class ParticleFactory {
     }
 
     /**
-     * Spawns small coin sparkles (lightweight shimmer)
-     * @param {HTMLElement} container
-     * @param {number} amount
-     */
-    static spawnCoinSparkle(container, amount = 18) {
-        if (!container) return;
-
-        const count = Math.min(amount, 40);
-        for (let i = 0; i < count; i++) {
-            const spark = document.createElement("div");
-            spark.classList.add("tavern-spark");
-
-            const startX = 10 + Math.random() * 80;
-            const startY = 10 + Math.random() * 80;
-            const delay = Math.random() * 0.2;
-            const duration = 0.6 + Math.random() * 0.6;
-            const scale = 0.5 + Math.random() * 0.8;
-
-            spark.style.left = `${startX}%`;
-            spark.style.top = `${startY}%`;
-            spark.style.animationDelay = `${delay}s`;
-            spark.style.animationDuration = `${duration}s`;
-            spark.style.transform = `scale(${scale})`;
-
-            container.appendChild(spark);
-
-            setTimeout(() => {
-                spark.remove();
-            }, (duration + delay) * 1000);
-        }
-    }
-
-    /**
      * Spawns an ale splash (amber droplets)
      * @param {HTMLElement} container
      * @param {number} amount

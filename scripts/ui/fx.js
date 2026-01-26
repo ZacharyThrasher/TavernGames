@@ -248,7 +248,6 @@ export function showSkillBanner(payload = {}) {
       banner.appendChild(particleLayer);
       ParticleFactory.spawnArcaneBurst(particleLayer, 40);
       setTimeout(() => particleLayer.remove(), 1800);
-      showSkillCrest(game.user?.id, payload.crest ?? "rune");
     }
 
     setTimeout(() => fadeOutAndRemove(banner, 500), 3200);
@@ -462,13 +461,6 @@ export function showScoreSurge(userId, payload = {}) {
         requestAnimationFrame(() => pop.classList.add("show"));
         setTimeout(() => pop.remove(), 900);
       }
-
-      if (payload.multiplied || delta >= 10) {
-        const stamp = createElement("div", { className: "tavern-wax-stamp", innerHTML: "LUCKY STREAK" });
-        seat.appendChild(stamp);
-        requestAnimationFrame(() => stamp.classList.add("show"));
-        setTimeout(() => stamp.remove(), 900);
-      }
     }, 60);
   } catch (error) {
     console.error("Tavern Twenty-One | Score surge error:", error);
@@ -491,14 +483,6 @@ export function showPotPulse() {
       void potEl.offsetWidth;
       potEl.classList.add("pot-breathe");
       setTimeout(() => potEl.classList.remove("pot-breathe"), 700);
-
-      const potDisplay = appWindow.querySelector(".pot-display");
-      if (potDisplay) {
-        const sparkleLayer = createElement("div", { className: "pot-sparkle-layer" });
-        potDisplay.appendChild(sparkleLayer);
-        ParticleFactory.spawnCoinSparkle(sparkleLayer, 16);
-        setTimeout(() => sparkleLayer.remove(), 900);
-      }
     }, 60);
   } catch (error) {
     console.error("Tavern Twenty-One | Pot pulse error:", error);
@@ -542,29 +526,6 @@ export function showImpactFrame() {
     setTimeout(() => frame.remove(), 260);
   } catch (error) {
     console.error("Tavern Twenty-One | Impact frame error:", error);
-  }
-}
-
-/**
- * Skill crest pop on player seat (private)
- * @param {string} userId
- * @param {string} crest
- */
-export function showSkillCrest(userId, crest = "rune") {
-  try {
-    if (!game.tavernDiceMaster?.app?.rendered) return;
-    if (isPerformanceMode()) return;
-    const appWindow = document.querySelector(".tavern-dice-master.application");
-    if (!appWindow) return;
-    const seat = appWindow.querySelector(`.player-seat[data-user-id="${userId}"]`);
-    if (!seat) return;
-
-    const crestEl = createElement("div", { className: `skill-crest ${crest}`, innerHTML: `<i class="fa-solid fa-wand-sparkles"></i>` });
-    seat.appendChild(crestEl);
-    requestAnimationFrame(() => crestEl.classList.add("show"));
-    setTimeout(() => crestEl.remove(), 900);
-  } catch (error) {
-    console.error("Tavern Twenty-One | Skill crest error:", error);
   }
 }
 
