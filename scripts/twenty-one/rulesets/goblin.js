@@ -82,6 +82,7 @@ export async function submitGoblinRoll({ state, tableData, userId, die }) {
 
   // Update Totals
   const previousTotal = totals[userId] ?? 0;
+  const maxBefore = Math.max(0, ...Object.entries(totals).filter(([id]) => id !== userId).map(([, v]) => Number(v ?? 0)));
   let currentTotal = previousTotal;
   if (multiplier > 1) {
     currentTotal *= multiplier;
@@ -129,6 +130,16 @@ export async function submitGoblinRoll({ state, tableData, userId, die }) {
       });
     } catch (e) { }
   }
+
+  if (!bust && currentTotal > maxBefore && currentTotal > 0) {
+    try {
+      await tavernSocket.executeForEveryone("showJackpotInlay");
+    } catch (e) { }
+  }
+
+  try {
+    await tavernSocket.executeForEveryone("showPotPulse");
+  } catch (e) { }
 
   const userName = getActorName(userId);
   let msg = "";

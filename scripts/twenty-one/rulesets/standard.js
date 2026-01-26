@@ -98,6 +98,7 @@ export async function submitStandardRoll({ state, tableData, userId, die, isOpen
 
   const rolls = { ...tableData.rolls };
   const totals = { ...tableData.totals };
+  const previousTotal = totals[userId] ?? 0;
   const cleaningFees = { ...tableData.cleaningFees };
   const visibleTotals = { ...tableData.visibleTotals };
 
@@ -211,6 +212,30 @@ export async function submitStandardRoll({ state, tableData, userId, die, isOpen
     hunchRolls,
     pendingBust: pendingBust ? userId : null,
   };
+
+  if (!isOpeningPhase) {
+    const totalDelta = totals[userId] - previousTotal;
+    if (!isBust && totalDelta > 0) {
+      try {
+        await tavernSocket.executeForEveryone("showScoreSurge", userId, {
+          from: previousTotal,
+          to: totals[userId],
+          delta: totalDelta,
+          multiplied: false
+        });
+      } catch (e) { }
+    }
+
+    if (!isBust && totals[userId] === 21) {
+      try {
+        await tavernSocket.executeForEveryone("showJackpotInlay");
+      } catch (e) { }
+    }
+
+    try {
+      await tavernSocket.executeForEveryone("showPotPulse");
+    } catch (e) { }
+  }
 
   if (!isOpeningPhase) {
     updatedTable.hasActed = { ...updatedTable.hasActed, [userId]: true };

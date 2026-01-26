@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.18.0] - 2026-01-25
+### Impact Pass (Visual Only)
+- **Score Impact**: Squash/stretch + seat pulse on score increases.
+- **Pot Pulse**: Breathing animation after rolls.
+- **Jackpot Inlay**: Pot glow on big wins.
+- **Bust Flash**: Red vignette impact on busts.
+
 ## [5.17.5] - 2026-01-25
 ### Goblin: Score Surge Visibility
 - **Goblin Scores**: Score surge now also pulses the player seat so all clients can see it.

@@ -1,7 +1,7 @@
 import { MODULE_ID } from "./state.js";
 import { handleJoinTable, handleLeaveTable, handleStartRound, handlePlayerAction, handleResetTable, handleMarkLogsAsSeen } from "./tavern-actions.js";
 import { showRollToUser, showPublicRollFromData } from "./dice.js";
-import { showVictoryFanfare, showBustFanfare, showCoinFlip, playBumpEffect, showFloatingText, showSkillCutIn, showSkillResult, showPrivateFeedback, showImpactRing, showFullSetBurst, showCheatResult, showSkillBanner, showScoreSurge } from "./ui/fx.js";
+import { showVictoryFanfare, showBustFanfare, showCoinFlip, playBumpEffect, showFloatingText, showSkillCutIn, showSkillResult, showPrivateFeedback, showImpactRing, showFullSetBurst, showCheatResult, showSkillBanner, showScoreSurge, showPotPulse, showJackpotInlay, showVignetteFlash } from "./ui/fx.js";
 
 export let tavernSocket;
 
@@ -34,6 +34,9 @@ export function setupSockets() {
   tavernSocket.register("playBumpEffect", playBumpEffect);
   tavernSocket.register("showFullSetBurst", showFullSetBurst);
   tavernSocket.register("showScoreSurge", showScoreSurge);
+  tavernSocket.register("showPotPulse", showPotPulse);
+  tavernSocket.register("showJackpotInlay", showJackpotInlay);
+  tavernSocket.register("showVignetteFlash", showVignetteFlash);
   tavernSocket.register("showFloatingText", showFloatingText);
   tavernSocket.register("showSkillCutIn", showSkillCutIn);
   // V4.7.6: Result Overlay

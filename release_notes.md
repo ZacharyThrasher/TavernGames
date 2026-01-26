@@ -1,2 +1,5 @@
-### Goblin: Score Surge Visibility
-- **Goblin Scores**: Score surge now also pulses the player seat so all clients can see it.
+### Impact Pass (Visual Only)
+- **Score Impact**: Squash/stretch + seat pulse on score increases.
+- **Pot Pulse**: Breathing animation after rolls.
+- **Jackpot Inlay**: Pot glow on big wins.
+- **Bust Flash**: Red vignette impact on busts.

@@ -142,6 +142,9 @@ export function showBustFanfare(userId) {
       text: "BUST!"
     });
 
+    // Vignette flash for impact
+    showVignetteFlash();
+
   } catch (error) {
     console.error("Tavern Twenty-One | Bust fanfare error:", error);
   }
@@ -370,6 +373,64 @@ export function showScoreSurge(userId, payload = {}) {
     }
   } catch (error) {
     console.error("Tavern Twenty-One | Score surge error:", error);
+  }
+}
+
+/**
+ * Pot breathing pulse
+ */
+export function showPotPulse() {
+  try {
+    if (!game.tavernDiceMaster?.app?.rendered) return;
+    if (isPerformanceMode()) return;
+    const appWindow = document.querySelector(".tavern-dice-master.application");
+    if (!appWindow) return;
+    const potEl = appWindow.querySelector(".pot-amount");
+    if (!potEl) return;
+    potEl.classList.remove("pot-breathe");
+    void potEl.offsetWidth;
+    potEl.classList.add("pot-breathe");
+    setTimeout(() => potEl.classList.remove("pot-breathe"), 700);
+  } catch (error) {
+    console.error("Tavern Twenty-One | Pot pulse error:", error);
+  }
+}
+
+/**
+ * Jackpot inlay on pot
+ */
+export function showJackpotInlay() {
+  try {
+    if (!game.tavernDiceMaster?.app?.rendered) return;
+    if (isPerformanceMode()) return;
+    const appWindow = document.querySelector(".tavern-dice-master.application");
+    if (!appWindow) return;
+    const potDisplay = appWindow.querySelector(".pot-display");
+    if (!potDisplay) return;
+    potDisplay.classList.remove("pot-jackpot");
+    void potDisplay.offsetWidth;
+    potDisplay.classList.add("pot-jackpot");
+    setTimeout(() => potDisplay.classList.remove("pot-jackpot"), 1200);
+  } catch (error) {
+    console.error("Tavern Twenty-One | Jackpot inlay error:", error);
+  }
+}
+
+/**
+ * Vignette flash
+ */
+export function showVignetteFlash() {
+  try {
+    if (!game.tavernDiceMaster?.app?.rendered) return;
+    if (isPerformanceMode()) return;
+    const appWindow = document.querySelector(".tavern-dice-master.application");
+    if (!appWindow) return;
+    const flash = createElement("div", { className: "tavern-vignette-flash" });
+    appWindow.appendChild(flash);
+    requestAnimationFrame(() => flash.classList.add("show"));
+    setTimeout(() => flash.remove(), 350);
+  } catch (error) {
+    console.error("Tavern Twenty-One | Vignette flash error:", error);
   }
 }
 
