@@ -9,6 +9,10 @@ import {
   showBustFanfare,
   playBumpEffect,
   showFloatingText,
+  showScoreSurge,
+  showPotPulse,
+  showJackpotInlay,
+  showVignetteFlash,
   showSkillCutIn,
   showSkillResult,
   isPerformanceMode
@@ -103,6 +107,10 @@ Hooks.once("ready", async () => {
       showBustFanfare,
       playBumpEffect,
       showFloatingText,
+      showScoreSurge,
+      showPotPulse,
+      showJackpotInlay,
+      showVignetteFlash,
       // Utility access for other modules
       isPerformanceMode,
       runDiagnostics,

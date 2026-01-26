@@ -413,6 +413,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       userId,
       ante,
       liquidMode,
+      isSloppy: tableData.sloppy?.[userId] ?? false,
       pot: state.pot,
       accusationCost,
       status: state.status,

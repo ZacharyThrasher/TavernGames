@@ -215,7 +215,7 @@ export async function submitStandardRoll({ state, tableData, userId, die, isOpen
 
   if (!isOpeningPhase) {
     const totalDelta = totals[userId] - previousTotal;
-    if (!isBust && totalDelta > 0) {
+    if (!isBust && totalDelta > 0 && isPublic) {
       try {
         await tavernSocket.executeForEveryone("showScoreSurge", userId, {
           from: previousTotal,
@@ -226,7 +226,7 @@ export async function submitStandardRoll({ state, tableData, userId, die, isOpen
       } catch (e) { }
     }
 
-    if (!isBust && totals[userId] === 21) {
+    if (!isBust && totals[userId] === 21 && isPublic) {
       try {
         await tavernSocket.executeForEveryone("showJackpotInlay");
       } catch (e) { }

@@ -137,12 +137,19 @@
     {{/if}}
 
     {{#unless isHouse}}
+    {{#unless isGoblinMode}}
     <div class="liquid-mode-toggle">
-      <button type="button" class="btn-toggle-liquid {{#if liquidMode}}active{{/if}}" data-action="toggleLiquidMode"
+      <button type="button" class="btn-toggle-liquid {{#if liquidMode}}active{{/if}} {{#if isSloppy}}cutoff{{/if}}"
+        data-action="toggleLiquidMode" {{#if isSloppy}}disabled{{/if}}
         title="Pay with your Liver! (Constitution Save)">
-        <i class="fa-solid fa-beer-mug-empty"></i> Put it on the Tab {{#if liquidMode}}(ON){{/if}}
+        <i class="fa-solid fa-beer-mug-empty"></i>
+        {{#if isSloppy}}Cut Off{{else}}Put it on the Tab{{/if}}
       </button>
+      {{#if isSloppy}}
+      <div class="cutoff-stamp">CUT OFF</div>
+      {{/if}}
     </div>
+    {{/unless}}
     {{/unless}}
 
     {{!-- V3: Hit locked indicator --}}

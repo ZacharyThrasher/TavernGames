@@ -3002,6 +3002,29 @@
   pointer-events: none;
 }
 
+.btn-toggle-liquid.cutoff {
+  background: linear-gradient(135deg, #3a2a1a 0%, #1a120a 100%);
+  border-color: rgba(255, 140, 90, 0.6);
+  color: #ffd7b5;
+  box-shadow: inset 0 0 8px rgba(255, 120, 60, 0.25);
+  text-shadow: 0 0 6px rgba(255, 120, 60, 0.3);
+}
+
+.cutoff-stamp {
+  margin-top: 6px;
+  display: inline-block;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #ffdfc2;
+  border: 1px solid rgba(255, 120, 60, 0.6);
+  border-radius: 6px;
+  transform: rotate(-6deg);
+  background: rgba(60, 25, 10, 0.7);
+  box-shadow: 0 0 10px rgba(255, 120, 60, 0.4);
+}
+
 @keyframes liquidPulse {
   0%, 100% { opacity: 0.4; }
   50% { opacity: 0.9; }
@@ -3607,6 +3630,7 @@
     width: 100%;
     height: 100%;
     overflow: hidden;
+    animation: cutin-punch 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   /* The Stripe */
@@ -3647,7 +3671,7 @@
     /* Reduced from 70vh */
     transform: translateX(100%);
     opacity: 0;
-    animation: portrait-slide 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
+    animation: portrait-slide 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.15s forwards;
     /* Masking for style */
     mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
     -webkit-mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
@@ -3658,6 +3682,8 @@
     height: 100%;
     object-fit: cover;
     filter: drop-shadow(10px 10px 20px rgba(0, 0, 0, 0.5));
+    border-radius: 8px;
+    box-shadow: 0 0 18px rgba(255, 215, 120, 0.25);
   }
 
   /* Flash effect only for single mode */
@@ -3713,7 +3739,20 @@
     transform: scale(3);
     opacity: 0;
     font-style: italic;
-    animation: text-slam 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s forwards;
+    animation: text-slam 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.25s forwards, text-stamp 0.15s ease-out 0.5s;
+  }
+
+  .cinematic-title::after {
+    content: "";
+    display: block;
+    margin: 8px auto 0;
+    width: 35vw;
+    max-width: 520px;
+    height: 6px;
+    background: linear-gradient(90deg, transparent, rgba(255, 215, 120, 0.9), transparent);
+    box-shadow: 0 0 18px rgba(255, 215, 120, 0.6);
+    opacity: 0;
+    animation: stamp-underline 0.25s ease-out 0.55s forwards;
   }
 
   @keyframes text-slam {
@@ -3726,6 +3765,22 @@
       transform: scale(1);
       opacity: 1;
     }
+  }
+
+  @keyframes text-stamp {
+    0% { transform: scale(1.15); filter: blur(1px); }
+    100% { transform: scale(1); filter: blur(0); }
+  }
+
+  @keyframes stamp-underline {
+    0% { opacity: 0; transform: scaleX(0.2); }
+    100% { opacity: 1; transform: scaleX(1); }
+  }
+
+  @keyframes cutin-punch {
+    0% { transform: scale(1.02) skew(-1deg); }
+    60% { transform: scale(1) skew(0deg); }
+    100% { transform: scale(1); }
   }
 
   .cinematic-subtitle {
@@ -3780,6 +3835,8 @@
     animation: text-slam 0.4s ease 0.3s forwards, float-vision 3s ease-in-out infinite 1s;
   }
 
+  .type-FORESIGHT .portrait-img { box-shadow: 0 0 26px rgba(155, 110, 255, 0.45); }
+
   /* --- GOAD (Orange/Aggressive) --- */
   .type-GOAD .cinematic-title {
     color: #e67e22;
@@ -3787,6 +3844,8 @@
     font-family: var(--tavern-font-primary);
     animation: text-slam 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s forwards, taunt-pulse 0.5s ease-in-out infinite alternate 1s;
   }
+
+  .type-GOAD .portrait-img { box-shadow: 0 0 26px rgba(230, 126, 34, 0.45); }
 
   /* --- PROFILE (Teal/Digital) --- */
   .type-PROFILE .cinematic-title {
@@ -3798,12 +3857,16 @@
     animation: text-slam 0.4s ease 0.3s forwards, scan-glitch 2s infinite 1s;
   }
 
+  .type-PROFILE .portrait-img { box-shadow: 0 0 26px rgba(26, 188, 156, 0.45); }
+
   /* --- BUMP (Red/Impact) --- */
   .type-BUMP .cinematic-title {
     color: #ff6b6b;
     text-shadow: 0 5px 0 #c0392b, 0 10px 10px rgba(0, 0, 0, 0.5);
     animation: text-slam 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s forwards, bump-shock 0.3s ease-out 0.7s;
   }
+
+  .type-BUMP .portrait-img { box-shadow: 0 0 26px rgba(255, 107, 107, 0.45); }
 
   /* Animations */
   @keyframes float-vision {

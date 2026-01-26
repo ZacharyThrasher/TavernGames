@@ -95,6 +95,7 @@ export async function finishTurn(userId) {
     updatedRolls[lastRollIndex] = { ...lastRoll, public: true };
 
     const updatedVisibleTotals = { ...tableData.visibleTotals };
+    const previousVisibleTotal = updatedVisibleTotals[userId] ?? 0;
     const gameMode = tableData.gameMode ?? "standard";
     if (gameMode === "goblin" && lastRoll.die === 2) {
       if (lastRoll.result === 2) {
@@ -161,6 +162,21 @@ export async function finishTurn(userId) {
     try {
       await showPublicRollFromData(Number(lastRoll.die), Number(lastRoll.result), userId);
     } catch (e) { console.warn("Tavern | DSN Error:", e); }
+
+    // Show score surge AFTER cheat resolution (public reveal)
+    if (gameMode !== "goblin") {
+      const delta = lastRoll.result;
+      if (delta > 0) {
+        try {
+          await tavernSocket.executeForEveryone("showScoreSurge", userId, {
+            from: previousVisibleTotal,
+            to: previousVisibleTotal + delta,
+            delta,
+            multiplied: false
+          });
+        } catch (e) { }
+      }
+    }
   }
 
   const updatedTable = { ...tableData, pendingAction: null };
