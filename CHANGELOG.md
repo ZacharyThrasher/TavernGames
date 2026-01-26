@@ -1,5 +1,9 @@
 # Changelog
 
+## [5.18.14] - 2026-01-26
+### Dice Hover Fix
+- **UI**: Force hover jitter/glow on dice buttons via JS class fallback.
+
 ## [5.18.13] - 2026-01-26
 ### Revert: Audio
 - **Revert**: Removed recent sound effects and audio hooks.

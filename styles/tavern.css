@@ -1288,7 +1288,8 @@
   grid-column: 2;
 }
 
-.btn-die-premium:hover {
+.btn-die-premium:hover,
+.btn-die-premium.is-hovered {
   transform: translateY(-4px) scale(1.05);
   animation: dieHoverJitter 0.25s linear infinite;
   border-color: var(--tavern-gold);
@@ -1298,13 +1299,15 @@
     inset 0 0 20px rgba(212, 160, 74, 0.1);
 }
 
-.btn-die-premium:hover .die-icon {
+.btn-die-premium:hover .die-icon,
+.btn-die-premium.is-hovered .die-icon {
   filter:
     drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 15px rgba(212, 160, 74, 0.6)) brightness(1.2);
   transform: scale(1.1);
 }
 
-.btn-die-premium:hover .die-label {
+.btn-die-premium:hover .die-label,
+.btn-die-premium.is-hovered .die-label {
   color: var(--tavern-gold);
 }
 

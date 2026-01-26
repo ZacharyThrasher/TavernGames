@@ -630,6 +630,27 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
   _onRender(context, options) {
     super._onRender(context, options);
 
+    if (this._diceHoverHandlers) {
+      this.element.removeEventListener("pointerover", this._diceHoverHandlers.over, true);
+      this.element.removeEventListener("pointerout", this._diceHoverHandlers.out, true);
+    }
+
+    this._diceHoverHandlers = {
+      over: (event) => {
+        const button = event.target.closest(".btn-die-premium");
+        if (!button || button.disabled) return;
+        button.classList.add("is-hovered");
+      },
+      out: (event) => {
+        const button = event.target.closest(".btn-die-premium");
+        if (!button) return;
+        button.classList.remove("is-hovered");
+      }
+    };
+
+    this.element.addEventListener("pointerover", this._diceHoverHandlers.over, true);
+    this.element.addEventListener("pointerout", this._diceHoverHandlers.out, true);
+
     // Handle ante input changes (GM only)
     const anteInput = this.element.querySelector('#ante-input');
     if (anteInput) {
