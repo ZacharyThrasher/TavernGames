@@ -1,5 +1,11 @@
 # Changelog
 
+## [5.18.4] - 2026-01-26
+### Cheat Integrity
+- **Bug Fix**: Failed cheat attempts no longer change the die value.
+- **Rules**: Nat 20 on the cheat check now always succeeds (invisible cheat).
+- **Telemetry**: Cheat records now distinguish proposed vs applied values.
+
 ## [5.18.3] - 2026-01-25
 ### Cut‑In V2
 - **Cinematics**: Punch‑in + stomp, staggered timing, and stamped underline glow.

@@ -144,8 +144,8 @@ export async function cheat(payload, userId) {
     }
     const rollTotal = d20Result + modifier;
 
-    // V3: Determine success (Nat 1 always fails, otherwise beat Heat DC)
-    const success = !isNat1 && rollTotal >= heatDC;
+    // V3: Determine success (Nat 1 always fails, Nat 20 always succeeds, otherwise beat Heat DC)
+    const success = isNat20 || (!isNat1 && rollTotal >= heatDC);
 
     // V3: Determine if caught
     // Nat 1 = auto-caught
@@ -209,12 +209,14 @@ export async function cheat(payload, userId) {
             : `${userName} attempted a ${cheatTypeLabel.toLowerCase()} cheat (${dcType}: ${rollTotal}).`,
     });
 
-    // Apply the cheat to state
+    // Apply the cheat to state (only on success)
     const playerRolls = tableData.rolls?.[userId] ?? [];
     const updatedRolls = [...playerRolls];
-    updatedRolls[dieIndex] = { ...targetDie, result: newValue };
+    const didApply = success && !fumbled;
+    const appliedValue = didApply ? newValue : oldValue;
+    updatedRolls[dieIndex] = { ...targetDie, result: appliedValue };
 
-    const rollDelta = newValue - oldValue;
+    const rollDelta = appliedValue - oldValue;
     const totals = { ...tableData.totals };
     const visibleTotals = { ...tableData.visibleTotals };
     const gameMode = tableData.gameMode ?? "standard";
@@ -251,13 +253,15 @@ export async function cheat(payload, userId) {
         dieIndex,
         die: targetDie.die,
         oldValue,
-        newValue,
+        newValue: appliedValue,
+        proposedValue: newValue,
         adjustment,
         skill: skillName,
         roll: rollTotal,
         success,
         fumbled,
-        invisible: isNat20
+        invisible: isNat20,
+        changed: didApply
     };
     cheaters[userId] = {
         ...existingCheater,

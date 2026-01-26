@@ -1,6 +1,4 @@
-### Cut‑In V2
-- **Cinematics**: Punch‑in + stomp, staggered timing, and stamped underline glow.
-- **Portraits**: Type‑tinted rim lighting for extra pop.
-- **Cheat Reveal**: Score surge now respects cheat reveal timing.
-- **Liquid Mode**: Hidden in Goblin, “Cut Off” state when sloppy.
-- **API**: Exposed new FX helpers for manual testing.
+### Cheat Integrity
+- **Bug Fix**: Failed cheat attempts no longer change the die value.
+- **Rules**: Nat 20 on the cheat check now always succeeds (invisible cheat).
+- **Telemetry**: Cheat records now distinguish proposed vs applied values.
