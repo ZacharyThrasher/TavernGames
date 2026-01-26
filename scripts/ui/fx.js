@@ -296,6 +296,37 @@ export function showDrinkResult(payload = {}) {
 }
 
 /**
+ * Cut off banner (private)
+ * @param {object} payload - { message }
+ */
+export function showCutOffBanner(payload = {}) {
+  try {
+    if (isPerformanceMode()) return;
+
+    const appWindow = document.querySelector(".tavern-dice-master.application");
+    if (!appWindow) return;
+
+    const message = payload.message ?? "The barkeep cuts you off. Pay in gold.";
+
+    const banner = createElement("div", {
+      className: "cutoff-banner",
+      innerHTML: `
+        <div class="cutoff-banner-title"><i class="fa-solid fa-mug-hot"></i> CUT OFF</div>
+        <div class="cutoff-banner-message">${message}</div>
+      `
+    });
+
+    appWindow.appendChild(banner);
+    requestAnimationFrame(() => banner.classList.add("show"));
+    shake(appWindow, "tavern-shake", 350);
+
+    setTimeout(() => fadeOutAndRemove(banner, 500), 2600);
+  } catch (error) {
+    console.error("Tavern Twenty-One | Cut off banner error:", error);
+  }
+}
+
+/**
  * Impact ring for skill effects
  * @param {string} userId
  * @param {string} type - "goad" | "bump"

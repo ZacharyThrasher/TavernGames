@@ -1,5 +1,10 @@
 # Changelog
 
+## [5.18.6] - 2026-01-26
+### Retaliation Clarity
+- **UI**: Retaliation dice now show values; hole dice display as “?”.
+- **UX**: Added visible value badges to the retaliation picker.
+
 ## [5.18.5] - 2026-01-26
 ### Tab Clarity
 - **UI**: “Put it on the Tab” now displays a private banner with the CON check result.

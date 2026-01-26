@@ -345,7 +345,17 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       : null;
 
     const retaliationAttackerDice = pendingRetaliation
-      ? (tableData.rolls?.[pendingRetaliation.attackerId] ?? []).map((r, idx) => ({ index: idx, die: r.die, result: r.result }))
+      ? (tableData.rolls?.[pendingRetaliation.attackerId] ?? []).map((r, idx) => {
+        const isPublic = r.public ?? true;
+        const isBlind = r.blind ?? false;
+        const showValue = isPublic && !isBlind;
+        return {
+          index: idx,
+          die: r.die,
+          result: showValue ? r.result : "?",
+          isHole: !isPublic || isBlind
+        };
+      })
       : [];
 
     // Bump Lock Context
@@ -870,7 +880,12 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       let payWithDrink = false;
 
       if (liquidModeSetting && isSloppy) {
-        ui.notifications.warn("You're cut off. Pay with gold instead.");
+        await game.settings.set(MODULE_ID, "liquidMode", false);
+        try {
+          await tavernSocket.executeAsUser("showCutOffBanner", game.user.id, {
+            message: "Barkeep slams the bar. You're done. Pay in gold."
+          });
+        } catch (e) { }
       }
 
       if (liquidModeSetting && !isSloppy) {
