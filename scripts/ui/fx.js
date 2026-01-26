@@ -245,8 +245,8 @@ export function showSkillBanner(payload = {}) {
     if (tone === "success") {
       const particleLayer = createElement("div", { className: "cinematic-particles" });
       banner.appendChild(particleLayer);
-      ParticleFactory.spawnArcaneBurst(particleLayer, 24);
-      setTimeout(() => particleLayer.remove(), 1400);
+      ParticleFactory.spawnArcaneBurst(particleLayer, 40);
+      setTimeout(() => particleLayer.remove(), 1800);
     }
 
     setTimeout(() => fadeOutAndRemove(banner, 500), 3200);
@@ -366,7 +366,7 @@ export function showScoreSurge(userId, payload = {}) {
       const delta = payload.delta ?? 0;
       const popText = payload.multiplied ? "x2!" : (delta > 0 ? `+${delta}` : "");
       if (popText) {
-        const pop = createElement("div", { className: "score-pop", innerHTML: popText });
+        const pop = createElement("div", { className: `score-pop ${payload.multiplied ? "multiplied" : ""} mega`, innerHTML: popText });
         seat.appendChild(pop);
         requestAnimationFrame(() => pop.classList.add("show"));
         setTimeout(() => pop.remove(), 900);

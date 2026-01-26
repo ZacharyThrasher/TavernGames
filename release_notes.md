@@ -1,2 +1,4 @@
-### Visual Timing Fix
-- **Impact FX**: Delayed DOM effects slightly to apply after re-render (prevents missing animations).
+### WOW Pass
+- **Score Pop**: Big, flashy casino-style pop numbers + burst glow.
+- **Surge Glow**: Stronger seat glow on score increases.
+- **Skill Success**: Heavier arcane burst intensity.
