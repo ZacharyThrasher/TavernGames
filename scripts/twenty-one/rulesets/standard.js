@@ -246,10 +246,10 @@ export async function submitStandardRoll({ state, tableData, userId, die, isOpen
     updatedTable.hasActed = { ...updatedTable.hasActed, [userId]: true };
   }
 
-  await updateState((current) => ({
+  await updateState({
     tableData: updatedTable,
-    pot: current.pot + rollCost,
-  }));
+    pot: newPot,
+  });
 
   if (isOpeningPhase) {
     const myRolls = rolls[userId] ?? [];

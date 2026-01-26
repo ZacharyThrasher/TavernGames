@@ -269,6 +269,12 @@ export async function drinkForPayment(userId, drinksNeeded, tableData) {
             });
         } catch (e) { }
 
+        try {
+            await tavernSocket.executeAsUser("showCutOffBanner", userId, {
+                message: "Barkeep slams the bar. You're done. Pay in gold."
+            });
+        } catch (e) { }
+
     } else {
         // Success - handled it like a champ
         await addLogToAll({

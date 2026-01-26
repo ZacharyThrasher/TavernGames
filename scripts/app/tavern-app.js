@@ -881,11 +881,6 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
       if (liquidModeSetting && isSloppy) {
         await game.settings.set(MODULE_ID, "liquidMode", false);
-        try {
-          await tavernSocket.executeAsUser("showCutOffBanner", game.user.id, {
-            message: "Barkeep slams the bar. You're done. Pay in gold."
-          });
-        } catch (e) { }
       }
 
       if (liquidModeSetting && !isSloppy) {

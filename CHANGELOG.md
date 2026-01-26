@@ -1,5 +1,11 @@
 # Changelog
 
+## [5.18.7] - 2026-01-26
+### Tab + Retaliation Polish
+- **Tab**: Cut‑off banner now triggers the moment a player becomes sloppy.
+- **Tab**: Rolls on the tab no longer add to the pot.
+- **Retaliation**: Die values now overlay the die icons; labels are brighter.
+
 ## [5.18.6] - 2026-01-26
 ### Retaliation Clarity
 - **UI**: Retaliation dice now show values; hole dice display as “?”.

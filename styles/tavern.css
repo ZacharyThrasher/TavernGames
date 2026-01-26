@@ -4498,19 +4498,26 @@
   position: relative;
 }
 
-.retaliation-die-result {
+.retaliation-die-face {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 26px;
+}
+
+.retaliation-die-result {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
   height: 20px;
   padding: 0 6px;
-  margin-top: 4px;
   font-size: 12px;
   font-weight: 700;
   color: var(--tavern-parchment);
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 215, 120, 0.35);
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 215, 120, 0.45);
   border-radius: 10px;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
 }
@@ -4518,6 +4525,12 @@
 .retaliation-die-result.hole {
   color: #c9bfb0;
   border-style: dashed;
+}
+
+.btn-retaliation-die .die-type {
+  color: #f2e4c0;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
 }
 
 /* Cheat Adjustment Controls */
