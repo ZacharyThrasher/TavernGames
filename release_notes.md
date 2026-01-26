@@ -1,2 +1,2 @@
-### Revert: POP Pack 2
-- **Revert**: Removed the experimental POP Pack 2 visuals per feedback.
+### Pot Audio
+- **SFX**: Play a CC0 coin clink when coins are added to the pot.

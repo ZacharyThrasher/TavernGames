@@ -1,5 +1,9 @@
 # Changelog
 
+## [5.18.11] - 2026-01-26
+### Pot Audio
+- **SFX**: Play a CC0 coin clink when coins are added to the pot.
+
 ## [5.18.10] - 2026-01-26
 ### Revert: POP Pack 2
 - **Revert**: Removed the experimental POP Pack 2 visuals per feedback.
