@@ -1,5 +1,6 @@
-### Visual POP Pack
-- **Impact**: Added impact frame flashes on jackpots/coin heads.
-- **Dice**: Hover charge jitter + glow on dice buttons.
-- **Totals**: Slam animation on score surges.
-- **Tab**: Ale splash particles and cut‑off glare.
+### Tavern POP Pack 2
+- **Dice**: Rune hover halos + jitter glow.
+- **Scores**: Slam effect + wax stamp on big hits.
+- **Pot**: Coin shimmer sparkles on pulse.
+- **Ambience**: Tavern dust motes overlay.
+- **Skills/Tab**: Skill crests + ale splash.

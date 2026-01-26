@@ -1,5 +1,13 @@
 # Changelog
 
+## [5.18.9] - 2026-01-26
+### Tavern POP Pack 2
+- **Dice**: Rune hover halos + jitter glow.
+- **Scores**: Slam effect + wax stamp on big hits.
+- **Pot**: Coin shimmer sparkles on pulse.
+- **Ambience**: Tavern dust motes overlay.
+- **Skills/Tab**: Skill crests + ale splash.
+
 ## [5.18.8] - 2026-01-26
 ### Visual POP Pack
 - **Impact**: Added impact frame flashes on jackpots/coin heads.

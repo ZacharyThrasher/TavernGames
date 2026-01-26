@@ -630,6 +630,18 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
   _onRender(context, options) {
     super._onRender(context, options);
 
+    const appWindow = this.element;
+    if (appWindow && !appWindow.querySelector(".tavern-ambient-motes")) {
+      const motes = document.createElement("div");
+      motes.className = "tavern-ambient-motes";
+      for (let i = 0; i < 10; i++) {
+        const mote = document.createElement("span");
+        mote.className = "tavern-ambient-mote";
+        motes.appendChild(mote);
+      }
+      appWindow.appendChild(motes);
+    }
+
     // Handle ante input changes (GM only)
     const anteInput = this.element.querySelector('#ante-input');
     if (anteInput) {
