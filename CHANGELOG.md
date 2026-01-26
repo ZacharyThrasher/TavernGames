@@ -1,5 +1,11 @@
 # Changelog
 
+## [5.18.15] - 2026-01-26
+### Goblin Rules Update
+- **Goblin**: Multi-roll turns, end-turn on 1, coin tail sets score to 1, final-round hold countdown.
+- **Goblin**: Used-dice lockout + full-set reset preserved; max-value rolls can explode.
+- **Docs**: RULES.md updated to match current behavior.
+
 ## [5.18.14] - 2026-01-26
 ### Dice Hover Fix
 - **UI**: Force hover jitter/glow on dice buttons via JS class fallback.

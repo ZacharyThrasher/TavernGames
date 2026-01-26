@@ -5,7 +5,7 @@ import { getActorName, payOutWinners } from "../utils/actors.js";
 import { getNextActivePlayer, allPlayersFinished, notifyUser } from "../utils/game-logic.js";
 import { emptyTableData, getAllowedDice, getDieCost } from "../constants.js";
 import { revealDice } from "./core.js";
-import { submitGoblinRoll } from "../rulesets/goblin.js";
+import { submitGoblinRoll, holdGoblin } from "../rulesets/goblin.js";
 import { submitStandardRoll } from "../rulesets/standard.js";
 import { showPublicRollFromData } from "../../dice.js";
 
@@ -245,6 +245,11 @@ export async function hold(userId) {
   }
 
   const tableData = state.tableData ?? emptyTableData();
+  const gameMode = tableData.gameMode ?? "standard";
+
+  if (gameMode === "goblin") {
+    return holdGoblin({ state, tableData, userId });
+  }
 
   if (tableData.currentPlayer !== userId) {
     await notifyUser(userId, "It's not your turn.");

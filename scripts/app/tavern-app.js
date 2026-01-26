@@ -555,13 +555,8 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       // Goblin Mode Logic
       if (isGoblinMode) {
         cost = 0;
-        costLabel = "FREE"; // Or "RISK"
+        costLabel = "FREE";
 
-        // Track Used Dice
-        // Exception: d20 can explode (handled in logic, but UI needs to know if allowed)
-        // Ideally state should clear it from usedDice if exploded, so simple .includes check works.
-        // My Logic in turn.js: "If Nat 20, we just DON'T add it to 'usedDice'".
-        // So checking usedDice.includes(d.value) is correct.
         if (d.value !== 2 && usedDice.includes(d.value)) {
           disabled = true;
         }
@@ -936,6 +931,10 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       }
 
       const updatedState = await tavernSocket.executeAsGM("playerAction", "roll", { die, payWithDrink }, game.user.id);
+
+      if (updatedState.tableData?.gameMode === "goblin") {
+        return;
+      }
 
       // Quick Cheat Opportunity
       await new Promise(resolve => setTimeout(resolve, 1500)); // Animation delay

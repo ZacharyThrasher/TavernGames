@@ -1,7 +1,7 @@
 import { updateState, addHistoryEntry, addLogToAll } from "../../state.js";
 import { tavernSocket } from "../../socket.js";
 import { getActorName } from "../utils/actors.js";
-import { allPlayersFinished } from "../utils/game-logic.js";
+import { allPlayersFinished, getNextActivePlayer, notifyUser } from "../utils/game-logic.js";
 import { revealDice } from "../phases/core.js";
 import { showPublicRollFromData } from "../../dice.js";
 
@@ -42,23 +42,21 @@ export async function submitGoblinRoll({ state, tableData, userId, die }) {
   } catch (e) { }
 
   // Logic Processing
-  let bust = false;
   let multiplier = 1;
-  let exploded = false;
+  const exploded = naturalRoll === die;
+  let endTurn = false;
+  let setScoreToOne = false;
 
   if (die === 2) {
     if (naturalRoll === 1) {
-      bust = true;
+      setScoreToOne = true;
+      endTurn = true;
     } else {
       multiplier = 2;
       result = 0;
     }
-  } else {
-    if (naturalRoll === 1) {
-      bust = true;
-    } else if (die === 20 && naturalRoll === 20) {
-      exploded = true;
-    }
+  } else if (naturalRoll === 1) {
+    endTurn = true;
   }
 
   // Coin flip pizzazz
@@ -84,7 +82,9 @@ export async function submitGoblinRoll({ state, tableData, userId, die }) {
   const previousTotal = totals[userId] ?? 0;
   const maxBefore = Math.max(0, ...Object.entries(totals).filter(([id]) => id !== userId).map(([, v]) => Number(v ?? 0)));
   let currentTotal = previousTotal;
-  if (multiplier > 1) {
+  if (setScoreToOne) {
+    currentTotal = 1;
+  } else if (multiplier > 1) {
     currentTotal *= multiplier;
   } else {
     currentTotal += result;
@@ -93,7 +93,9 @@ export async function submitGoblinRoll({ state, tableData, userId, die }) {
 
   if (isPublic) {
     let currentVisible = visibleTotals[userId] ?? 0;
-    if (multiplier > 1) {
+    if (setScoreToOne) {
+      currentVisible = 1;
+    } else if (multiplier > 1) {
       currentVisible *= multiplier;
     } else {
       currentVisible += result;
@@ -101,26 +103,19 @@ export async function submitGoblinRoll({ state, tableData, userId, die }) {
     visibleTotals[userId] = currentVisible;
   }
 
-  // Mark die as used (Unless exploded)
+  // Mark die as used (unless exploded) and track progress for full-set reset
   if (!exploded && die !== 2) {
     usedDiceMap[userId] = [...(usedDiceMap[userId] ?? []), die];
   }
 
-  // Track full-set progress
   if (die !== 2) {
     const progress = new Set(goblinSetProgress[userId] ?? []);
-    progress.add(die);
+    if (!exploded) progress.add(die);
     goblinSetProgress[userId] = [...progress];
   }
 
-  // Check Bust
-  if (bust) {
-    busts[userId] = true;
-    tavernSocket.executeForEveryone("showBustFanfare", userId);
-  }
-
   const totalDelta = currentTotal - previousTotal;
-  if (!bust && (totalDelta > 0 || multiplier > 1)) {
+  if (totalDelta !== 0 || multiplier > 1 || setScoreToOne) {
     try {
       await tavernSocket.executeForEveryone("showScoreSurge", userId, {
         from: previousTotal,
@@ -131,55 +126,40 @@ export async function submitGoblinRoll({ state, tableData, userId, die }) {
     } catch (e) { }
   }
 
-  if (!bust && currentTotal > maxBefore && currentTotal > 0) {
+  if (currentTotal > maxBefore && currentTotal > 0) {
     try {
       await tavernSocket.executeForEveryone("showJackpotInlay");
     } catch (e) { }
   }
 
-  try {
-    await tavernSocket.executeForEveryone("showPotPulse");
-  } catch (e) { }
-
   const userName = getActorName(userId);
   let msg = "";
   if (die === 2) {
-    if (bust) msg = `${userName} flipped TAILS and DIED! (Bust)`;
+    if (setScoreToOne) msg = `${userName} flipped TAILS and dropped to 1!`;
     else msg = `${userName} flipped HEADS and DOUBLED their score to ${currentTotal}!`;
   } else {
-    if (bust) msg = `${userName} rolled a 1 on d${die} and BUSTED!`;
-    else if (exploded) msg = `${userName} rolled a NAT 20! The d20 explodes and can be rolled again!`;
+    if (naturalRoll === 1) msg = `${userName} rolled a 1 on d${die} and their turn ends!`;
+    else if (exploded) msg = `${userName} rolled a MAX on d${die}! It explodes — roll it again!`;
     else msg = `${userName} rolled ${result} on d${die}. Total: ${currentTotal}.`;
   }
 
   if (tableData.phase === "opening") {
     await addLogToAll({
-      title: bust ? "BUST!" : (exploded ? "Explosion!" : "Roll"),
+      title: exploded ? "Explosion!" : "Roll",
       message: msg,
-      icon: bust ? "fa-solid fa-skull" : "fa-solid fa-dice",
-      type: bust ? "bust" : "roll",
-      cssClass: bust ? "failure" : (exploded ? "success" : "")
+      icon: "fa-solid fa-dice",
+      type: "roll",
+      cssClass: exploded ? "success" : ""
     });
 
     await addHistoryEntry({
-      type: bust ? "bust" : "roll",
+      type: "roll",
       player: userName,
       die: `d${die}`,
       result: naturalRoll,
       total: currentTotal,
       message: msg
     });
-  }
-
-  let fullSetReset = false;
-  if (!bust) {
-    const requiredDice = [4, 6, 8, 10, 20];
-    const progress = new Set(goblinSetProgress[userId] ?? []);
-    fullSetReset = requiredDice.every(d => progress.has(d));
-    if (fullSetReset) {
-      usedDiceMap[userId] = [];
-      goblinSetProgress[userId] = [];
-    }
   }
 
   let updatedTable = {
@@ -193,6 +173,17 @@ export async function submitGoblinRoll({ state, tableData, userId, die }) {
     hasActed: { ...tableData.hasActed, [userId]: true },
     pendingAction: null
   };
+
+  let fullSetReset = false;
+  if (!endTurn) {
+    const requiredDice = [4, 6, 8, 10, 20];
+    const progress = new Set(goblinSetProgress[userId] ?? []);
+    fullSetReset = requiredDice.every(d => progress.has(d));
+    if (fullSetReset) {
+      updatedTable.usedDice = { ...usedDiceMap, [userId]: [] };
+      updatedTable.goblinSetProgress = { ...goblinSetProgress, [userId]: [] };
+    }
+  }
 
   if (fullSetReset) {
     await addLogToAll({
@@ -214,10 +205,93 @@ export async function submitGoblinRoll({ state, tableData, userId, die }) {
     });
   }
 
-  const next = await updateState({ tableData: updatedTable });
-  if (allPlayersFinished(state, updatedTable)) {
-    return revealDice();
+  if (endTurn) {
+    const remaining = updatedTable.goblinFinalRemaining ?? [];
+    if (updatedTable.goblinFinalActive && remaining.includes(userId)) {
+      updatedTable.goblinFinalRemaining = remaining.filter(id => id !== userId);
+      updatedTable.holds = { ...updatedTable.holds, [userId]: true };
+    }
+
+    updatedTable.currentPlayer = getNextActivePlayer(state, updatedTable);
+    updatedTable.skillUsedThisTurn = false;
+    updatedTable.lastSkillUsed = null;
   }
 
+  const next = await updateState({ tableData: updatedTable });
+  const finalRemaining = updatedTable.goblinFinalRemaining ?? [];
+  if (updatedTable.goblinFinalActive && finalRemaining.length === 0) return revealDice();
+  if (allPlayersFinished(state, updatedTable)) return revealDice();
+
+  return next;
+}
+
+export async function holdGoblin({ state, tableData, userId }) {
+  if (tableData.currentPlayer !== userId) {
+    await notifyUser(userId, "It's not your turn.");
+    return state;
+  }
+
+  if (tableData.folded?.[userId]) {
+    ui.notifications.warn("You've already finished this round.");
+    return state;
+  }
+
+  let holds = { ...tableData.holds, [userId]: true };
+  let goblinFinalActive = tableData.goblinFinalActive ?? false;
+  let goblinFinalTargetId = tableData.goblinFinalTargetId ?? null;
+  let goblinFinalTargetScore = tableData.goblinFinalTargetScore ?? null;
+  let goblinFinalRemaining = tableData.goblinFinalRemaining ?? [];
+
+  if (!goblinFinalActive) {
+    goblinFinalActive = true;
+    goblinFinalTargetId = userId;
+    goblinFinalTargetScore = tableData.totals?.[userId] ?? 0;
+    const activePlayers = state.turnOrder.filter(id => !tableData.folded?.[id] && !tableData.caught?.[id]);
+    goblinFinalRemaining = activePlayers.filter(id => id !== userId);
+    holds = { [userId]: true };
+  } else if (goblinFinalRemaining.includes(userId)) {
+    goblinFinalRemaining = goblinFinalRemaining.filter(id => id !== userId);
+  }
+
+  const updatedTable = {
+    ...tableData,
+    holds,
+    goblinFinalActive,
+    goblinFinalTargetId,
+    goblinFinalTargetScore,
+    goblinFinalRemaining,
+    skillUsedThisTurn: false,
+    lastSkillUsed: null
+  };
+
+  updatedTable.currentPlayer = getNextActivePlayer(state, updatedTable);
+
+  const userName = getActorName(userId);
+  if (!tableData.goblinFinalActive) {
+    await addLogToAll({
+      title: "Final Round!",
+      message: `<strong>${userName}</strong> holds at <strong>${goblinFinalTargetScore}</strong>.<br>Everyone gets one more turn to beat it.`,
+      icon: "fa-solid fa-hourglass-half",
+      type: "phase"
+    });
+  } else {
+    await addLogToAll({
+      title: "Hold",
+      message: `${userName} holds.`,
+      icon: "fa-solid fa-hand",
+      type: "hold"
+    });
+  }
+
+  await addHistoryEntry({
+    type: "hold",
+    player: userName,
+    total: tableData.totals?.[userId] ?? 0,
+    message: `${userName} holds at ${tableData.totals?.[userId] ?? 0}.`
+  });
+
+  const next = await updateState({ tableData: updatedTable });
+  if (goblinFinalActive && (goblinFinalRemaining?.length ?? 0) === 0) return revealDice();
+  if (allPlayersFinished(state, updatedTable)) return revealDice();
   return next;
 }

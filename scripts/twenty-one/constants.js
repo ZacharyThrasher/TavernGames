@@ -141,6 +141,10 @@ export function emptyTableData() {
         // V5.14: Goblin Mode
         usedDice: {}, // { [userId]: [4, 6, 8] } - tracks used dice types
         goblinSetProgress: {}, // { [userId]: [4, 6, 8, 10, 20] } - full-set tracking
+        goblinFinalActive: false,
+        goblinFinalTargetId: null,
+        goblinFinalTargetScore: null,
+        goblinFinalRemaining: [], // [userId] players who still get a final turn
         gameMode: "standard",
         // V5.14: House Rules
         houseRules: { startingHeat: 10 },
