@@ -792,6 +792,16 @@
   100% { opacity: 0; transform: translateY(-10px); }
 }
 
+.player-seat.score-surge-seat {
+  box-shadow: 0 0 22px rgba(255, 215, 120, 0.35), inset 0 0 18px rgba(255, 215, 120, 0.12);
+  transition: box-shadow 0.2s ease;
+}
+
+.player-seat.score-surge-seat-multi {
+  box-shadow: 0 0 26px rgba(180, 120, 255, 0.45), inset 0 0 18px rgba(180, 120, 255, 0.2);
+  transition: box-shadow 0.2s ease;
+}
+
 .player-total .total-value {
   font-size: 20px;
   font-weight: 700;

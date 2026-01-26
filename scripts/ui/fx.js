@@ -345,13 +345,19 @@ export function showScoreSurge(userId, payload = {}) {
     if (!seat) return;
 
     const totalEl = seat.querySelector(".player-total .total-value");
-    if (!totalEl) return;
-
     const surgeClass = payload.multiplied ? "score-surge-multi" : "score-surge";
-    totalEl.classList.remove("score-surge", "score-surge-multi");
-    void totalEl.offsetWidth;
-    totalEl.classList.add(surgeClass);
-    setTimeout(() => totalEl.classList.remove(surgeClass), 800);
+
+    seat.classList.remove("score-surge-seat", "score-surge-seat-multi");
+    void seat.offsetWidth;
+    seat.classList.add(payload.multiplied ? "score-surge-seat-multi" : "score-surge-seat");
+    setTimeout(() => seat.classList.remove("score-surge-seat", "score-surge-seat-multi"), 900);
+
+    if (totalEl) {
+      totalEl.classList.remove("score-surge", "score-surge-multi");
+      void totalEl.offsetWidth;
+      totalEl.classList.add(surgeClass);
+      setTimeout(() => totalEl.classList.remove(surgeClass), 800);
+    }
 
     // Floating pop value
     const delta = payload.delta ?? 0;

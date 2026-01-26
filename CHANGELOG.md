@@ -1,5 +1,9 @@
 # Changelog
 
+## [5.17.5] - 2026-01-25
+### Goblin: Score Surge Visibility
+- **Goblin Scores**: Score surge now also pulses the player seat so all clients can see it.
+
 ## [5.17.4] - 2026-01-25
 ### Goblin: Score Surge
 - **Goblin Scores**: High roll increases now trigger a casino‑style score surge (pulse + pop text).
