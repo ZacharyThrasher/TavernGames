@@ -1,2 +1,2 @@
-### Revert: POP Pack 2
-- **Revert**: Removed the experimental POP Pack 2 visuals per feedback.
+### Revert: Audio
+- **Revert**: Removed recent sound effects and audio hooks.

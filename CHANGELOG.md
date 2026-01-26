@@ -1,5 +1,9 @@
 # Changelog
 
+## [5.18.13] - 2026-01-26
+### Revert: Audio
+- **Revert**: Removed recent sound effects and audio hooks.
+
 ## [5.18.10] - 2026-01-26
 ### Revert: POP Pack 2
 - **Revert**: Removed the experimental POP Pack 2 visuals per feedback.
