@@ -212,6 +212,12 @@ export async function submitGoblinRoll({ state, tableData, userId, die }) {
       updatedTable.holds = { ...updatedTable.holds, [userId]: true };
     }
 
+    const suddenRemaining = updatedTable.goblinSuddenDeathRemaining ?? [];
+    if (updatedTable.goblinSuddenDeathActive && suddenRemaining.includes(userId)) {
+      updatedTable.goblinSuddenDeathRemaining = suddenRemaining.filter(id => id !== userId);
+      updatedTable.holds = { ...updatedTable.holds, [userId]: true };
+    }
+
     updatedTable.currentPlayer = getNextActivePlayer(state, updatedTable);
     updatedTable.skillUsedThisTurn = false;
     updatedTable.lastSkillUsed = null;
@@ -220,6 +226,8 @@ export async function submitGoblinRoll({ state, tableData, userId, die }) {
   const next = await updateState({ tableData: updatedTable });
   const finalRemaining = updatedTable.goblinFinalRemaining ?? [];
   if (updatedTable.goblinFinalActive && finalRemaining.length === 0) return revealDice();
+  const suddenRemaining = updatedTable.goblinSuddenDeathRemaining ?? [];
+  if (updatedTable.goblinSuddenDeathActive && suddenRemaining.length === 0) return revealDice();
   if (allPlayersFinished(state, updatedTable)) return revealDice();
 
   return next;
@@ -241,8 +249,13 @@ export async function holdGoblin({ state, tableData, userId }) {
   let goblinFinalTargetId = tableData.goblinFinalTargetId ?? null;
   let goblinFinalTargetScore = tableData.goblinFinalTargetScore ?? null;
   let goblinFinalRemaining = tableData.goblinFinalRemaining ?? [];
+  let goblinSuddenDeathActive = tableData.goblinSuddenDeathActive ?? false;
+  let goblinSuddenDeathParticipants = tableData.goblinSuddenDeathParticipants ?? [];
+  let goblinSuddenDeathRemaining = tableData.goblinSuddenDeathRemaining ?? [];
 
-  if (!goblinFinalActive) {
+  if (goblinSuddenDeathActive && goblinSuddenDeathRemaining.includes(userId)) {
+    goblinSuddenDeathRemaining = goblinSuddenDeathRemaining.filter(id => id !== userId);
+  } else if (!goblinFinalActive) {
     goblinFinalActive = true;
     goblinFinalTargetId = userId;
     goblinFinalTargetScore = tableData.totals?.[userId] ?? 0;
@@ -260,6 +273,9 @@ export async function holdGoblin({ state, tableData, userId }) {
     goblinFinalTargetId,
     goblinFinalTargetScore,
     goblinFinalRemaining,
+    goblinSuddenDeathActive,
+    goblinSuddenDeathParticipants,
+    goblinSuddenDeathRemaining,
     skillUsedThisTurn: false,
     lastSkillUsed: null
   };
@@ -267,7 +283,14 @@ export async function holdGoblin({ state, tableData, userId }) {
   updatedTable.currentPlayer = getNextActivePlayer(state, updatedTable);
 
   const userName = getActorName(userId);
-  if (!tableData.goblinFinalActive) {
+  if (goblinSuddenDeathActive) {
+    await addLogToAll({
+      title: "Sudden Death",
+      message: `${userName} ends their sudden‑death turn.`,
+      icon: "fa-solid fa-bolt",
+      type: "phase"
+    });
+  } else if (!tableData.goblinFinalActive) {
     await addLogToAll({
       title: "Final Round!",
       message: `<strong>${userName}</strong> holds at <strong>${goblinFinalTargetScore}</strong>.<br>Everyone gets one more turn to beat it.`,

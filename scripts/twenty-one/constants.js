@@ -145,6 +145,9 @@ export function emptyTableData() {
         goblinFinalTargetId: null,
         goblinFinalTargetScore: null,
         goblinFinalRemaining: [], // [userId] players who still get a final turn
+        goblinSuddenDeathActive: false,
+        goblinSuddenDeathParticipants: [],
+        goblinSuddenDeathRemaining: [],
         gameMode: "standard",
         // V5.14: House Rules
         houseRules: { startingHeat: 10 },

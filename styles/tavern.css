@@ -3886,6 +3886,14 @@
     transform: skew(-10deg);
   }
 
+  .type-SUDDEN_DEATH .cinematic-title {
+    color: #ff5a3c;
+    text-shadow: 4px 4px 0 #2b0f0f, 0 0 18px rgba(255, 90, 60, 0.8);
+    letter-spacing: 6px;
+    font-weight: 900;
+    animation: text-slam 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.25s forwards, shake 0.5s ease-in-out 0.9s;
+  }
+
   /* --- FORESIGHT (Purple/Mystic) --- */
   .type-FORESIGHT .cinematic-title {
     color: #d6a2e8;

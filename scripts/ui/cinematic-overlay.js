@@ -33,7 +33,7 @@ export class CinematicOverlay extends HandlebarsApplicationMixin(ApplicationV2) 
     /**
      * Show a cinematic cut-in
      * @param {Object} options
-     * @param {string} options.type - "CRITICAL", "BUST", "VICTORY", "DUEL"
+     * @param {string} options.type - "CRITICAL", "BUST", "VICTORY", "DUEL", "SUDDEN_DEATH"
      * @param {string} options.userId - User ID of the subject
      * @param {string} [options.text] - Override text (optional)
      * @returns {Promise<void>}
@@ -91,7 +91,7 @@ export class CinematicOverlay extends HandlebarsApplicationMixin(ApplicationV2) 
         // V4.8.56: Versus Mode completely scrapped per user request.
         // Duel & Staredown = System Event (Text Only)
         // Skills (Bump/Goad) = Standard (Single Portrait)
-        const isSystemEvent = options.type === "DUEL" || options.type === "STAREDOWN";
+        const isSystemEvent = options.type === "DUEL" || options.type === "STAREDOWN" || options.type === "SUDDEN_DEATH";
         const isVersus = false; // Always false now
 
         overlay.cutInData = {
@@ -128,6 +128,7 @@ export class CinematicOverlay extends HandlebarsApplicationMixin(ApplicationV2) 
             case "BUST": return "var(--tavern-danger)";
             case "VICTORY": return "var(--tavern-gold-bright)";
             case "DUEL": return "var(--tavern-info)";
+            case "SUDDEN_DEATH": return "#e74c3c";
             case "FORESIGHT": return "#9b59b6"; // Mystical Purple
             case "GOAD": return "#e67e22";      // Aggressive Orange
             case "PROFILE": return "#1abc9c";   // Detective Cyan

@@ -165,7 +165,7 @@ export function showCoinFlip(userId, result) {
     const isHeads = result === 2;
     const banner = createElement("div", {
       className: `coin-flip-banner ${isHeads ? "heads" : "tails"}`,
-      innerHTML: isHeads ? "COIN FLIP: HEADS x2" : "COIN FLIP: TAILS — BUST"
+      innerHTML: isHeads ? "COIN FLIP: HEADS x2" : "COIN FLIP: TAILS — SCORE = 1"
     });
 
     appWindow.appendChild(banner);
@@ -611,6 +611,7 @@ export function showSkillCutIn(type, userId, targetId) {
     else if (type === "ACCUSE") text = "ACCUSATION!"; // V4.8.47
     else if (type === "STAREDOWN") text = "THE STAREDOWN"; // V4.8.47
     else if (type === "DUEL") text = "DUEL!"; // V4.8.47
+    else if (type === "SUDDEN_DEATH") text = "SUDDEN DEATH!";
 
     CinematicOverlay.show({
       type,

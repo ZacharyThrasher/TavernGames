@@ -165,6 +165,7 @@ Goblin mode is a high‑variance ruleset with no skill use and no 21 cap.
   - When a player **Holds**, a **final‑round countdown** starts.
   - **Each player gets one more turn** to beat the held score.
 - **Winner**: **Highest total wins** (no 21 cap).
+  - **Tie at end**: One **sudden‑death turn** for each tied player. If still tied, the pot is split.
 
 ---
 

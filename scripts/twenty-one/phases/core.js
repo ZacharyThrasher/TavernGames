@@ -364,6 +364,57 @@ export async function finishRound() {
   });
 
   if (winners.length > 1) {
+    if (isGoblinMode) {
+      if (!tableData.goblinSuddenDeathActive) {
+        const participants = [...winners];
+        const updatedHolds = { ...tableData.holds };
+        for (const id of state.turnOrder) {
+          if (!participants.includes(id)) updatedHolds[id] = true;
+        }
+
+        await addLogToAll({
+          title: "Sudden Death",
+          message: `<strong>${participants.map(id => getActorName(id)).join(" vs ")}</strong> are tied!<br><em>One last turn each to break the tie.</em>`,
+          icon: "fa-solid fa-bolt",
+          type: "phase"
+        });
+
+        tavernSocket.executeForEveryone("showSkillCutIn", "SUDDEN_DEATH", participants[0], participants[1]);
+
+        return updateState({
+          status: "PLAYING",
+          tableData: {
+            ...tableData,
+            holds: updatedHolds,
+            goblinSuddenDeathActive: true,
+            goblinSuddenDeathParticipants: participants,
+            goblinSuddenDeathRemaining: participants,
+            currentPlayer: participants[0] ?? null
+          }
+        });
+      }
+
+      // Sudden death already happened; if still tied, split the pot evenly.
+      const finalPot = state.pot;
+      const split = Math.floor(finalPot / winners.length);
+      const payouts = {};
+      for (const id of winners) payouts[id] = split;
+      if (split > 0) await payOutWinners(payouts);
+
+      await addLogToAll({
+        title: "Sudden Death Tie",
+        message: `Tie persists after sudden death. Pot split among tied players (${split}gp each).`,
+        icon: "fa-solid fa-handshake",
+        type: "phase"
+      });
+
+      return updateState({
+        status: "PAYOUT",
+        pot: 0,
+        tableData: { ...tableData, caught, goblinSuddenDeathActive: false, goblinSuddenDeathParticipants: [], goblinSuddenDeathRemaining: [] },
+      });
+    }
+
     const duelParticipantNames = winners.map(id => getActorName(id)).join(" vs "); // V5.9
 
     await addLogToAll({

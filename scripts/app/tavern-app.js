@@ -516,6 +516,8 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       if (roll.die === 2) {
         if (roll.result === 2) {
           total *= 2;
+        } else if (roll.result === 1) {
+          total = 1;
         }
       } else {
         total += roll.result || 0;

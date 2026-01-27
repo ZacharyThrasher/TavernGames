@@ -1,5 +1,11 @@
 # Changelog
 
+## [5.18.16] - 2026-01-26
+### Goblin UI + Sudden Death
+- **Goblin**: Coin tails now sets score to 1 (visible total fixed) and banner updated.
+- **Goblin**: Help dialog updated for new rules + hold countdown.
+- **Goblin**: Sudden Death cut‑in replaces Duel for ties (custom styling).
+
 ## [5.18.15] - 2026-01-26
 ### Goblin Rules Update
 - **Goblin**: Multi-roll turns, end-turn on 1, coin tail sets score to 1, final-round hold countdown.
