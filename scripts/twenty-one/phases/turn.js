@@ -37,7 +37,11 @@ export async function submitRoll(payload, userId) {
     return state;
   }
 
-  if (tableData.holds[userId] || tableData.busts[userId] || tableData.folded?.[userId]) {
+  const goblinSuddenDeath = (tableData.gameMode ?? "standard") === "goblin"
+    && tableData.goblinSuddenDeathActive
+    && (tableData.goblinSuddenDeathParticipants ?? []).includes(userId);
+
+  if (!goblinSuddenDeath && (tableData.holds[userId] || tableData.busts[userId] || tableData.folded?.[userId])) {
     ui.notifications.warn("You've already finished this round.");
     return state;
   }

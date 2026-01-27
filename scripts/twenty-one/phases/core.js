@@ -370,6 +370,7 @@ export async function finishRound() {
         const updatedHolds = { ...tableData.holds };
         for (const id of state.turnOrder) {
           if (!participants.includes(id)) updatedHolds[id] = true;
+          else delete updatedHolds[id];
         }
 
         await addLogToAll({

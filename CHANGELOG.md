@@ -1,5 +1,9 @@
 # Changelog
 
+## [5.18.17] - 2026-01-26
+### Goblin Sudden Death Fix
+- **Goblin**: Sudden‑death participants can roll even if they were previously holding.
+
 ## [5.18.16] - 2026-01-26
 ### Goblin UI + Sudden Death
 - **Goblin**: Coin tails now sets score to 1 (visible total fixed) and banner updated.
