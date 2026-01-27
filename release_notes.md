@@ -1,2 +1,2 @@
-### Goblin Sudden Death Fix
-- **Goblin**: Sudden‑death participants can roll even if they were previously holding.
+### Goblin Sudden Death Fix (2)
+- **Goblin**: Sudden‑death no longer ends after the first player’s roll.

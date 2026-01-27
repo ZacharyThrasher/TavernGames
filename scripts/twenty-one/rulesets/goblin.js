@@ -224,10 +224,10 @@ export async function submitGoblinRoll({ state, tableData, userId, die }) {
   }
 
   const next = await updateState({ tableData: updatedTable });
-  const finalRemaining = updatedTable.goblinFinalRemaining ?? [];
-  if (updatedTable.goblinFinalActive && finalRemaining.length === 0) return revealDice();
   const suddenRemaining = updatedTable.goblinSuddenDeathRemaining ?? [];
   if (updatedTable.goblinSuddenDeathActive && suddenRemaining.length === 0) return revealDice();
+  const finalRemaining = updatedTable.goblinFinalRemaining ?? [];
+  if (!updatedTable.goblinSuddenDeathActive && updatedTable.goblinFinalActive && finalRemaining.length === 0) return revealDice();
   if (allPlayersFinished(state, updatedTable)) return revealDice();
 
   return next;

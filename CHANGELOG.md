@@ -1,5 +1,9 @@
 # Changelog
 
+## [5.18.18] - 2026-01-26
+### Goblin Sudden Death Fix (2)
+- **Goblin**: Sudden‑death no longer ends after the first player’s roll.
+
 ## [5.18.17] - 2026-01-26
 ### Goblin Sudden Death Fix
 - **Goblin**: Sudden‑death participants can roll even if they were previously holding.

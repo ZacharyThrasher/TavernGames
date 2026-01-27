@@ -390,6 +390,10 @@ export async function finishRound() {
             goblinSuddenDeathActive: true,
             goblinSuddenDeathParticipants: participants,
             goblinSuddenDeathRemaining: participants,
+            goblinFinalActive: false,
+            goblinFinalRemaining: [],
+            goblinFinalTargetId: null,
+            goblinFinalTargetScore: null,
             currentPlayer: participants[0] ?? null
           }
         });
