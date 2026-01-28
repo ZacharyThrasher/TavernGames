@@ -64,6 +64,16 @@
 
   <div class="control-section rules">
     <h3><i class="fa-solid fa-scroll"></i> Rules Summary</h3>
+    {{#if isGoblinMode}}
+    <ul class="rules-list">
+      <li><strong>Chamber:</strong> Everyone rolls the same die each stage (d20 → d12 → d10 → d8 → d6 → d4).</li>
+      <li><strong>Natural 1:</strong> You die (score becomes 0).</li>
+      <li><strong>Max Roll:</strong> Earn a Boot to kick a holder back in.</li>
+      <li><strong>Hold:</strong> Only the current leader can Hold.</li>
+      <li><strong>Sudden Death:</strong> Ties go to the Coin.</li>
+      <li><strong>Disabled:</strong> Skills and Accusations are off.</li>
+    </ul>
+    {{else}}
     <ul class="rules-list">
       <li><strong>Deal:</strong> Everyone gets 2d10 (1 visible, 1 hole).</li>
       <li><strong>Betting:</strong> Buy dice (d4-d20) or <strong>Hold</strong>.</li>
@@ -73,6 +83,7 @@
       <li><strong>Duels:</strong> Ties are settled by rolling 1d20 + 1d4 per Hit.</li>
       <li><strong>Side Bets:</strong> Open for two full betting rounds. Winners split a side‑bet pool.</li>
     </ul>
+    {{/if}}
   </div>
   {{/if}}
 
@@ -131,8 +142,19 @@
       1)}}die{{else}}dice{{/if}}.
     </p>
     {{else}}
+    {{#if isGoblinMode}}
+    <p class="turn-hint phase-goblin">
+      <strong>Chamber:</strong> Roll the current die (or Hold if you're the leader).
+    </p>
+    {{else}}
     <p class="turn-hint phase-betting">
       <strong>Betting Round:</strong> Choose your action!
+    </p>
+    {{/if}}
+    {{/if}}
+    {{#if isGoblinMode}}
+    <p class="turn-hint phase-goblin">
+      <strong>{{goblinStageLabel}}</strong>
     </p>
     {{/if}}
 
@@ -191,12 +213,24 @@
     {{#if isBettingPhase}}
     <div class="main-actions">
       <button type="button" class="btn btn-hold" data-action="hold" {{#unless canHold}}disabled
-        title="You cannot hold right now (Dared?)" {{/unless}}>
+        title="{{holdDisabledReason}}" {{/unless}}>
         <i class="fa-solid fa-hand"></i> Hold
       </button>
+      {{#if isGoblinMode}}
+      {{#if canBoot}}
+      <button type="button" class="btn btn-secondary" data-action="boot" title="Kick a holder back in">
+        <i class="fa-solid fa-shoe-prints"></i> Boot ({{goblinBoots}})
+      </button>
+      {{else}}
+      <button type="button" class="btn btn-secondary" data-action="boot" disabled title="No Boots available">
+        <i class="fa-solid fa-shoe-prints"></i> Boot ({{goblinBoots}})
+      </button>
+      {{/if}}
+      {{else}}
       <button type="button" class="btn btn-fold" data-action="fold">
         <i class="fa-solid fa-door-open"></i> Fold {{#unless hasActed}}(50% back){{/unless}}
       </button>
+      {{/if}}
     </div>
     {{/if}}
   </div>
@@ -300,7 +334,14 @@
     {{else if isCutPhase}}
     <p class="phase-label">The Cut</p>
     {{else}}
+    {{#if isGoblinMode}}
+    <p class="phase-label">The Chamber</p>
+    {{else}}
     <p class="phase-label">Betting Round</p>
+    {{/if}}
+    {{/if}}
+    {{#if isGoblinMode}}
+    <p class="phase-label">{{goblinStageLabel}}</p>
     {{/if}}
   </div>
   {{/if}}

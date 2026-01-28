@@ -6,6 +6,7 @@ import {
   getValidProfileTargets,
   getValidGoadTargets,
   getValidBumpTargets,
+  getValidBootTargets,
   getValidAccuseTargets,
   isActingAsHouse,
   getAccusationCost,
@@ -17,6 +18,7 @@ import { CheatDialog } from "./dialogs/cheat-dialog.js";
 import { ProfileDialog } from "./dialogs/profile-dialog.js";
 import { GoadDialog } from "./dialogs/goad-dialog.js";
 import { BumpDialog } from "./dialogs/bump-dialog.js";
+import { BootDialog } from "./dialogs/boot-dialog.js";
 import { AccuseDialog } from "./dialogs/accuse-dialog.js";
 import { SideBetDialog } from "./dialogs/side-bet-dialog.js";
 import { PaymentDialog } from "./dialogs/payment-dialog.js";
@@ -45,6 +47,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       roll: TavernApp.onRoll,
       hold: TavernApp.onHold,
       fold: TavernApp.onFold,
+      boot: TavernApp.onBoot,
       useCut: TavernApp.onUseCut,
       hunch: TavernApp.onHunch,
       profile: TavernApp.onProfile,
@@ -268,6 +271,13 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const isBettingPhase = phase === "betting";
     const isCutPhase = phase === "cut";
 
+    const goblinStageDie = isGoblinMode ? (tableData.goblinStageDie ?? 20) : null;
+    const goblinStageIndex = isGoblinMode ? (tableData.goblinStageIndex ?? 0) : null;
+    const goblinSuddenDeathActive = tableData.goblinSuddenDeathActive ?? false;
+    const goblinStageLabel = isGoblinMode
+      ? (goblinSuddenDeathActive ? "Sudden Death: Coin" : `Chamber: d${goblinStageDie}`)
+      : null;
+
     // The Cut
     const theCutPlayer = tableData.theCutPlayer;
     const isTheCutPlayer = theCutPlayer === userId;
@@ -278,8 +288,32 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     // Action Constraints
     const myRolls = tableData.rolls?.[userId] ?? [];
     const isFolded = tableData.folded?.[userId] ?? false;
+    const isBusted = tableData.busts?.[userId] ?? false;
     const hasActed = tableData.hasActed?.[userId] ?? false;
-    const canHold = myTurn && isBettingPhase && !isCutPhase && !tableData.hunchLocked?.[userId];
+    let canHold = myTurn && isBettingPhase && !isCutPhase && !tableData.hunchLocked?.[userId];
+    let holdDisabledReason = "You cannot hold right now.";
+    if (isGoblinMode) {
+      const myRollCount = (tableData.rolls?.[userId] ?? []).length;
+      const activeIds = state.turnOrder.filter(id => !tableData.busts?.[id] && !tableData.folded?.[id] && !tableData.caught?.[id]);
+      const maxTotal = activeIds.length
+        ? Math.max(...activeIds.map(id => Number(tableData.totals?.[id] ?? 0)))
+        : 0;
+      const myTotal = Number(tableData.totals?.[userId] ?? 0);
+      const isLeader = myTotal >= maxTotal;
+      canHold = myTurn
+        && isBettingPhase
+        && !isCutPhase
+        && !tableData.hunchLocked?.[userId]
+        && !goblinSuddenDeathActive
+        && myRollCount > 0
+        && isLeader
+        && !isFolded
+        && !isBusted;
+
+      if (goblinSuddenDeathActive) holdDisabledReason = "Cannot hold during Sudden Death.";
+      else if (myRollCount === 0) holdDisabledReason = "You must roll before holding.";
+      else if (!isLeader) holdDisabledReason = "Only the current leader can Hold.";
+    }
     const openingRollsRemaining = Math.max(0, 2 - myRolls.length);
     const myTotal = tableData.totals?.[userId] ?? 0;
     let riskLevel = null;
@@ -311,8 +345,6 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const isInspection = state.status === "INSPECTION";
     const accusedThisRound = tableData.accusedThisRound?.[userId] ?? false;
     const accusationCost = getAccusationCost(ante);
-    const isBusted = tableData.busts?.[userId] ?? false;
-
     // Centralized Targeting Logic
     const accuseTargets = !accusedThisRound ? getValidAccuseTargets(state, userId, accusedThisRound) : [];
 
@@ -335,6 +367,13 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const hasBumpedThisRound = tableData.bumpedThisRound?.[userId] ?? tableData.usedSkills?.[userId]?.bump ?? false;
     const canBump = !isGoblinMode && isBettingPhase && !isCutPhase && myTurn && isInGame && !isBusted && !isHolding && !isHouse && !hasBumpedThisRound && !tableData.skillUsedThisTurn;
     const bumpTargets = canBump ? getValidBumpTargets(state, userId) : [];
+
+    // Boot (Goblin-only)
+    const goblinBoots = tableData.goblinBoots?.[userId] ?? 0;
+    const bootTargets = (isGoblinMode && myTurn && isBettingPhase && !isHouse && !isBusted && !isFolded)
+      ? getValidBootTargets(state, userId)
+      : [];
+    const canBoot = isGoblinMode && myTurn && isBettingPhase && goblinBoots > 0 && bootTargets.length > 0 && !isHouse && !isBusted && !isFolded;
 
     // Retaliation Context
     const pendingRetaliation = tableData.pendingBumpRetaliation;
@@ -441,6 +480,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       currentPlayer,
       myTurn,
       canHold,
+      holdDisabledReason,
       canCheat,
       myDiceForCheat,
       canAccuse,
@@ -449,6 +489,9 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       goadTargets,
       canBump,
       bumpTargets,
+      canBoot,
+      bootTargets,
+      goblinBoots,
       canRetaliate,
       isRetaliationTarget,
       retaliationAttackerName,
@@ -488,6 +531,10 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       uiLocked: TavernApp.uiLocked, // V4.8.56: UI Lock State
       gameMode, // V5.14.1: Game Mode for UI
       isGoblinMode, // V5.14.0
+      goblinStageDie,
+      goblinStageIndex,
+      goblinStageLabel,
+      goblinSuddenDeathActive,
       // Pass usedDice for Goblin Mode
       dice: this._buildDiceArray(
         ante,
@@ -497,7 +544,9 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         tableData.usedDice?.[userId] ?? [],
         tableData.hunchPrediction?.[userId] ?? null,
         tableData.hunchExact?.[userId] ?? null,
-        liquidMode
+        liquidMode,
+        goblinStageDie,
+        goblinSuddenDeathActive
       )
     };
   }
@@ -534,7 +583,9 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     usedDice = [],
     hunchPrediction = null,
     hunchExact = null,
-    liquidMode = false
+    liquidMode = false,
+    goblinStageDie = null,
+    goblinSuddenDeathActive = false
   ) {
     const diceConfig = [
       { value: 20, label: "d20", icon: "d20-grey", strategy: "Hail Mary" },
@@ -544,12 +595,17 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       { value: 4, label: "d4", icon: "d4-grey", strategy: "Precision" },
     ];
 
+    // Add Coin (Goblin only)
     if (isGoblinMode) {
-      // Add Coin
-      diceConfig.push({ value: 2, label: "Coin", icon: "circle-dollar", strategy: "Double or Nothing" });
+      diceConfig.splice(1, 0, { value: 12, label: "d12", icon: "d12-grey", strategy: "Wildcard" });
+      diceConfig.push({ value: 2, label: "Coin", icon: "circle-dollar", strategy: "Sudden Death" });
     }
 
-    return diceConfig.map(d => {
+    const workingConfig = isGoblinMode && goblinStageDie
+      ? diceConfig.filter(d => d.value === goblinStageDie)
+      : diceConfig;
+
+    return workingConfig.map(d => {
       let cost = getDieCost(d.value, ante);
       let costLabel = this._formatCostLabel(cost, ante, isBettingPhase);
       let disabled = false;
@@ -557,11 +613,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       // Goblin Mode Logic
       if (isGoblinMode) {
         cost = 0;
-        costLabel = "FREE";
-
-        if (d.value !== 2 && usedDice.includes(d.value)) {
-          disabled = true;
-        }
+        costLabel = goblinSuddenDeathActive ? "SUDDEN" : "CHAMBER";
       } else {
         // Dared Mechanic (Standard Mode)
         if (isDared && d.value === 8) {
@@ -579,7 +631,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       const exactValue = hunchExact?.[d.value];
       const hunchDirection = prediction === "HIGH" ? "up" : (prediction === "LOW" ? "down" : null);
 
-      const isUsed = isGoblinMode && d.value !== 2 && usedDice.includes(d.value);
+      const isUsed = false;
       return {
         ...d,
         cost,
@@ -857,21 +909,22 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!die) return;
 
     const state = getState();
+    const isGoblinMode = state.tableData?.gameMode === "goblin";
 
     // V4: Bump Retaliation Lock (Client Side)
-    if (state.tableData?.pendingBumpRetaliation?.attackerId === game.user.id) {
+    if (!isGoblinMode && state.tableData?.pendingBumpRetaliation?.attackerId === game.user.id) {
       ui.notifications.warn("You were caught bumping! Wait for retaliation.");
       return;
     }
 
     // V4: Dared Client-Side Validation
-    if (state.tableData?.dared?.[game.user.id] && die !== "8") {
+    if (!isGoblinMode && state.tableData?.dared?.[game.user.id] && die !== "8") {
       ui.notifications.warn("You are Dared! You forced to roll a d8 (Free) or Fold.");
       return;
     }
 
     // V4.9: Hunch Lock Client-Side Validation
-    if (state.tableData?.hunchLocked?.[game.user.id] && die !== "20") {
+    if (!isGoblinMode && state.tableData?.hunchLocked?.[game.user.id] && die !== "20") {
       ui.notifications.warn("Foresight locked you into rolling a d20!");
       return;
     }
@@ -999,6 +1052,30 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
     try {
       await tavernSocket.executeAsGM("playerAction", "hold", {}, game.user.id);
+    } finally {
+      TavernApp.uiLocked = false;
+      if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
+    }
+  }
+
+  static async onBoot() {
+    const state = getState();
+    const userId = game.user.id;
+    const targets = getValidBootTargets(state, userId);
+
+    if (targets.length === 0) return ui.notifications.warn("No held players to boot.");
+
+    if (TavernApp.uiLocked) return;
+    TavernApp.uiLocked = true;
+    if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
+    try {
+      const result = await BootDialog.show({
+        targets,
+        boots: state.tableData?.goblinBoots?.[userId] ?? 0
+      });
+      if (result) {
+        await tavernSocket.executeAsGM("playerAction", "boot", result, game.user.id);
+      }
     } finally {
       TavernApp.uiLocked = false;
       if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();

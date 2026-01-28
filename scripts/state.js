@@ -220,7 +220,9 @@ export function normalizeTableData(tableData) {
     "accusedThisRound",
     "usedSkills",
     "usedDice",
-    "goblinSetProgress"
+    "goblinSetProgress",
+    "goblinBoots",
+    "goblinHoldStage"
   ];
 
   for (const key of mapKeys) {
@@ -233,6 +235,15 @@ export function normalizeTableData(tableData) {
   }
   if (typeof normalized.lastSkillUsed !== "string") {
     normalized.lastSkillUsed = null;
+  }
+  if (!Array.isArray(normalized.goblinStageRemaining)) {
+    normalized.goblinStageRemaining = [];
+  }
+  if (!Array.isArray(normalized.goblinSuddenDeathParticipants)) {
+    normalized.goblinSuddenDeathParticipants = [];
+  }
+  if (!Array.isArray(normalized.goblinSuddenDeathRemaining)) {
+    normalized.goblinSuddenDeathRemaining = [];
   }
 
   return normalized;

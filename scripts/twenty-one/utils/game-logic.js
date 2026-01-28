@@ -138,6 +138,31 @@ export function getValidBumpTargets(state, userId) {
 }
 
 /**
+ * Get valid targets for the Goblin Boot action
+ */
+export function getValidBootTargets(state, userId) {
+    const tableData = state.tableData ?? {};
+    const players = Object.values(state.players ?? {});
+
+    return players
+        .filter(p => {
+            const isNotSelf = p.id !== userId;
+            const isHolding = tableData.holds?.[p.id];
+            const isNotBusted = !tableData.busts?.[p.id];
+            const isNotFolded = !tableData.folded?.[p.id];
+            const isNotCaught = !tableData.caught?.[p.id];
+            const isNotHouse = !isActingAsHouse(p.id, state);
+            return isNotSelf && isHolding && isNotBusted && isNotFolded && isNotCaught && isNotHouse;
+        })
+        .map(p => {
+            const user = game.users.get(p.id);
+            const actor = user?.character;
+            const img = actor?.img || user?.avatar || "icons/svg/mystery-man.svg";
+            return { id: p.id, name: p.name, img, isHolding: true };
+        });
+}
+
+/**
  * Get valid targets for Accusations
  */
 export function getValidAccuseTargets(state, userId, accusedThisRound) {

@@ -6,7 +6,7 @@ import { showPublicRoll } from "../../dice.js";
 import { tavernSocket } from "../../socket.js";
 import { getActorForUser, getActorName } from "../utils/actors.js"; // V5.9
 import { calculateBettingOrder, getGMUserIds } from "../utils/game-logic.js";
-import { emptyTableData } from "../constants.js";
+import { emptyTableData, GOBLIN_STAGE_DICE } from "../constants.js";
 import { processSideBetPayouts } from "./side-bets.js";
 
 export async function startRound(startingHeat = 10) {
@@ -65,6 +65,14 @@ export async function startRound(startingHeat = 10) {
     tableData.sideBetRoundStart = tableData.currentPlayer;
     tableData.theCutPlayer = null;
     tableData.theCutUsed = false;
+    tableData.goblinStageIndex = 0;
+    tableData.goblinStageDie = GOBLIN_STAGE_DICE[0] ?? 20;
+    tableData.goblinStageRemaining = [...tableData.bettingOrder];
+    tableData.goblinSuddenDeathActive = false;
+    tableData.goblinSuddenDeathParticipants = [];
+    tableData.goblinSuddenDeathRemaining = [];
+    tableData.goblinBoots = {};
+    tableData.goblinHoldStage = {};
 
     const next = await updateState({
       status: "PLAYING",
@@ -83,7 +91,8 @@ export async function startRound(startingHeat = 10) {
     await addLogToAll({
       title: "Goblin Rules",
       message: `New round started (Goblin Rules).<br>
-        <em>Roll each die type once (coin unlimited). Nat 1 = Bust. Nat 20 (d20) explodes. Highest total wins.</em>`,
+        <em>The Chamber shrinks: d20 → d12 → d10 → d8 → d6 → d4 → Coin.<br>
+        Roll a 1 and you die. Max roll earns a Boot. Highest survivor wins.</em>`,
       icon: "fa-solid fa-dice",
       type: "phase"
     });
@@ -365,58 +374,34 @@ export async function finishRound() {
 
   if (winners.length > 1) {
     if (isGoblinMode) {
-      if (!tableData.goblinSuddenDeathActive) {
-        const participants = [...winners];
-        const updatedHolds = { ...tableData.holds };
-        for (const id of state.turnOrder) {
-          if (!participants.includes(id)) updatedHolds[id] = true;
-          else delete updatedHolds[id];
-        }
-
-        await addLogToAll({
-          title: "Sudden Death",
-          message: `<strong>${participants.map(id => getActorName(id)).join(" vs ")}</strong> are tied!<br><em>One last turn each to break the tie.</em>`,
-          icon: "fa-solid fa-bolt",
-          type: "phase"
-        });
-
-        tavernSocket.executeForEveryone("showSkillCutIn", "SUDDEN_DEATH", participants[0], participants[1]);
-
-        return updateState({
-          status: "PLAYING",
-          tableData: {
-            ...tableData,
-            holds: updatedHolds,
-            goblinSuddenDeathActive: true,
-            goblinSuddenDeathParticipants: participants,
-            goblinSuddenDeathRemaining: participants,
-            goblinFinalActive: false,
-            goblinFinalRemaining: [],
-            goblinFinalTargetId: null,
-            goblinFinalTargetScore: null,
-            currentPlayer: participants[0] ?? null
-          }
-        });
+      const participants = [...winners];
+      const updatedHolds = { ...tableData.holds };
+      for (const id of state.turnOrder) {
+        if (!participants.includes(id)) updatedHolds[id] = true;
+        else delete updatedHolds[id];
       }
 
-      // Sudden death already happened; if still tied, split the pot evenly.
-      const finalPot = state.pot;
-      const split = Math.floor(finalPot / winners.length);
-      const payouts = {};
-      for (const id of winners) payouts[id] = split;
-      if (split > 0) await payOutWinners(payouts);
-
       await addLogToAll({
-        title: "Sudden Death Tie",
-        message: `Tie persists after sudden death. Pot split among tied players (${split}gp each).`,
-        icon: "fa-solid fa-handshake",
+        title: "SUDDEN DEATH",
+        message: `<strong>${participants.map(id => getActorName(id)).join(" vs ")}</strong> are tied!<br><em>The coin decides.</em>`,
+        icon: "fa-solid fa-bolt",
         type: "phase"
       });
 
+      tavernSocket.executeForEveryone("showSkillCutIn", "SUDDEN_DEATH", participants[0], participants[1]);
+
       return updateState({
-        status: "PAYOUT",
-        pot: 0,
-        tableData: { ...tableData, caught, goblinSuddenDeathActive: false, goblinSuddenDeathParticipants: [], goblinSuddenDeathRemaining: [] },
+        status: "PLAYING",
+        tableData: {
+          ...tableData,
+          holds: updatedHolds,
+          goblinSuddenDeathActive: true,
+          goblinSuddenDeathParticipants: participants,
+          goblinSuddenDeathRemaining: participants,
+          goblinStageRemaining: participants,
+          goblinStageDie: 2,
+          currentPlayer: participants[0] ?? null
+        }
       });
     }
 
@@ -483,12 +468,27 @@ export async function finishRound() {
   }
 
   if (winners.length === 1) {
-    const payouts = { [winners[0]]: finalPot };
-    await payOutWinners(payouts);
+    let payout = finalPot;
+    if (isGoblinMode) {
+      const holdStage = tableData.goblinHoldStage?.[winners[0]];
+      if (holdStage && holdStage > 8) {
+        payout = Math.floor(finalPot * 0.5);
+        await addLogToAll({
+          title: "Coward's Tax",
+          message: `${getActorName(winners[0])} held early and only claims <strong>${payout}gp</strong>. The House keeps the rest.`,
+          icon: "fa-solid fa-land-mine-on",
+          type: "system"
+        });
+      }
+    }
+
+    const payouts = { [winners[0]]: payout };
+    if (payout > 0) await payOutWinners(payouts);
 
     // V4.1: Victory Fanfare
     try {
-      await tavernSocket.executeForEveryone("showVictoryFanfare", winners[0], finalPot);
+      const victoryPot = isGoblinMode ? payout : finalPot;
+      await tavernSocket.executeForEveryone("showVictoryFanfare", winners[0], victoryPot);
     } catch (e) {
       console.warn("Could not show victory fanfare:", e);
     }
@@ -499,6 +499,14 @@ export async function finishRound() {
     for (const id of sideBetWinnerIds) sideBetWinners[id] = true;
     tableData.sideBetWinners = sideBetWinners;
   } else if (winners.length === 0) {
+    if (isGoblinMode) {
+      await addLogToAll({
+        title: "Total Wipeout",
+        message: "Everyone died. The House keeps the pot.",
+        icon: "fa-solid fa-skull",
+        type: "system"
+      });
+    }
 
     // V4: No winner - side bets lost
     tableData.sideBetWinners = {};

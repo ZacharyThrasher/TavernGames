@@ -48,25 +48,25 @@ export async function submitRoll(payload, userId) {
 
   // V4.9: Dared check - can ONLY buy d8 (Free) if dared
   // V5.7: Deprecated Dared in favor of Goad Backfire Symmetry, but keeping for legacy safety
-  if (tableData.dared?.[userId] && die !== 8) {
+  if (!isGoblinMode && tableData.dared?.[userId] && die !== 8) {
     ui.notifications.warn("You are Dared! You forced to roll a d8 (Free) or Fold.");
     return state;
   }
 
   // V5.7: Goad Force D20 check
-  if (tableData.goadBackfire?.[userId]?.forceD20 && die !== 20) {
+  if (!isGoblinMode && tableData.goadBackfire?.[userId]?.forceD20 && die !== 20) {
     ui.notifications.warn("Critically Goaded! You are forced to roll a d20!");
     return state;
   }
 
   // V4.9: Hunch Lock check - can ONLY roll d20 if locked
-  if (tableData.hunchLocked?.[userId] && die !== 20) {
+  if (!isGoblinMode && tableData.hunchLocked?.[userId] && die !== 20) {
     ui.notifications.warn("Foresight locked you into rolling a d20!");
     return state;
   }
 
   // V3.5: Bump Retaliation Lock
-  if (tableData.pendingBumpRetaliation?.attackerId === userId) {
+  if (!isGoblinMode && tableData.pendingBumpRetaliation?.attackerId === userId) {
     console.warn("Tavern | Blocked Roll due to Lock:", tableData.pendingBumpRetaliation);
     ui.notifications.warn("You were caught bumping! Wait for retaliation.");
     return state;
@@ -332,6 +332,10 @@ export async function fold(userId) {
   }
 
   const tableData = state.tableData ?? emptyTableData();
+  if ((tableData.gameMode ?? "standard") === "goblin") {
+    ui.notifications.warn("No folding in Goblin Mode.");
+    return state;
+  }
   const ante = game.settings.get(MODULE_ID, "fixedAnte");
 
   if (tableData.currentPlayer !== userId) {

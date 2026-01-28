@@ -1,0 +1,16 @@
+<form class="tavern-dialog boot-dialog">
+  <p class="dialog-instruction">
+    Choose a held player to drag back into the Chamber.
+    <span class="hint">(Boots: {{boots}})</span>
+  </p>
+
+  <div class="portrait-grid">
+    {{#each targets}}
+    <div class="portrait-option is-holding" data-target-id="{{id}}" tabindex="0">
+      <img src="{{img}}" alt="{{name}}" />
+      <div class="name">{{name}}</div>
+      <div class="status-badge holding">HOLDING</div>
+    </div>
+    {{/each}}
+  </div>
+</form>

@@ -143,29 +143,44 @@ When paying roll costs, you can choose to drink instead of paying gold (if Liqui
 
 ---
 
-## 7) Goblin Mode (New Section)
-Goblin mode is a high‑variance ruleset with no skill use and no 21 cap.
+## 7) Goblin Mode — The Chamber
+Goblin Mode is a high‑stakes variant with **no 21 limit**. Dice are forced by the Chamber.
 
-### Core Rules
-- **No Opening / Cut**: The round starts directly in betting order.
-- **No Skills**: Goad, Bump, Cheat, Foresight, Profile, Accuse are disabled.
-- **No Tab**: All rolls are free; no drink payments.
-- **Multiple Rolls per Turn**: You may roll **multiple dice on your turn**.
-- **Die Usage**:
-  - **d4, d6, d8, d10, d20** can each be rolled **once per full set**.
-  - **Full Set Reset**: After rolling **all non‑coin dice** once, your used‑dice lock resets.
-  - **Every die can explode** on its **maximum value** (you may roll that die again).
-- **Rolling a 1**:
-  - A **1 does not bust** you.
-  - Rolling a **1 ends your turn immediately**.
-- **Coin (d2)**:
-  - **Heads (2)** → **double** your total.
-  - **Tails (1)** → **set your score to 1** (and end your turn).
-- **Hold Countdown**:
-  - When a player **Holds**, a **final‑round countdown** starts.
-  - **Each player gets one more turn** to beat the held score.
-- **Winner**: **Highest total wins** (no 21 cap).
-  - **Tie at end**: One **sudden‑death turn** for each tied player. If still tied, the pot is split.
+### Core Concept: The Shrinking Chamber
+Everyone rolls the **same die each stage**, in this order:
+1. **d20**
+2. **d12**
+3. **d10**
+4. **d8**
+5. **d6**
+6. **d4**
+
+If players are still alive and tied after the d4 stage, the game enters **Sudden Death** with the **Coin (d2)**.
+
+**Disabled in Goblin Mode**
+- **Skills** are disabled.
+- **Accusations/Staredown** are skipped.
+- **Liquid Mode** (Iron Liver) is not used.
+
+### The 3 Rules of Death
+1. **The Bullet (Natural 1s)**  
+   Rolling a **1** on any die means **instant death**. Your score becomes **0**, you are **out**, and your ante stays in the pot.
+2. **The Runt Rule (King’s Privilege)**  
+   You may **Hold** only if you currently have the **highest score** at the table.
+3. **The Boot (Weaponized Luck)**  
+   Rolling the **maximum value** on any die earns a **Boot**.  
+   Spend a Boot to **break a Hold** and force that player back into the next stage.
+
+### Winning the Round
+- The round ends when everyone has **Held** or **Died**.
+- The **highest score** wins the pot.
+- **Coward’s Tax**: If you Hold **before the d8 stage**, you only claim **50%** of the pot. (The House keeps the rest.)
+- **Total Wipeout**: If everyone dies, the House keeps the pot.
+
+### Sudden Death (The Coin)
+- **Heads (2)**: **+2 points**
+- **Tails (1)**: **death**
+- Keep flipping until a **clear winner** remains.
 
 ---
 

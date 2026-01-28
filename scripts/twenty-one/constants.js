@@ -7,7 +7,8 @@ export const MODULE_ID = "tavern-dice-master";
 
 // Valid dice types in the game
 export const VALID_DICE = [4, 6, 8, 10, 20];
-export const GOBLIN_DICE = [...VALID_DICE, 2];
+export const GOBLIN_STAGE_DICE = [20, 12, 10, 8, 6, 4];
+export const GOBLIN_DICE = [...GOBLIN_STAGE_DICE, 2];
 
 export function getAllowedDice(gameMode = "standard") {
     return gameMode === "goblin" ? GOBLIN_DICE : VALID_DICE;
@@ -148,6 +149,11 @@ export function emptyTableData() {
         goblinSuddenDeathActive: false,
         goblinSuddenDeathParticipants: [],
         goblinSuddenDeathRemaining: [],
+        goblinStageIndex: 0,
+        goblinStageDie: 20,
+        goblinStageRemaining: [],
+        goblinBoots: {}, // { [userId]: number }
+        goblinHoldStage: {}, // { [userId]: die }
         gameMode: "standard",
         // V5.14: House Rules
         houseRules: { startingHeat: 10 },

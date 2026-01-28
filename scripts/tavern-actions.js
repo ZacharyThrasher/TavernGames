@@ -1,5 +1,5 @@
 import { MODULE_ID, getState, updateState, markLogsAsSeen } from "./state.js";
-import { startRound, submitRoll, hold, revealDice, finishRound, returnToLobby, cheat, accuse, skipInspection, goad, bumpTable, bumpRetaliation, hunch, profile, useCut, fold, submitDuelRoll, finishTurn } from "./twenty-one/index.js";
+import { startRound, submitRoll, hold, revealDice, finishRound, returnToLobby, cheat, accuse, skipInspection, goad, bumpTable, bumpRetaliation, hunch, profile, useCut, fold, submitDuelRoll, finishTurn, bootGoblin } from "./twenty-one/index.js";
 import { emptyTableData } from "./twenty-one/constants.js";
 import { placeSideBet } from "./twenty-one/phases/side-bets.js";
 import { setNpcWallet, getNpcCashOutSummary } from "./wallet.js";
@@ -126,6 +126,11 @@ export async function handlePlayerAction(action, payload, userId) {
       return submitRoll(payload, userId);
     case "hold":
       return hold(userId);
+    case "boot": {
+      const state = getState();
+      const tableData = state.tableData ?? emptyTableData();
+      return bootGoblin({ state, tableData, userId, targetId: payload?.targetId });
+    }
     // V3: New actions
     case "fold":
       return fold(userId);
