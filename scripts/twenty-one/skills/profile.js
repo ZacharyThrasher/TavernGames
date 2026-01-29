@@ -115,8 +115,6 @@ export async function profile(payload, userId) {
     const targetName = getActorName(targetId);
     const safeUserName = getSafeActorName(userId);
     const safeTargetName = getSafeActorName(targetId);
-    const safeUserName = getSafeActorName(userId);
-    const safeTargetName = getSafeActorName(targetId);
 
     // Roll Investigation (Sloppy = disadvantage)
     const isSloppy = tableData.sloppy?.[userId] ?? false;

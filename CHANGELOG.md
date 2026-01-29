@@ -1,5 +1,9 @@
 # Changelog
 
+## [5.20.2] - 2026-01-29
+### Profile Skill Hotfix
+- **Fix**: Resolved a syntax error in `Profile` caused by duplicate `safeUserName` declarations.
+
 ## [5.19.0] - 2026-01-28
 ### Goblin Mode: The Chamber Overhaul
 - **Goblin**: Forced stage dice (d20 → d12 → d10 → d8 → d6 → d4), then Sudden Death coin.
