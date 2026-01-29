@@ -1,7 +1,8 @@
 import { MODULE_ID, getState, updateState, addHistoryEntry, addLogToAll } from "../../state.js"; // V5.8.6: Restore missing imports
 
 import { tavernSocket } from "../../socket.js";
-import { getActorName, payOutWinners } from "../utils/actors.js";
+import { getActorName, getSafeActorName } from "../utils/actors.js";
+import { payOutWinners } from "../../wallet.js";
 import { getNextActivePlayer, allPlayersFinished, notifyUser } from "../utils/game-logic.js";
 import { emptyTableData, getAllowedDice, getDieCost } from "../constants.js";
 import { revealDice } from "./core.js";
@@ -14,7 +15,7 @@ import { showPublicRollFromData } from "../../dice.js";
 export async function submitRoll(payload, userId) {
   const state = getState();
   if (state.status !== "PLAYING") {
-    ui.notifications.warn("No active round.");
+    await notifyUser(userId, "No active round.");
     return state;
   }
 
@@ -28,7 +29,7 @@ export async function submitRoll(payload, userId) {
   const allowedDice = getAllowedDice(gameMode);
 
   if (!allowedDice.includes(die)) {
-    ui.notifications.warn("Invalid die selection.");
+    await notifyUser(userId, "Invalid die selection.");
     return state;
   }
 
@@ -42,33 +43,33 @@ export async function submitRoll(payload, userId) {
     && (tableData.goblinSuddenDeathParticipants ?? []).includes(userId);
 
   if (!goblinSuddenDeath && (tableData.holds[userId] || tableData.busts[userId] || tableData.folded?.[userId])) {
-    ui.notifications.warn("You've already finished this round.");
+    await notifyUser(userId, "You've already finished this round.");
     return state;
   }
 
   // V4.9: Dared check - can ONLY buy d8 (Free) if dared
   // V5.7: Deprecated Dared in favor of Goad Backfire Symmetry, but keeping for legacy safety
   if (!isGoblinMode && tableData.dared?.[userId] && die !== 8) {
-    ui.notifications.warn("You are Dared! You forced to roll a d8 (Free) or Fold.");
+    await notifyUser(userId, "You are Dared! You forced to roll a d8 (Free) or Fold.");
     return state;
   }
 
   // V5.7: Goad Force D20 check
   if (!isGoblinMode && tableData.goadBackfire?.[userId]?.forceD20 && die !== 20) {
-    ui.notifications.warn("Critically Goaded! You are forced to roll a d20!");
+    await notifyUser(userId, "Critically Goaded! You are forced to roll a d20!");
     return state;
   }
 
   // V4.9: Hunch Lock check - can ONLY roll d20 if locked
   if (!isGoblinMode && tableData.hunchLocked?.[userId] && die !== 20) {
-    ui.notifications.warn("Foresight locked you into rolling a d20!");
+    await notifyUser(userId, "Foresight locked you into rolling a d20!");
     return state;
   }
 
   // V3.5: Bump Retaliation Lock
   if (!isGoblinMode && tableData.pendingBumpRetaliation?.attackerId === userId) {
     console.warn("Tavern | Blocked Roll due to Lock:", tableData.pendingBumpRetaliation);
-    ui.notifications.warn("You were caught bumping! Wait for retaliation.");
+    await notifyUser(userId, "You were caught bumping! Wait for retaliation.");
     return state;
   }
 
@@ -100,15 +101,7 @@ export async function finishTurn(userId) {
 
     const updatedVisibleTotals = { ...tableData.visibleTotals };
     const previousVisibleTotal = updatedVisibleTotals[userId] ?? 0;
-    const gameMode = tableData.gameMode ?? "standard";
-    if (gameMode === "goblin" && lastRoll.die === 2) {
-      if (lastRoll.result === 2) {
-        updatedVisibleTotals[userId] = (updatedVisibleTotals[userId] ?? 0) * 2;
-      }
-      // Tails adds nothing; bust is handled elsewhere.
-    } else {
-      updatedVisibleTotals[userId] = (updatedVisibleTotals[userId] ?? 0) + lastRoll.result;
-    }
+    updatedVisibleTotals[userId] = (updatedVisibleTotals[userId] ?? 0) + lastRoll.result;
 
     tableData.rolls = { ...tableData.rolls, [userId]: updatedRolls };
     tableData.visibleTotals = updatedVisibleTotals;
@@ -132,7 +125,7 @@ export async function finishTurn(userId) {
     let specialMsg = "";
     if (gameMode === "goblin") {
       if (lastRoll.die === 2) {
-        specialMsg = lastRoll.result === 2 ? " **COIN: DOUBLE!**" : " **COIN: BUST!**";
+        specialMsg = lastRoll.result === 2 ? " **COIN: +2!**" : " **COIN: DEATH!**";
       } else if (lastRoll.result === 1) {
         specialMsg = " **BUST!**";
       } else if (lastRoll.die === 20 && lastRoll.result === 20) {
@@ -193,11 +186,12 @@ export async function finishTurn(userId) {
         // Still busted after cheat decision
         updatedTable.busts = { ...updatedTable.busts, [userId]: true };
         const userName = getActorName(userId);
+        const safeUserName = getSafeActorName(userId);
 
         // V5.8: Log Bust
         await addLogToAll({
           title: "BUST!",
-          message: `${userName} busted with ${currentTotal}!`,
+          message: `${safeUserName} busted with ${currentTotal}!`,
           icon: "fa-solid fa-skull",
           type: "bust",
           cssClass: "failure"
@@ -244,7 +238,7 @@ export async function finishTurn(userId) {
 export async function hold(userId) {
   const state = getState();
   if (state.status !== "PLAYING") {
-    ui.notifications.warn("No active round.");
+    await notifyUser(userId, "No active round.");
     return state;
   }
 
@@ -261,7 +255,7 @@ export async function hold(userId) {
   }
 
   if (tableData.holds[userId] || tableData.busts[userId] || tableData.folded?.[userId]) {
-    ui.notifications.warn("You've already finished this round.");
+    await notifyUser(userId, "You've already finished this round.");
     return state;
   }
 
@@ -299,11 +293,13 @@ export async function hold(userId) {
   updatedTable.lastSkillUsed = null;
 
   const userName = getActorName(userId);
+  const safeUserName = getSafeActorName(userId);
+  const safeUserName = getSafeActorName(userId);
 
   // V5.8: Log Hold
   await addLogToAll({
     title: "Hold",
-    message: `${userName} holds.`, // Don't show total yet? Or visible total?
+    message: `${safeUserName} holds.`, // Don't show total yet? Or visible total?
     icon: "fa-solid fa-hand",
     type: "hold"
   });
@@ -327,13 +323,13 @@ export async function hold(userId) {
 export async function fold(userId) {
   const state = getState();
   if (state.status !== "PLAYING") {
-    ui.notifications.warn("No active round.");
+    await notifyUser(userId, "No active round.");
     return state;
   }
 
   const tableData = state.tableData ?? emptyTableData();
   if ((tableData.gameMode ?? "standard") === "goblin") {
-    ui.notifications.warn("No folding in Goblin Mode.");
+    await notifyUser(userId, "No folding in Goblin Mode.");
     return state;
   }
   const ante = game.settings.get(MODULE_ID, "fixedAnte");
@@ -349,7 +345,7 @@ export async function fold(userId) {
   }
 
   if (tableData.folded?.[userId] || tableData.busts?.[userId]) {
-    ui.notifications.warn("You've already finished this round.");
+    await notifyUser(userId, "You've already finished this round.");
     return state;
   }
 
@@ -371,7 +367,7 @@ export async function fold(userId) {
   // V5.8: Log Fold
   await addLogToAll({
     title: "Fold",
-    message: `${userName} folds.${refund > 0 ? ` (Refund: ${refund}gp)` : ""}`,
+    message: `${safeUserName} folds.${refund > 0 ? ` (Refund: ${refund}gp)` : ""}`,
     icon: "fa-solid fa-door-open",
     type: "fold"
   });

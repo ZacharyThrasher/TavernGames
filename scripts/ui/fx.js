@@ -23,6 +23,7 @@ export function debounce(fn, delay) {
  */
 export function isPerformanceMode() {
   try {
+    if (window?.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) return true;
     return game.settings.get(MODULE_ID, "performanceMode") ?? false;
   } catch {
     return false;
@@ -165,7 +166,7 @@ export function showCoinFlip(userId, result) {
     const isHeads = result === 2;
     const banner = createElement("div", {
       className: `coin-flip-banner ${isHeads ? "heads" : "tails"}`,
-      innerHTML: isHeads ? "COIN FLIP: HEADS x2" : "COIN FLIP: TAILS — SCORE = 1"
+      innerHTML: isHeads ? "COIN FLIP: HEADS +2" : "COIN FLIP: TAILS — DEATH"
     });
 
     appWindow.appendChild(banner);

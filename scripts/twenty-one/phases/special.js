@@ -2,7 +2,7 @@ import { MODULE_ID, getState, updateState, addHistoryEntry, addLogToAll, addPriv
 import { deductFromActor, payOutWinners } from "../../wallet.js";
 // import { createChatCard } from "../../ui/chat.js"; // Removed
 import { tavernSocket } from "../../socket.js";
-import { getActorForUser, getActorName } from "../utils/actors.js"; // V5.9
+import { getActorForUser, getActorName, getSafeActorName } from "../utils/actors.js"; // V5.9
 import { notifyUser } from "../utils/game-logic.js";
 import { emptyTableData, OPENING_ROLLS_REQUIRED } from "../constants.js";
 import { finishRound } from "./core.js";
@@ -11,7 +11,7 @@ import { processSideBetPayouts } from "./side-bets.js";
 export async function useCut(userId, reroll = false) {
   const state = getState();
   if (state.status !== "PLAYING") {
-    ui.notifications.warn("No active round.");
+    await notifyUser(userId, "No active round.");
     return state;
   }
 
@@ -31,6 +31,7 @@ export async function useCut(userId, reroll = false) {
 
   // V5.9: Use getActorName
   const userName = getActorName(userId);
+  const safeUserName = getSafeActorName(userId);
 
   if (reroll) {
     const roll = await new Roll("1d10").evaluate();
@@ -67,7 +68,7 @@ export async function useCut(userId, reroll = false) {
     // Public Log (Hidden Value)
     await addLogToAll({
       title: "The Cut",
-      message: `<strong>${userName}</strong> re-rolled their Hole Die!<br><em>(Value remains hidden)</em>`,
+      message: `<strong>${safeUserName}</strong> re-rolled their Hole Die!<br><em>(Value remains hidden)</em>`,
       icon: "fa-solid fa-scissors",
       type: "phase"
     }, [], userId);
@@ -75,7 +76,7 @@ export async function useCut(userId, reroll = false) {
   } else {
     await addLogToAll({
       title: "The Cut",
-      message: `<strong>${userName}</strong> passes the cut.<br><em>(Original hole die kept)</em>`,
+      message: `<strong>${safeUserName}</strong> passes the cut.<br><em>(Original hole die kept)</em>`,
       icon: "fa-solid fa-hand-point-right",
       type: "phase"
     }, [], userId);
@@ -93,9 +94,9 @@ export async function useCut(userId, reroll = false) {
   const orderNames = tableData.bettingOrder
     .filter(id => !tableData.busts[id])
     .map(id => {
-      const name = getActorName(id); // V5.9
+      const safeName = getSafeActorName(id); // V5.9
       const vt = tableData.visibleTotals[id] ?? 0;
-      return `${name} (${vt})`;
+      return `${safeName} (${vt})`;
     })
     .join(" → ");
 
@@ -112,7 +113,7 @@ export async function useCut(userId, reroll = false) {
 export async function submitDuelRoll(userId) {
   const state = getState();
   if (state.status !== "DUEL") {
-    ui.notifications.warn("No duel in progress.");
+    await notifyUser(userId, "No duel in progress.");
     return state;
   }
 
@@ -120,21 +121,22 @@ export async function submitDuelRoll(userId) {
   const duel = tableData.duel;
 
   if (!duel || !duel.active) {
-    ui.notifications.warn("No active duel.");
+    await notifyUser(userId, "No active duel.");
     return state;
   }
 
   if (!duel.participants.includes(userId)) {
-    ui.notifications.warn("You're not in this duel!");
+    await notifyUser(userId, "You're not in this duel!");
     return state;
   }
 
   if (duel.rolls[userId]) {
-    ui.notifications.warn("You've already rolled in this duel.");
+    await notifyUser(userId, "You've already rolled in this duel.");
     return state;
   }
 
   const userName = getActorName(userId); // V5.9
+  const safeUserName = getSafeActorName(userId);
 
   const playerRolls = tableData.rolls[userId] ?? [];
   const hitsTaken = Math.max(0, playerRolls.length - OPENING_ROLLS_REQUIRED);
@@ -156,7 +158,7 @@ export async function submitDuelRoll(userId) {
 
   // Log the Duel Roll
   await addLogToAll({
-    title: `${userName} Duel Roll`,
+    title: `${safeUserName} Duel Roll`,
     message: `Rolled <strong>${formula}</strong><br>Result: <strong>${total}</strong>`,
     icon: "fa-solid fa-dice-d20",
     type: "roll"
@@ -196,7 +198,8 @@ async function resolveDuel() {
 
   for (const [playerId, rollData] of Object.entries(duel.rolls)) {
     const playerName = getActorName(playerId); // V5.9
-    results.push({ playerId, playerName, ...rollData });
+    const safePlayerName = getSafeActorName(playerId);
+    results.push({ playerId, playerName, safePlayerName, ...rollData });
     if (rollData.total > highestTotal) {
       highestTotal = rollData.total;
     }
@@ -206,10 +209,11 @@ async function resolveDuel() {
 
   if (winners.length > 1) {
     const tiedNames = winners.map(w => w.playerName).join(" vs ");
+    const tiedNamesSafe = winners.map(w => w.safePlayerName).join(" vs ");
 
     await addLogToAll({
       title: "Sudden Death!",
-      message: `<strong>${tiedNames}</strong> TIED at <strong>${highestTotal}</strong>!<br><em>The duel continues...</em>`,
+      message: `<strong>${tiedNamesSafe}</strong> TIED at <strong>${highestTotal}</strong>!<br><em>The duel continues...</em>`,
       icon: "fa-solid fa-swords",
       type: "phase"
     });
@@ -241,16 +245,16 @@ async function resolveDuel() {
 
   const resultsMsg = results
     .sort((a, b) => b.total - a.total)
-    .map(r => `${r.playerName}: ${r.total}`)
+    .map(r => `${r.safePlayerName}: ${r.total}`)
     .join(" | ");
 
   await addLogToAll({
     title: "Duel Victory!",
-    message: `<strong>${winner.playerName}</strong> wins the pot (<strong>${potAmount}gp</strong>)!<br>${resultsMsg}`,
-    icon: "fa-solid fa-trophy",
-    type: "phase",
-    cssClass: "success"
-  }, [], winner.playerId);
+      message: `<strong>${getSafeActorName(winner.playerId)}</strong> wins the pot (<strong>${potAmount}gp</strong>)!<br>${resultsMsg}`,
+      icon: "fa-solid fa-trophy",
+      type: "phase",
+      cssClass: "success"
+    }, [], winner.playerId);
 
   await addHistoryEntry({
     type: "duel_end",
@@ -281,11 +285,11 @@ async function resolveDuel() {
 export async function accuse(payload, userId) {
   const state = getState();
   if (state.status === "LOBBY" || state.status === "PAYOUT") {
-    ui.notifications.warn("Accusations can only be made during an active round.");
+    await notifyUser(userId, "Accusations can only be made during an active round.");
     return state;
   }
   if (state.tableData?.gameMode === "goblin") {
-    ui.notifications.warn("Accusations are disabled in Goblin Rules.");
+    await notifyUser(userId, "Accusations are disabled in Goblin Rules.");
     return state;
   }
 
@@ -294,7 +298,7 @@ export async function accuse(payload, userId) {
   const playerData = state.players?.[userId];
   const isHouse = user?.isGM && !playerData?.playingAsNpc;
   if (isHouse) {
-    ui.notifications.warn("The house observes but does not accuse.");
+    await notifyUser(userId, "The house observes but does not accuse.");
     return state;
   }
 
@@ -303,12 +307,12 @@ export async function accuse(payload, userId) {
   const { targetId, dieIndex } = payload;
 
   if (!targetId || !state.turnOrder.includes(targetId)) {
-    ui.notifications.warn("Invalid accusation target.");
+    await notifyUser(userId, "Invalid accusation target.");
     return state;
   }
 
   if (targetId === userId) {
-    ui.notifications.warn("You can't accuse yourself!");
+    await notifyUser(userId, "You can't accuse yourself!");
     return state;
   }
 
@@ -316,24 +320,24 @@ export async function accuse(payload, userId) {
   const targetUser = game.users.get(targetId);
   const isTargetHouse = targetUser?.isGM && !state.players?.[targetId]?.playingAsNpc;
   if (isTargetHouse) {
-    ui.notifications.warn("You can't accuse the house!");
+    await notifyUser(userId, "You can't accuse the house!");
     return state;
   }
 
   if (tableData.accusedThisRound?.[userId]) {
-    ui.notifications.warn("You have already made an accusation this round.");
+    await notifyUser(userId, "You have already made an accusation this round.");
     return state;
   }
 
   if (tableData.busts?.[userId]) {
-    ui.notifications.warn("You busted - you can't make accusations!");
+    await notifyUser(userId, "You busted - you can't make accusations!");
     return state;
   }
 
   // V4: Validate die index
   const targetRolls = tableData.rolls?.[targetId] ?? [];
   if (dieIndex === undefined || dieIndex < 0 || dieIndex >= targetRolls.length) {
-    ui.notifications.warn("Invalid die selection.");
+    await notifyUser(userId, "Invalid die selection.");
     return state;
   }
 
@@ -354,6 +358,8 @@ export async function accuse(payload, userId) {
   // V5.9: Use getActorName
   const accuserName = getActorName(userId);
   const targetName = getActorName(targetId);
+  const safeAccuserName = getSafeActorName(userId);
+  const safeTargetName = getSafeActorName(targetId);
 
   // V4: Check if THIS SPECIFIC DIE was cheated
   const targetCheaterData = tableData.cheaters?.[targetId];
@@ -367,7 +373,7 @@ export async function accuse(payload, userId) {
 
   // "You can't accuse a player who has already been caught."
   if (alreadyCaught) {
-    ui.notifications.warn("That player has already been caught cheating!");
+    await notifyUser(userId, "That player has already been caught cheating!");
     await payOutWinners({ [userId]: accusationCost });
     return state;
   }
@@ -393,8 +399,8 @@ export async function accuse(payload, userId) {
 
     await addLogToAll({
       title: "Cheater Caught!",
-      message: `<strong>${accuserName}</strong> exposed <strong>${targetName}</strong>!<br>
-        <em>${accuserName} earns ${totalReward}gp (${bountyMsg})</em>`,
+      message: `<strong>${safeAccuserName}</strong> exposed <strong>${safeTargetName}</strong>!<br>
+        <em>${safeAccuserName} earns ${totalReward}gp (${bountyMsg})</em>`,
       icon: "fa-solid fa-gavel",
       type: "cheat",
       cssClass: "success"
@@ -415,8 +421,8 @@ export async function accuse(payload, userId) {
 
     await addLogToAll({
       title: "False Accusation!",
-      message: `<strong>${accuserName}</strong> accused <strong>${targetName}</strong> but was wrong about that die.<br>
-        <em>${accuserName} loses their ${accusationCost}gp fee.</em>`,
+      message: `<strong>${safeAccuserName}</strong> accused <strong>${safeTargetName}</strong> but was wrong about that die.<br>
+        <em>${safeAccuserName} loses their ${accusationCost}gp fee.</em>`,
       icon: "fa-solid fa-face-frown",
       type: "cheat",
       cssClass: "failure"

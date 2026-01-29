@@ -1,6 +1,6 @@
 import { updateState, addHistoryEntry, addLogToAll } from "../../state.js";
 import { tavernSocket } from "../../socket.js";
-import { getActorName } from "../utils/actors.js";
+import { getActorName, getSafeActorName } from "../utils/actors.js";
 import { getNextOpeningPlayer, allPlayersCompletedOpening, calculateBettingOrder, notifyUser } from "../utils/game-logic.js";
 import { OPENING_ROLLS_REQUIRED, getDieCost } from "../constants.js";
 import { deductFromActor } from "../../wallet.js";
@@ -264,7 +264,7 @@ export async function submitStandardRoll({ state, tableData, userId, die, isOpen
         const orderNames = updatedTable.bettingOrder
           .filter(id => !updatedTable.busts[id])
           .map(id => {
-            const name = game.users.get(id)?.name ?? "Unknown";
+            const name = getSafeActorName(id);
             const vt = updatedTable.visibleTotals[id] ?? 0;
             return `${name} (${vt})`;
           })

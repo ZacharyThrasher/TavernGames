@@ -1,11 +1,8 @@
-import { MODULE_ID, getState, updateState, addLogToAll } from "../../state.js"; // V5.8
-import { getActorForUser, getActorName } from "./actors.js"; // V5.9
+import { addLogToAll } from "../../state.js"; // V5.8
+import { getActorForUser, getActorName, getSafeActorName } from "./actors.js"; // V5.9
 // import { createChatCard } from "../../ui/chat.js"; // Removed
 import { tavernSocket } from "../../socket.js";
-import { getDieCost } from "../constants.js";
-
-export const OPENING_ROLLS_REQUIRED = 2;
-export const OPENING_DIE = 10;
+import { getDieCost, OPENING_ROLLS_REQUIRED } from "../constants.js";
 
 /**
  * V3.5: Check if a user is acting as "the house" (GM not playing as NPC)
@@ -199,6 +196,7 @@ export async function notifyUser(userId, message, type = "warn") {
 export async function drinkForPayment(userId, drinksNeeded, tableData) {
     // V5.9: Use getActorName
     const playerName = getActorName(userId);
+    const safePlayerName = getSafeActorName(userId);
 
     // Calculate DC: 10 + (2 per drink this round)
     const currentDrinks = tableData.drinkCount?.[userId] ?? 0;
@@ -228,7 +226,7 @@ export async function drinkForPayment(userId, drinksNeeded, tableData) {
 
         await addLogToAll({
             title: "Passed Out!",
-            message: `<strong>${playerName}</strong> drank too much...<br>
+            message: `<strong>${safePlayerName}</strong> drank too much...<br>
                 Attempt: ${drinksNeeded} ${drinksNeeded === 1 ? 'drink' : 'drinks'} (DC ${dc})<br>
                 Rolled: <strong>${d20}</strong> + ${conMod} = ${total}<br>
                 <strong style="color: #ff4444;">NAT 1! They pass out cold! (BUST)</strong>`,
@@ -277,7 +275,7 @@ export async function drinkForPayment(userId, drinksNeeded, tableData) {
 
         await addLogToAll({
             title: "Getting Sloppy...",
-            message: `<strong>${playerName}</strong> is stumbling around!<br>
+            message: `<strong>${safePlayerName}</strong> is stumbling around!<br>
                 Attempt: ${drinksNeeded} drinks (DC ${dc})<br>
                 Rolled: ${d20} + ${conMod} = ${total} (Fail)<br>
                 <em>SLOPPY! Disadvantage on checks!</em>${holeDieRevealedMsg}`,
@@ -304,7 +302,7 @@ export async function drinkForPayment(userId, drinksNeeded, tableData) {
         // Success - handled it like a champ
         await addLogToAll({
             title: "Iron Liver!",
-            message: `<strong>${playerName}</strong> downs ${drinksNeeded} ${drinksNeeded === 1 ? 'drink' : 'drinks'} like water!<br>
+            message: `<strong>${safePlayerName}</strong> downs ${drinksNeeded} ${drinksNeeded === 1 ? 'drink' : 'drinks'} like water!<br>
                 <em>"Put it on my tab!"</em> (DC ${dc} Success)`,
             icon: "fa-solid fa-beer-mug-empty",
             type: "system",
@@ -400,8 +398,4 @@ export function getNextOpeningPlayer(state, tableData) {
         }
     }
     return null;
-}
-
-export function getGMUserIds() {
-    return game.users.filter(u => u.isGM).map(u => u.id);
 }

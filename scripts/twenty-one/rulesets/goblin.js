@@ -1,6 +1,6 @@
 import { updateState, addHistoryEntry, addLogToAll } from "../../state.js";
 import { tavernSocket } from "../../socket.js";
-import { getActorName } from "../utils/actors.js";
+import { getActorName, getSafeActorName } from "../utils/actors.js";
 import { notifyUser } from "../utils/game-logic.js";
 import { revealDice } from "../phases/core.js";
 import { showPublicRollFromData } from "../../dice.js";
@@ -125,7 +125,7 @@ async function advanceStageIfNeeded(state, tableData) {
 export async function submitGoblinRoll({ state, tableData, userId, die }) {
   const stageDie = getStageDie(tableData);
   if (Number(die) !== stageDie) {
-    ui.notifications.warn(`The Chamber demands a d${stageDie}.`);
+    await notifyUser(userId, `The Chamber demands a d${stageDie}.`);
     return state;
   }
 
@@ -140,7 +140,7 @@ export async function submitGoblinRoll({ state, tableData, userId, die }) {
     tableData.goblinStageRemaining = stageRemaining;
   }
   if (!stageRemaining.includes(userId)) {
-    ui.notifications.warn("You've already rolled this stage.");
+    await notifyUser(userId, "You've already rolled this stage.");
     return state;
   }
 
@@ -171,9 +171,13 @@ export async function submitGoblinRoll({ state, tableData, userId, die }) {
   let currentTotal = previousTotal;
   let busted = false;
   let message = "";
+  let logMessage = "";
   let logTitle = "Roll";
   let logType = "roll";
   let cssClass = "";
+
+  const userName = getActorName(userId);
+  const safeUserName = getSafeActorName(userId);
 
   if (result === 1) {
     busted = true;
@@ -183,8 +187,11 @@ export async function submitGoblinRoll({ state, tableData, userId, die }) {
     busts[userId] = true;
     delete holds[userId];
     message = stageDie === 2
-      ? `${getActorName(userId)} flipped TAILS and DIED.`
-      : `${getActorName(userId)} rolled a 1 on d${stageDie} and DIED.`;
+      ? `${userName} flipped TAILS and DIED.`
+      : `${userName} rolled a 1 on d${stageDie} and DIED.`;
+    logMessage = stageDie === 2
+      ? `${safeUserName} flipped TAILS and DIED.`
+      : `${safeUserName} rolled a 1 on d${stageDie} and DIED.`;
     logTitle = "BUST!";
     logType = "bust";
     cssClass = "failure";
@@ -195,17 +202,20 @@ export async function submitGoblinRoll({ state, tableData, userId, die }) {
   } else {
     if (stageDie === 2) {
       currentTotal = previousTotal + 2;
-      message = `${getActorName(userId)} flipped HEADS for +2. Total: ${currentTotal}.`;
+      message = `${userName} flipped HEADS for +2. Total: ${currentTotal}.`;
+      logMessage = `${safeUserName} flipped HEADS for +2. Total: ${currentTotal}.`;
     } else {
       currentTotal = previousTotal + result;
-      message = `${getActorName(userId)} rolled ${result} on d${stageDie}. Total: ${currentTotal}.`;
+      message = `${userName} rolled ${result} on d${stageDie}. Total: ${currentTotal}.`;
+      logMessage = `${safeUserName} rolled ${result} on d${stageDie}. Total: ${currentTotal}.`;
     }
     totals[userId] = currentTotal;
     visibleTotals[userId] = currentTotal;
 
     if (stageDie !== 2 && result === stageDie) {
       goblinBoots[userId] = (goblinBoots[userId] ?? 0) + 1;
-      message += ` <strong>Boot earned!</strong>`;
+      message += ` Boot earned!`;
+      logMessage += ` <strong>Boot earned!</strong>`;
       cssClass = "success";
     }
 
@@ -221,7 +231,7 @@ export async function submitGoblinRoll({ state, tableData, userId, die }) {
 
   await addLogToAll({
     title: logTitle,
-    message,
+    message: logMessage || message,
     icon: "fa-solid fa-dice",
     type: logType,
     cssClass
@@ -229,7 +239,7 @@ export async function submitGoblinRoll({ state, tableData, userId, die }) {
 
   await addHistoryEntry({
     type: logType,
-    player: getActorName(userId),
+    player: userName,
     die: `d${stageDie}`,
     result,
     total: currentTotal,
@@ -273,7 +283,7 @@ export async function submitGoblinRoll({ state, tableData, userId, die }) {
   } else if (progress.action === "sudden-death-start") {
     await addLogToAll({
       title: "SUDDEN DEATH",
-      message: `<strong>${progress.leaders.map(id => getActorName(id)).join(" vs ")}</strong> are tied!<br><em>The coin decides.</em>`,
+      message: `<strong>${progress.leaders.map(id => getSafeActorName(id)).join(" vs ")}</strong> are tied!<br><em>The coin decides.</em>`,
       icon: "fa-solid fa-bolt",
       type: "phase"
     });
@@ -299,7 +309,7 @@ export async function holdGoblin({ state, tableData, userId }) {
   }
 
   if (tableData.folded?.[userId] || tableData.busts?.[userId]) {
-    ui.notifications.warn("You've already finished this round.");
+    await notifyUser(userId, "You've already finished this round.");
     return state;
   }
 
@@ -340,9 +350,10 @@ export async function holdGoblin({ state, tableData, userId }) {
   updatedTable.currentPlayer = updatedTable.currentPlayer ?? getNextStagePlayer(state, updatedTable);
 
   const userName = getActorName(userId);
+  const safeUserName = getSafeActorName(userId);
   await addLogToAll({
     title: "Hold",
-    message: `${userName} holds at ${tableData.totals?.[userId] ?? 0}.`,
+    message: `${safeUserName} holds at ${tableData.totals?.[userId] ?? 0}.`,
     icon: "fa-solid fa-hand",
     type: "hold"
   });
@@ -366,7 +377,7 @@ export async function holdGoblin({ state, tableData, userId }) {
   } else if (progress.action === "sudden-death-start") {
     await addLogToAll({
       title: "SUDDEN DEATH",
-      message: `<strong>${progress.leaders.map(id => getActorName(id)).join(" vs ")}</strong> are tied!<br><em>The coin decides.</em>`,
+      message: `<strong>${progress.leaders.map(id => getSafeActorName(id)).join(" vs ")}</strong> are tied!<br><em>The coin decides.</em>`,
       icon: "fa-solid fa-bolt",
       type: "phase"
     });
@@ -380,12 +391,12 @@ export async function holdGoblin({ state, tableData, userId }) {
 
 export async function bootGoblin({ state, tableData, userId, targetId }) {
   if ((tableData.gameMode ?? "standard") !== "goblin") {
-    ui.notifications.warn("Boots are only available in Goblin Mode.");
+    await notifyUser(userId, "Boots are only available in Goblin Mode.");
     return state;
   }
 
   if (!targetId) {
-    ui.notifications.warn("Select a target to boot.");
+    await notifyUser(userId, "Select a target to boot.");
     return state;
   }
   if (tableData.currentPlayer !== userId) {
@@ -395,17 +406,17 @@ export async function bootGoblin({ state, tableData, userId, targetId }) {
 
   const boots = tableData.goblinBoots?.[userId] ?? 0;
   if (boots <= 0) {
-    ui.notifications.warn("You have no Boots.");
+    await notifyUser(userId, "You have no Boots.");
     return state;
   }
 
   if (!tableData.holds?.[targetId]) {
-    ui.notifications.warn("That player isn't holding.");
+    await notifyUser(userId, "That player isn't holding.");
     return state;
   }
 
   if (tableData.busts?.[targetId] || tableData.folded?.[targetId] || tableData.caught?.[targetId]) {
-    ui.notifications.warn("That player is out of the round.");
+    await notifyUser(userId, "That player is out of the round.");
     return state;
   }
 
@@ -429,9 +440,11 @@ export async function bootGoblin({ state, tableData, userId, targetId }) {
 
   const userName = getActorName(userId);
   const targetName = getActorName(targetId);
+  const safeUserName = getSafeActorName(userId);
+  const safeTargetName = getSafeActorName(targetId);
   await addLogToAll({
     title: "Boot!",
-    message: `<strong>${userName}</strong> kicks <strong>${targetName}</strong> back into the Chamber!`,
+    message: `<strong>${safeUserName}</strong> kicks <strong>${safeTargetName}</strong> back into the Chamber!`,
     icon: "fa-solid fa-shoe-prints",
     type: "phase"
   });

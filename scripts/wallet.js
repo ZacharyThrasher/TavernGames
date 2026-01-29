@@ -1,23 +1,6 @@
 import { MODULE_ID, getState, updateState } from "./state.js";
 import { tavernSocket } from "./socket.js";
-
-// V3.5: Updated to return NPC actor for GM-as-NPC
-export function getActorForUser(userId) {
-  const user = game.users.get(userId);
-  if (!user) return null;
-
-  // V3.5: Check if this is a GM playing as NPC
-  const state = getState();
-  const playerData = state?.players?.[userId];
-  if (playerData?.playingAsNpc && playerData?.npcActorId) {
-    return game.actors.get(playerData.npcActorId) ?? null;
-  }
-
-  // Regular behavior - use assigned character
-  const actorId = user.character?.id;
-  if (!actorId) return null;
-  return game.actors.get(actorId) ?? null;
-}
+import { getActorForUser } from "./twenty-one/utils/actors.js";
 
 /**
  * V4: Check if a player is an NPC (GM playing as NPC)
@@ -163,6 +146,7 @@ export async function payOutWinners(payouts, flatShare) {
  * Returns true if successful, false if they can't afford it.
  */
 export async function deductFromActor(userId, amount, stateOverride = null) {
+  if (amount <= 0) return true;
   const state = stateOverride ?? getState();
   const user = game.users.get(userId);
 
@@ -222,4 +206,3 @@ export function getNpcCashOutSummary(userId) {
     netChangeDisplay: netChange >= 0 ? `+${netChange}` : `${netChange}`,
   };
 }
-

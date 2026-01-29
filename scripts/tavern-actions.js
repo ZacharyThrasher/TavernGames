@@ -3,7 +3,8 @@ import { startRound, submitRoll, hold, revealDice, finishRound, returnToLobby, c
 import { emptyTableData } from "./twenty-one/constants.js";
 import { placeSideBet } from "./twenty-one/phases/side-bets.js";
 import { setNpcWallet, getNpcCashOutSummary } from "./wallet.js";
-import { createChatCard } from "./ui/chat.js";
+import { notifyUser } from "./twenty-one/utils/game-logic.js";
+import { escapeHtmlString } from "./twenty-one/utils/actors.js";
 
 function ensureGM() {
   if (!game.user.isGM) {
@@ -18,7 +19,7 @@ export async function handleJoinTable(userId, options = {}) {
 
   const state = getState();
   if (state.status !== "LOBBY") {
-    ui.notifications.warn("Cannot join while a round is in progress.");
+    await notifyUser(userId, "Cannot join while a round is in progress.");
     return state;
   }
   if (state.players[userId]) return state;
@@ -68,7 +69,7 @@ export async function handleLeaveTable(userId) {
   ensureGM();
   const state = getState();
   if (state.status !== "LOBBY" && state.status !== "PAYOUT") {
-    ui.notifications.warn("Cannot leave while a round is in progress.");
+    await notifyUser(userId, "Cannot leave while a round is in progress.");
     return state;
   }
 
@@ -79,11 +80,12 @@ export async function handleLeaveTable(userId) {
   if (player.playingAsNpc) {
     const summary = getNpcCashOutSummary(userId);
     if (summary) {
+      const safeName = escapeHtmlString(summary.name);
       await ChatMessage.create({
         content: `
           <div class="tavern-npc-cashout">
             <h3><i class="fa-solid fa-cash-register"></i> NPC Cash Out</h3>
-            <p><strong>${summary.name}</strong> is leaving the table.</p>
+            <p><strong>${safeName}</strong> is leaving the table.</p>
             <hr>
             <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
               <span>Initial Stake:</span> <span>${summary.initial} gp</span>

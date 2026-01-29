@@ -11,7 +11,8 @@
 
 import { MODULE_ID } from "../constants.js";
 import { getState, updateState, emptyTableData, addPrivateLog, addLogToAll, addHistoryEntry } from "../../state.js"; // V5.8
-import { getActorForUser, notifyUser, getActorName } from "../utils/actors.js"; // V5.9
+import { getActorForUser, getActorName, getSafeActorName } from "../utils/actors.js"; // V5.9
+import { notifyUser } from "../utils/game-logic.js";
 // import { createChatCard, addHistoryEntry } from "../../ui/chat.js"; // Removed
 import { tavernSocket } from "../../socket.js";
 import { showPublicRoll } from "../../dice.js";
@@ -19,11 +20,11 @@ import { showPublicRoll } from "../../dice.js";
 export async function profile(payload, userId) {
     const state = getState();
     if (state.status !== "PLAYING") {
-        ui.notifications.warn("Cannot Profile outside of an active round.");
+        await notifyUser(userId, "Cannot Profile outside of an active round.");
         return state;
     }
     if (state.tableData?.gameMode === "goblin") {
-        ui.notifications.warn("Profile is disabled in Goblin Rules.");
+        await notifyUser(userId, "Profile is disabled in Goblin Rules.");
         return state;
     }
 
@@ -47,7 +48,7 @@ export async function profile(payload, userId) {
     const playerData = state.players?.[userId];
     const isHouse = user?.isGM && !playerData?.playingAsNpc;
     if (isHouse) {
-        ui.notifications.warn("The house knows all.");
+        await notifyUser(userId, "The house knows all.");
         return state;
     }
 
@@ -112,6 +113,10 @@ export async function profile(payload, userId) {
     // V5.9: Use getActorName
     const userName = getActorName(userId);
     const targetName = getActorName(targetId);
+    const safeUserName = getSafeActorName(userId);
+    const safeTargetName = getSafeActorName(targetId);
+    const safeUserName = getSafeActorName(userId);
+    const safeTargetName = getSafeActorName(targetId);
 
     // Roll Investigation (Sloppy = disadvantage)
     const isSloppy = tableData.sloppy?.[userId] ?? false;
@@ -188,7 +193,7 @@ export async function profile(payload, userId) {
         // Public Log
         await addLogToAll({
             title: "Perfect Profile",
-            message: `<strong>${userName}</strong> sees right through <strong>${targetName}</strong>!<br><em>(Result is hidden)</em>`,
+            message: `<strong>${safeUserName}</strong> sees right through <strong>${safeTargetName}</strong>!<br><em>(Result is hidden)</em>`,
             icon: "fa-solid fa-user-secret",
             type: "profile",
             cssClass: "success"
@@ -217,25 +222,25 @@ export async function profile(payload, userId) {
         // Log failure to self
         await addPrivateLog(userId, {
             title: "Profile: BACKFIRE",
-            message: `Exposed! ${targetName} read your hole die.`,
+            message: `Exposed! ${safeTargetName} read your hole die.`,
             icon: "fa-solid fa-user-injured",
             type: "profile",
             cssClass: "failure"
         });
 
         try {
-            await tavernSocket.executeAsUser("showSkillBanner", userId, {
-                title: "Profile Backfire",
-                message: `${targetName} read you.`,
-                tone: "failure",
-                icon: "fa-solid fa-user-injured"
-            });
+        await tavernSocket.executeAsUser("showSkillBanner", userId, {
+            title: "Profile Backfire",
+            message: `${safeTargetName} read you.`,
+            tone: "failure",
+            icon: "fa-solid fa-user-injured"
+        });
         } catch (e) { }
 
         // Public Log
         await addLogToAll({
             title: "Profile Backfire",
-            message: `<strong>${userName}</strong> tried to read <strong>${targetName}</strong> but was EXPOSED!<br><em>Target countered the read!</em>`,
+            message: `<strong>${safeUserName}</strong> tried to read <strong>${safeTargetName}</strong> but was EXPOSED!<br><em>Target countered the read!</em>`,
             icon: "fa-solid fa-user-injured",
             type: "profile",
             cssClass: "failure"
@@ -264,7 +269,7 @@ export async function profile(payload, userId) {
         // Public Log
         await addLogToAll({
             title: "Profile Success",
-            message: `<strong>${userName}</strong> gets a read on <strong>${targetName}</strong>.<br><em>(Result is hidden)</em>`,
+            message: `<strong>${safeUserName}</strong> gets a read on <strong>${safeTargetName}</strong>.<br><em>(Result is hidden)</em>`,
             icon: "fa-solid fa-user-secret",
             type: "profile",
             cssClass: "success"
@@ -275,25 +280,25 @@ export async function profile(payload, userId) {
         // V5.8: Log Failure
         await addPrivateLog(userId, {
             title: "Profile Failed",
-            message: `No read on ${targetName}.`,
+            message: `No read on ${safeTargetName}.`,
             icon: "fa-solid fa-question",
             type: "profile",
             cssClass: "failure"
         });
 
         try {
-            await tavernSocket.executeAsUser("showSkillBanner", userId, {
-                title: "Profile Failed",
-                message: `No read on ${targetName}.`,
-                tone: "failure",
-                icon: "fa-solid fa-question"
-            });
+        await tavernSocket.executeAsUser("showSkillBanner", userId, {
+            title: "Profile Failed",
+            message: `No read on ${safeTargetName}.`,
+            tone: "failure",
+            icon: "fa-solid fa-question"
+        });
         } catch (e) { }
 
         // Public Log
         await addLogToAll({
             title: "Profile Failed",
-            message: `<strong>${userName}</strong> fails to read <strong>${targetName}</strong>.`,
+            message: `<strong>${safeUserName}</strong> fails to read <strong>${safeTargetName}</strong>.`,
             icon: "fa-solid fa-question",
             type: "profile",
             cssClass: "failure"

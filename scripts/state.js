@@ -11,7 +11,7 @@ export function registerSettings() {
     config: true,
     type: Number,
     default: 5,
-    range: { min: 1, max: 100, step: 1 },
+    range: { min: 1, max: 1000, step: 1 },
   });
 
   // V5.8.3: Configurable Side Bet Payout
@@ -91,7 +91,10 @@ export async function preloadTemplates() {
 
 export function defaultState() {
   return {
-    version: 4, // V4: Bumped for World Settings migration
+    version: 5, // V5: Added revision/updatedAt for serialized updates
+    revision: 0,
+    updatedAt: null,
+    updatedBy: null,
     status: "LOBBY", // LOBBY, PLAYING, INSPECTION, REVEALING, PAYOUT
     pot: 0,
     turnOrder: [],
@@ -128,6 +131,18 @@ export async function initializeState() {
       };
       await game.settings.set(MODULE_ID, "gameState", migrated);
       console.log("Tavern Twenty-One | Migrated state to V4 (World Settings)");
+    } else if (currentState.version < 5) {
+      const migrated = {
+        ...defaultState(),
+        ...currentState,
+        version: 5,
+        revision: currentState.revision ?? 0,
+        updatedAt: currentState.updatedAt ?? Date.now(),
+        updatedBy: currentState.updatedBy ?? game.user.id
+      };
+      migrated.tableData = normalizeTableData(migrated.tableData);
+      await game.settings.set(MODULE_ID, "gameState", migrated);
+      console.log("Tavern Twenty-One | Migrated state to V5 (revision fields)");
     }
     return;
   }
@@ -255,55 +270,64 @@ export function getState() {
     return defaultState();
   }
   // Ensure tableData has all expected fields
-  return { ...state, tableData: normalizeTableData(state.tableData) };
+  const normalized = { ...state, tableData: normalizeTableData(state.tableData) };
+  if (!Number.isInteger(normalized.version)) normalized.version = defaultState().version;
+  if (!Number.isInteger(normalized.revision)) normalized.revision = 0;
+  if (!normalized.updatedAt) normalized.updatedAt = null;
+  if (!normalized.updatedBy) normalized.updatedBy = null;
+  return normalized;
 }
 
 /**
  * V4: Update game state in World Settings
  */
 export async function updateState(patchOrFn) {
-  // Use a transaction-like pattern by fetching fresh state explicitly
-  // Note: Foundry settings are not truly transactional, but this helps with async race conditions
-  const current = getState();
   if (!game.user.isGM) {
     console.warn("Tavern Twenty-One | updateState called by non-GM user. Skipping update.");
-    return current;
+    return getState();
   }
 
-  // Resolve patch if it's a function
-  const patch = typeof patchOrFn === 'function' ? patchOrFn(current) : patchOrFn;
+  stateUpdateQueue = stateUpdateQueue.then(async () => {
+    const current = getState();
+    const rawPatch = typeof patchOrFn === 'function' ? patchOrFn(current) : patchOrFn;
+    const patch = rawPatch && typeof rawPatch === "object" ? rawPatch : {};
 
-  // Manual merge to ensure arrays are replaced, not merged by index
-  const next = {
-    ...current,
-    ...patch,
-    // Deep merge tableData if present in patch
-    tableData: patch.tableData !== undefined
-      ? { ...current.tableData, ...patch.tableData }
-      : current.tableData,
-    // Replace players entirely if present in patch (not merge)
-    players: patch.players !== undefined
-      ? { ...patch.players }
-      : current.players,
-    // Replace turnOrder entirely if present in patch (not merge)
-    turnOrder: patch.turnOrder !== undefined
-      ? [...patch.turnOrder]
-      : current.turnOrder,
-    // V4: Replace npcWallets entirely if present
-    npcWallets: patch.npcWallets !== undefined
-      ? { ...patch.npcWallets }
-      : current.npcWallets,
-    // V5.8: Replace privateLogs entirely if present (deep merge too expensive/complex for this)
-    privateLogs: patch.privateLogs !== undefined
-      ? { ...patch.privateLogs }
-      : current.privateLogs,
-  };
+    const next = {
+      ...current,
+      ...patch,
+      tableData: patch.tableData !== undefined
+        ? { ...current.tableData, ...patch.tableData }
+        : current.tableData,
+      players: patch.players !== undefined
+        ? { ...patch.players }
+        : current.players,
+      turnOrder: patch.turnOrder !== undefined
+        ? [...patch.turnOrder]
+        : current.turnOrder,
+      npcWallets: patch.npcWallets !== undefined
+        ? { ...patch.npcWallets }
+        : current.npcWallets,
+      privateLogs: patch.privateLogs !== undefined
+        ? { ...patch.privateLogs }
+        : current.privateLogs,
+    };
 
-  next.tableData = normalizeTableData(next.tableData);
+    next.tableData = normalizeTableData(next.tableData);
+    next.revision = (current.revision ?? 0) + 1;
+    next.updatedAt = Date.now();
+    next.updatedBy = game.user.id;
 
-  await game.settings.set(MODULE_ID, "gameState", next);
-  return next;
+    await game.settings.set(MODULE_ID, "gameState", next);
+    return next;
+  }).catch((error) => {
+    console.error("Tavern Twenty-One | updateState failed:", error);
+    return getState();
+  });
+
+  return stateUpdateQueue;
 }
+
+let stateUpdateQueue = Promise.resolve();
 
 export function getPlayerState(userId) {
   const state = getState();

@@ -14,7 +14,8 @@
 
 import { MODULE_ID, getState, updateState, addHistoryEntry, addLogToAll, addPrivateLog } from "../../state.js"; // V5.8
 import { deductFromActor } from "../../wallet.js"; // V5.9: Use wallet.js for proper NPC support
-import { getActorForUser, notifyUser, getActorName } from "../utils/actors.js"; // V5.9
+import { getActorForUser, getActorName, getSafeActorName } from "../utils/actors.js"; // V5.9
+import { notifyUser } from "../utils/game-logic.js";
 // import { createChatCard } from "../../ui/chat.js"; // Removed
 import { emptyTableData } from "../constants.js";
 import { tavernSocket } from "../../socket.js";
@@ -28,11 +29,11 @@ import { showPublicRoll } from "../../dice.js";
 export async function bumpTable(payload, userId) {
     const state = getState();
     if (state.status !== "PLAYING") {
-        ui.notifications.warn("Cannot bump the table outside of an active round.");
+        await notifyUser(userId, "Cannot bump the table outside of an active round.");
         return state;
     }
     if (state.tableData?.gameMode === "goblin") {
-        ui.notifications.warn("Bump is disabled in Goblin Rules.");
+        await notifyUser(userId, "Bump is disabled in Goblin Rules.");
         return state;
     }
 
@@ -40,7 +41,7 @@ export async function bumpTable(payload, userId) {
 
     // Must be in betting phase
     if (tableData.phase !== "betting") {
-        ui.notifications.warn("You can only bump the table during the betting phase.");
+        await notifyUser(userId, "You can only bump the table during the betting phase.");
         return state;
     }
 
@@ -49,23 +50,23 @@ export async function bumpTable(payload, userId) {
     const playerData = state.players?.[userId];
     const isHouse = user?.isGM && !playerData?.playingAsNpc;
     if (isHouse) {
-        ui.notifications.warn("The house does not bump the table.");
+        await notifyUser(userId, "The house does not bump the table.");
         return state;
     }
 
     // Player must not have busted or held
     if (tableData.busts?.[userId]) {
-        ui.notifications.warn("You busted - you can't bump the table!");
+        await notifyUser(userId, "You busted - you can't bump the table!");
         return state;
     }
     if (tableData.holds?.[userId]) {
-        ui.notifications.warn("You've already held - you can't bump the table!");
+        await notifyUser(userId, "You've already held - you can't bump the table!");
         return state;
     }
 
     // Player can only bump once per round
     if (tableData.usedSkills?.[userId]?.bump || tableData.bumpedThisRound?.[userId]) {
-        ui.notifications.warn("You've already bumped the table this round.");
+        await notifyUser(userId, "You've already bumped the table this round.");
         return state;
     }
 
@@ -80,7 +81,7 @@ export async function bumpTable(payload, userId) {
 
     // Validate target
     if (!targetId || targetId === userId) {
-        ui.notifications.warn("You can't bump your own dice!");
+        await notifyUser(userId, "You can't bump your own dice!");
         return state;
     }
 
@@ -88,24 +89,24 @@ export async function bumpTable(payload, userId) {
     // V3.5: Allow targeting GM-as-NPC, only block house
     const isTargetHouse = targetUser?.isGM && !state.players?.[targetId]?.playingAsNpc;
     if (isTargetHouse) {
-        ui.notifications.warn("You can't bump the house's dice!");
+        await notifyUser(userId, "You can't bump the house's dice!");
         return state;
     }
 
     if (tableData.busts?.[targetId]) {
-        ui.notifications.warn("That player has already busted.");
+        await notifyUser(userId, "That player has already busted.");
         return state;
     }
 
     // Validate target has dice and dieIndex is valid
     const targetRolls = tableData.rolls?.[targetId] ?? [];
     if (targetRolls.length === 0) {
-        ui.notifications.warn("That player has no dice to bump.");
+        await notifyUser(userId, "That player has no dice to bump.");
         return state;
     }
 
     if (Number.isNaN(dieIndex) || dieIndex < 0 || dieIndex >= targetRolls.length) {
-        ui.notifications.warn("Invalid die selection.");
+        await notifyUser(userId, "Invalid die selection.");
         return state;
     }
 
@@ -143,6 +144,8 @@ export async function bumpTable(payload, userId) {
     const attackerName = actualAttackerActor?.name ?? game.users.get(userId)?.name ?? "Unknown";
     const targetActor = getActorForUser(targetId);
     const targetName = targetActor?.name ?? game.users.get(targetId)?.name ?? "Unknown";
+    const safeAttackerName = getSafeActorName(userId);
+    const safeTargetName = getSafeActorName(targetId);
 
     // V3: Roll STR vs STR (not Athletics vs DEX save)
     const isAttackerSloppy = tableData.sloppy?.[userId] ?? false;
@@ -189,8 +192,8 @@ export async function bumpTable(payload, userId) {
         outcome: success ? "SUCCESS" : "FAIL",
         outcomeClass: success ? "success" : "failure",
         detail: success
-            ? `Bumping ${targetName}'s die...`
-            : `${targetName} caught you! RETALIATION incoming!`
+            ? `Bumping ${safeTargetName}'s die...`
+            : `${safeTargetName} caught you! RETALIATION incoming!`
     };
     tavernSocket.executeForEveryone("showSkillResult", "BUMP", userId, targetId, resultData);
 
@@ -290,7 +293,7 @@ export async function bumpTable(payload, userId) {
             // Public Die Bumped -> Log to Everyone
             await addLogToAll({
                 title: "Table Bump!",
-                message: `<strong>${attackerName}</strong> bumped <strong>${targetName}</strong>!<br>d${dieSides}: ${oldValue} → <strong>${newValue}</strong>${targetBusted ? " (BUST!)" : ""}`,
+                message: `<strong>${safeAttackerName}</strong> bumped <strong>${safeTargetName}</strong>!<br>d${dieSides}: ${oldValue} → <strong>${newValue}</strong>${targetBusted ? " (BUST!)" : ""}`,
                 icon: "fa-solid fa-hand-fist",
                 type: "bump",
                 cssClass: "success"
@@ -302,7 +305,7 @@ export async function bumpTable(payload, userId) {
             // Public Log
             await addLogToAll({
                 title: "Table Bump!",
-                message: `<strong>${attackerName}</strong> bumped <strong>${targetName}'s</strong> Hole Die!<br><em>(Value remains hidden)</em>`,
+                message: `<strong>${safeAttackerName}</strong> bumped <strong>${safeTargetName}'s</strong> Hole Die!<br><em>(Value remains hidden)</em>`,
                 icon: "fa-solid fa-hand-fist",
                 type: "bump",
                 cssClass: "warning"
@@ -311,7 +314,7 @@ export async function bumpTable(payload, userId) {
             try {
                 await tavernSocket.executeAsUser("showSkillBanner", userId, {
                     title: "Bump Landed",
-                    message: `You bumped ${targetName}'s die.`,
+                    message: `You bumped ${safeTargetName}'s die.`,
                     tone: "success",
                     icon: "fa-solid fa-hand-fist"
                 });
@@ -380,7 +383,7 @@ export async function bumpTable(payload, userId) {
         // V5.8: Log Bump Failure
         await addLogToAll({
             title: "Bump Caught!",
-            message: `<strong>${attackerName}</strong> tried to bump <strong>${targetName}</strong> but was caught!`,
+            message: `<strong>${safeAttackerName}</strong> tried to bump <strong>${safeTargetName}</strong> but was caught!`,
             icon: "fa-solid fa-hand-fist",
             type: "bump",
             cssClass: "failure"
@@ -404,7 +407,7 @@ export async function bumpTable(payload, userId) {
         // Log Retaliation Pending to Target
         await addPrivateLog(targetId, {
             title: "Retaliation Ready",
-            message: `You caught ${attackerName}! Select one of their dice to re-roll.`,
+            message: `You caught ${safeAttackerName}! Select one of their dice to re-roll.`,
             icon: "fa-solid fa-hand-back-fist",
             type: "bump",
             cssClass: "success"
@@ -422,7 +425,7 @@ export async function bumpTable(payload, userId) {
 export async function bumpRetaliation(payload, userId) {
     const state = getState();
     if (state.status !== "PLAYING") {
-        ui.notifications.warn("Cannot complete retaliation outside of an active round.");
+        await notifyUser(userId, "Cannot complete retaliation outside of an active round.");
         return state;
     }
 
@@ -430,7 +433,7 @@ export async function bumpRetaliation(payload, userId) {
     const pending = tableData.pendingBumpRetaliation;
 
     if (!pending) {
-        ui.notifications.warn("No pending bump retaliation.");
+        await notifyUser(userId, "No pending bump retaliation.");
         return state;
     }
 
@@ -440,7 +443,7 @@ export async function bumpRetaliation(payload, userId) {
     const isGM = user?.isGM;
 
     if (!isTarget && !isGM) {
-        ui.notifications.warn("Only the target or GM can choose the retaliation die.");
+        await notifyUser(userId, "Only the target or GM can choose the retaliation die.");
         return state;
     }
 
@@ -451,20 +454,20 @@ export async function bumpRetaliation(payload, userId) {
     // Validate attacker has dice and dieIndex is valid
     const attackerRolls = tableData.rolls?.[attackerId] ?? [];
     if (attackerRolls.length === 0) {
-        ui.notifications.warn("Attacker has no dice to re-roll.");
+        await notifyUser(userId, "Attacker has no dice to re-roll.");
         return state;
     }
 
     if (Number.isNaN(dieIndex) || dieIndex < 0 || dieIndex >= attackerRolls.length) {
-        ui.notifications.warn("Invalid die selection.");
+        await notifyUser(userId, "Invalid die selection.");
         return state;
     }
 
     // Get names
-    const attackerActor = game.users.get(attackerId)?.character;
-    const attackerName = attackerActor?.name ?? game.users.get(attackerId)?.name ?? "Unknown";
-    const targetActor = game.users.get(targetId)?.character;
-    const targetName = targetActor?.name ?? game.users.get(targetId)?.name ?? "Unknown";
+    const attackerName = getActorName(attackerId);
+    const targetName = getActorName(targetId);
+    const safeAttackerName = getSafeActorName(attackerId);
+    const safeTargetName = getSafeActorName(targetId);
 
     // Re-roll attacker's die
     const attackerDie = attackerRolls[dieIndex];
@@ -521,7 +524,7 @@ export async function bumpRetaliation(payload, userId) {
     if (wasPublic) {
         await addLogToAll({
             title: "Retaliation!",
-            message: `<strong>${targetName}</strong> re-rolled <strong>${attackerName}'s</strong> d${dieSides}: ${oldValue} → <strong>${newValue}</strong>${attackerBusted ? " (BUST!)" : ""}`,
+            message: `<strong>${safeTargetName}</strong> re-rolled <strong>${safeAttackerName}'s</strong> d${dieSides}: ${oldValue} → <strong>${newValue}</strong>${attackerBusted ? " (BUST!)" : ""}`,
             icon: "fa-solid fa-hand-back-fist",
             type: "bump",
             cssClass: "warning"
@@ -530,7 +533,7 @@ export async function bumpRetaliation(payload, userId) {
         // Public generic
         await addLogToAll({
             title: "Retaliation!",
-            message: `<strong>${targetName}</strong> re-rolled <strong>${attackerName}'s</strong> Hole Die!`,
+            message: `<strong>${safeTargetName}</strong> re-rolled <strong>${safeAttackerName}'s</strong> Hole Die!`,
             icon: "fa-solid fa-hand-back-fist",
             type: "bump",
             cssClass: "warning"

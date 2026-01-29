@@ -13,7 +13,8 @@
 
 import { MODULE_ID, getState, updateState, addHistoryEntry, addLogToAll, addPrivateLog } from "../../state.js"; // V5.8
 import { deductFromActor } from "../../wallet.js"; // V5.9: Use wallet.js for proper NPC support
-import { getActorForUser, notifyUser, getActorName } from "../utils/actors.js"; // V5.9
+import { getActorForUser, getActorName, getSafeActorName } from "../utils/actors.js"; // V5.9
+import { notifyUser } from "../utils/game-logic.js";
 import { tavernSocket } from "../../socket.js";
 // import { createChatCard } from "../../ui/chat.js"; // Removed
 import { emptyTableData } from "../constants.js";
@@ -26,11 +27,11 @@ import { emptyTableData } from "../constants.js";
 export async function cheat(payload, userId) {
     const state = getState();
     if (state.status !== "PLAYING") {
-        ui.notifications.warn("Cannot cheat outside of an active round.");
+        await notifyUser(userId, "Cannot cheat outside of an active round.");
         return state;
     }
     if (state.tableData?.gameMode === "goblin") {
-        ui.notifications.warn("Cheating is disabled in Goblin Rules.");
+        await notifyUser(userId, "Cheating is disabled in Goblin Rules.");
         return state;
     }
 
@@ -39,7 +40,7 @@ export async function cheat(payload, userId) {
     const playerData = state.players?.[userId];
     const isHouse = user?.isGM && !playerData?.playingAsNpc;
     if (isHouse) {
-        ui.notifications.warn("The house doesn't cheat... or do they?");
+        await notifyUser(userId, "The house doesn't cheat... or do they?");
         return state;
     }
 
@@ -75,7 +76,7 @@ export async function cheat(payload, userId) {
     // V3: Validate adjustment is ±1 to ±3
     const absAdj = Math.abs(adjustment);
     if (absAdj < 1 || absAdj > 3) {
-        ui.notifications.warn("Cheat adjustment must be ±1, ±2, or ±3.");
+        await notifyUser(userId, "Cheat adjustment must be ±1, ±2, or ±3.");
         return state;
     }
 
@@ -94,7 +95,7 @@ export async function cheat(payload, userId) {
 
     // Validate die index
     if (dieIndex < 0 || dieIndex >= rolls.length) {
-        ui.notifications.warn("Invalid die selection.");
+        await notifyUser(userId, "Invalid die selection.");
         return state;
     }
 
@@ -112,7 +113,7 @@ export async function cheat(payload, userId) {
 
     // Don't allow "cheating" to the same value
     if (newValue === oldValue) {
-        ui.notifications.warn("That wouldn't change the value!");
+        await notifyUser(userId, "That wouldn't change the value!");
         return state;
     }
 
@@ -173,7 +174,7 @@ export async function cheat(payload, userId) {
         // Public Caught Log
         await addLogToAll({
             title: "Clumsy Hands!",
-            message: `<strong>${getActorName(userId)}</strong> fumbled a cheat attempt!<br><em>CAUGHT and forfeited the round.</em>`,
+            message: `<strong>${getSafeActorName(userId)}</strong> fumbled a cheat attempt!<br><em>CAUGHT and forfeited the round.</em>`,
             icon: "fa-solid fa-hand-fist",
             type: "cheat",
             cssClass: "failure"
@@ -221,23 +222,27 @@ export async function cheat(payload, userId) {
     const visibleTotals = { ...tableData.visibleTotals };
     const gameMode = tableData.gameMode ?? "standard";
 
-    if (gameMode === "goblin") {
-        let total = 0;
-        let visibleTotal = 0;
-        for (const rollEntry of updatedRolls) {
-            const isCoin = rollEntry.die === 2;
-            const isPublic = rollEntry.public ?? true;
-            if (isCoin) {
-                if (rollEntry.result === 2) {
-                    total *= 2;
-                    if (isPublic) visibleTotal *= 2;
+        if (gameMode === "goblin") {
+            let total = 0;
+            let visibleTotal = 0;
+            for (const rollEntry of updatedRolls) {
+                const isCoin = rollEntry.die === 2;
+                const isPublic = rollEntry.public ?? true;
+                if (isCoin) {
+                    if (rollEntry.result === 2) {
+                        total += 2;
+                        if (isPublic) visibleTotal += 2;
+                    } else if (rollEntry.result === 1) {
+                        total = 0;
+                        if (isPublic) visibleTotal = 0;
+                        break;
+                    }
+                } else {
+                    total += rollEntry.result;
+                    if (isPublic) visibleTotal += rollEntry.result;
                 }
-            } else {
-                total += rollEntry.result;
-                if (isPublic) visibleTotal += rollEntry.result;
             }
-        }
-        totals[userId] = total;
+            totals[userId] = total;
         visibleTotals[userId] = visibleTotal;
     } else {
         totals[userId] = (tableData.totals?.[userId] ?? 0) + rollDelta;

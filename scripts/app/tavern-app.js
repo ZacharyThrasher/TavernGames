@@ -21,7 +21,6 @@ import { BumpDialog } from "./dialogs/bump-dialog.js";
 import { BootDialog } from "./dialogs/boot-dialog.js";
 import { AccuseDialog } from "./dialogs/accuse-dialog.js";
 import { SideBetDialog } from "./dialogs/side-bet-dialog.js";
-import { PaymentDialog } from "./dialogs/payment-dialog.js";
 import { HelpDialog } from "./dialogs/help-dialog.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -564,9 +563,10 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       }
       if (roll.die === 2) {
         if (roll.result === 2) {
-          total *= 2;
+          total += 2;
         } else if (roll.result === 1) {
-          total = 1;
+          total = 0;
+          break;
         }
       } else {
         total += roll.result || 0;
@@ -1185,7 +1185,8 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const ante = game.settings.get(MODULE_ID, "fixedAnte");
 
     // Get target from UI selection
-    const selectedPortrait = document.querySelector('.accuse-portrait.selected');
+    const appElement = game.tavernDiceMaster?.app?.element;
+    const selectedPortrait = appElement?.querySelector('.accuse-portrait.selected') ?? document.querySelector('.accuse-portrait.selected');
     const targetId = selectedPortrait?.dataset?.targetId;
 
     if (!targetId) return ui.notifications.warn("Select a player to accuse.");
@@ -1380,26 +1381,6 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       TavernApp.uiLocked = false;
       if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
     }
-  }
-
-  static async promptPayment(cost, ante, purpose) {
-    if (cost <= 0) return "gold";
-
-    const actor = game.user.character;
-    const gp = actor?.system?.currency?.gp ?? 0;
-    const canAffordGold = gp >= cost;
-    const isHouse = isActingAsHouse(game.user.id, getState());
-
-    if (isHouse) return "gold";
-    if (!event.shiftKey && canAffordGold) return "gold";
-
-    return PaymentDialog.show({
-      cost,
-      purpose,
-      gp,
-      canAffordGold,
-      drinksNeeded: Math.ceil(cost / ante)
-    });
   }
 
   static async onSideBet() {

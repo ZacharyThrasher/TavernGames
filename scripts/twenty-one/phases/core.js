@@ -4,8 +4,8 @@ import { canAffordAnte, deductAnteFromActors, deductFromActor, payOutWinners } f
 import { showPublicRoll } from "../../dice.js";
 
 import { tavernSocket } from "../../socket.js";
-import { getActorForUser, getActorName } from "../utils/actors.js"; // V5.9
-import { calculateBettingOrder, getGMUserIds } from "../utils/game-logic.js";
+import { getActorForUser, getActorName, getSafeActorName } from "../utils/actors.js"; // V5.9
+import { calculateBettingOrder } from "../utils/game-logic.js";
 import { emptyTableData, GOBLIN_STAGE_DICE } from "../constants.js";
 import { processSideBetPayouts } from "./side-bets.js";
 
@@ -176,11 +176,12 @@ export async function startRound(startingHeat = 10) {
 
   // V3: Updated message for auto-roll opening
   const cutPlayerName = cutPlayerId ? getActorName(cutPlayerId) : null;
+  const safeCutPlayerName = cutPlayerId ? getSafeActorName(cutPlayerId) : null;
   let chatMessage = `Each player antes ${ante}gp. The house matches. Pot: <strong>${pot}gp</strong><br>` +
     `<em>All hands dealt (2d10 each: 1 visible, 1 hole)</em>`;
 
   if (cutPlayerId && state.turnOrder.length > 1) {
-    chatMessage += `<br><strong>${cutPlayerName}</strong> has The Cut (lowest visible: ${lowestVisible})`;
+    chatMessage += `<br><strong>${safeCutPlayerName}</strong> has The Cut (lowest visible: ${lowestVisible})`;
   }
 
   // V5.8: Log to All
@@ -256,6 +257,7 @@ export async function finishRound() {
   // V2.0: Check for fumbled cheaters (physical cheat < 10 = auto-caught)
   const caught = { ...tableData.caught };
   const fumbledCheaterNames = [];
+  const fumbledCheaterNamesSafe = [];
   for (const [cheaterId, cheaterData] of Object.entries(tableData.cheaters)) {
     if (caught[cheaterId]) continue; // Already caught
     const cheats = cheaterData.cheats ?? cheaterData.deceptionRolls ?? [];
@@ -263,7 +265,9 @@ export async function finishRound() {
       if (cheatRecord.fumbled) {
         caught[cheaterId] = true;
         const cheaterName = getActorName(cheaterId); // V5.9
+        const safeCheaterName = getSafeActorName(cheaterId);
         fumbledCheaterNames.push(cheaterName);
+        fumbledCheaterNamesSafe.push(safeCheaterName);
         break;
       }
     }
@@ -272,7 +276,7 @@ export async function finishRound() {
   if (fumbledCheaterNames.length > 0) {
     await addLogToAll({
       title: "Fumbled!",
-      message: `<strong>${fumbledCheaterNames.join(", ")}</strong> fumbled their cheat and got caught red-handed!`,
+      message: `<strong>${fumbledCheaterNamesSafe.join(", ")}</strong> fumbled their cheat and got caught red-handed!`,
       icon: "fa-solid fa-hand-fist",
       type: "cheat",
       cssClass: "failure"
@@ -284,6 +288,8 @@ export async function finishRound() {
     const { accuserId, targetId, success, cost, bounty } = tableData.accusation;
     const accuserName = getActorName(accuserId);
     const targetName = getActorName(targetId);
+    const safeAccuserName = getSafeActorName(accuserId);
+    const safeTargetName = getSafeActorName(targetId);
 
     await new Promise(r => setTimeout(r, 1000));
 
@@ -308,8 +314,8 @@ export async function finishRound() {
 
       await addLogToAll({
         title: "Cheater Caught!",
-        message: `<strong>${accuserName}</strong> exposed <strong>${targetName}</strong>!<br>
-          <em>${accuserName} earns ${totalReward}gp (${refund} refund + ${bountyMsg})</em>`,
+        message: `<strong>${safeAccuserName}</strong> exposed <strong>${safeTargetName}</strong>!<br>
+          <em>${safeAccuserName} earns ${totalReward}gp (${refund} refund + ${bountyMsg})</em>`,
         icon: "fa-solid fa-gavel",
         type: "cheat",
         cssClass: "success"
@@ -327,8 +333,8 @@ export async function finishRound() {
 
       await addLogToAll({
         title: "False Accusation!",
-        message: `<strong>${accuserName}</strong> accused <strong>${targetName}</strong> but was WRONG!<br>
-          <em>${accuserName} loses their ${cost ?? 0}gp fee.</em>`,
+        message: `<strong>${safeAccuserName}</strong> accused <strong>${safeTargetName}</strong> but was WRONG!<br>
+          <em>${safeAccuserName} loses their ${cost ?? 0}gp fee.</em>`,
         icon: "fa-solid fa-face-frown",
         type: "cheat",
         cssClass: "failure"
@@ -383,7 +389,7 @@ export async function finishRound() {
 
       await addLogToAll({
         title: "SUDDEN DEATH",
-        message: `<strong>${participants.map(id => getActorName(id)).join(" vs ")}</strong> are tied!<br><em>The coin decides.</em>`,
+        message: `<strong>${participants.map(id => getSafeActorName(id)).join(" vs ")}</strong> are tied!<br><em>The coin decides.</em>`,
         icon: "fa-solid fa-bolt",
         type: "phase"
       });
@@ -406,10 +412,11 @@ export async function finishRound() {
     }
 
     const duelParticipantNames = winners.map(id => getActorName(id)).join(" vs "); // V5.9
+    const duelParticipantNamesSafe = winners.map(id => getSafeActorName(id)).join(" vs ");
 
     await addLogToAll({
       title: "The Duel!",
-      message: `<strong>${duelParticipantNames}</strong> are TIED!<br>
+      message: `<strong>${duelParticipantNamesSafe}</strong> are TIED!<br>
         <em>One final clash to settle the pot!</em><br>
         <span style="font-size: 0.9em; opacity: 0.8;">Roll 1d20 + 1d4 per Hit taken.</span>`,
       icon: "fa-solid fa-swords",
@@ -450,8 +457,8 @@ export async function finishRound() {
     if (fee > 0) {
       await deductFromActor(odId, fee);
       totalCleaningFees += fee;
-      const userName = getActorName(odId); // V5.9
-      cleaningFeeMessages.push(`${userName}: ${fee}gp`);
+      const safeUserName = getSafeActorName(odId); // V5.9
+      cleaningFeeMessages.push(`${safeUserName}: ${fee}gp`);
     }
   }
 
@@ -475,7 +482,7 @@ export async function finishRound() {
         payout = Math.floor(finalPot * 0.5);
         await addLogToAll({
           title: "Coward's Tax",
-          message: `${getActorName(winners[0])} held early and only claims <strong>${payout}gp</strong>. The House keeps the rest.`,
+          message: `${getSafeActorName(winners[0])} held early and only claims <strong>${payout}gp</strong>. The House keeps the rest.`,
           icon: "fa-solid fa-land-mine-on",
           type: "system"
         });

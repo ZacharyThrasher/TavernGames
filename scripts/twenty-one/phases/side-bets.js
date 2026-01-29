@@ -1,9 +1,8 @@
 import { MODULE_ID, getState, updateState, addHistoryEntry, addLogToAll, addPrivateLog } from "../../state.js"; // V5.8
-import { tavernSocket } from "../../socket.js";
-import { deductFromActor, getPlayerGold } from "../../wallet.js";
+import { deductFromActor, getPlayerGold, payOutWinners } from "../../wallet.js";
 // import { createChatCard } from "../../ui/chat.js"; // Removed
 
-import { getActorForUser, getActorName } from "../utils/actors.js"; // V5.9
+import { getActorName, getSafeActorName } from "../utils/actors.js"; // V5.9
 import { notifyUser } from "../utils/game-logic.js";
 
 /**
@@ -80,10 +79,12 @@ export async function placeSideBet(payload, userId) {
     // V5.9: Use getActorName
     const betterName = getActorName(userId);
     const championName = getActorName(championId);
+    const safeBetterName = getSafeActorName(userId);
+    const safeChampionName = getSafeActorName(championId);
 
     await addLogToAll({
         title: "Side Bet",
-        message: `<strong>${betterName}</strong> placed a side bet of <strong>${amount}gp</strong> on <strong>${championName}</strong>!`,
+        message: `<strong>${safeBetterName}</strong> placed a side bet of <strong>${amount}gp</strong> on <strong>${safeChampionName}</strong>!`,
         icon: "fa-solid fa-sack-dollar",
         type: "system"
     }, [], userId);
@@ -108,6 +109,9 @@ export async function processSideBetPayouts(winnerId) {
     const tableData = state.tableData ?? {};
     const sideBets = tableData.sideBets ?? {};
     const pool = tableData.sideBetPool ?? 0;
+    const rawMultiplier = Number(game.settings.get(MODULE_ID, "sideBetPayout") ?? 2.0);
+    const payoutMultiplier = Number.isFinite(rawMultiplier) ? rawMultiplier : 2.0;
+    const effectivePool = Math.floor(pool * payoutMultiplier);
 
     const payouts = [];
     const losses = [];
@@ -135,30 +139,32 @@ export async function processSideBetPayouts(winnerId) {
 
     for (const { betterId, amount } of winnerBets) {
         const betterName = getActorName(betterId);
-        const payout = Math.floor((amount / totalWinnerBet) * pool);
-        await deductFromActor(betterId, -payout);
-        payouts.push({ name: betterName, payout, bet: amount, userId: betterId });
-        try {
-            await tavernSocket.executeForEveryone("showFloatingText", betterId, payout);
-        } catch (e) { }
+        const safeBetterName = getSafeActorName(betterId);
+        const payout = Math.floor((amount / totalWinnerBet) * effectivePool);
+        await payOutWinners({ [betterId]: payout });
+        payouts.push({ name: betterName, safeName: safeBetterName, payout, bet: amount, userId: betterId });
     }
 
     for (const [betterId, bets] of Object.entries(sideBets)) {
         const betterName = getActorName(betterId);
+        const safeBetterName = getSafeActorName(betterId);
         const totalBet = bets.reduce((sum, b) => sum + b.amount, 0);
         const betOnWinner = bets
             .filter(b => b.championId === winnerId)
             .reduce((sum, b) => sum + b.amount, 0);
         const lost = totalBet - betOnWinner;
-        if (lost > 0) losses.push({ name: betterName, amount: lost });
+        if (lost > 0) losses.push({ name: betterName, safeName: safeBetterName, amount: lost });
     }
 
-    const payoutMsg = payouts.map(p => `${p.name}: +${p.payout}gp (bet ${p.bet}gp)`).join("<br>");
-    const lossMsg = losses.map(l => `${l.name}: -${l.amount}gp`).join("<br>");
+    const payoutMsg = payouts.map(p => `${p.safeName}: +${p.payout}gp (bet ${p.bet}gp)`).join("<br>");
+    const lossMsg = losses.map(l => `${l.safeName}: -${l.amount}gp`).join("<br>");
+    const poolLabel = payoutMultiplier !== 1
+        ? `${pool}gp (x${payoutMultiplier.toFixed(1)} = ${effectivePool}gp)`
+        : `${pool}gp`;
 
     await addLogToAll({
         title: "Side Bet Results",
-        message: `${payouts.length > 0 ? `<strong>Pool Winners:</strong><br>${payoutMsg}<br>` : ""}${losses.length > 0 ? `<strong>Losses:</strong><br>${lossMsg}` : ""}<em>Side Bet Pool: ${pool}gp</em>`,
+        message: `${payouts.length > 0 ? `<strong>Pool Winners:</strong><br>${payoutMsg}<br>` : ""}${losses.length > 0 ? `<strong>Losses:</strong><br>${lossMsg}` : ""}<em>Side Bet Pool: ${poolLabel}</em>`,
         icon: "fa-solid fa-coins",
         type: "system",
         cssClass: payouts.length > 0 ? "success" : "failure"

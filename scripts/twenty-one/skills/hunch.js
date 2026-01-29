@@ -19,18 +19,19 @@ import { addHistoryEntry } from "../../state.js"; // History moved to state long
 // The file was importing it from `ui/chat.js` which was likely a re-export or legacy location?
 // Let's standardise to state.js imports.
 
-import { getActorForUser, notifyUser, getActorName } from "../utils/actors.js"; // V5.9
+import { getActorForUser, getActorName, getSafeActorName } from "../utils/actors.js"; // V5.9
+import { notifyUser } from "../utils/game-logic.js";
 import { finishTurn } from "../phases/turn.js";
 
 
 export async function hunch(userId) {
     const state = getState();
     if (state.status !== "PLAYING") {
-        ui.notifications.warn("Cannot use Foresight outside of an active round.");
+        await notifyUser(userId, "Cannot use Foresight outside of an active round.");
         return state;
     }
     if (state.tableData?.gameMode === "goblin") {
-        ui.notifications.warn("Foresight is disabled in Goblin Rules.");
+        await notifyUser(userId, "Foresight is disabled in Goblin Rules.");
         return state;
     }
 
@@ -71,7 +72,7 @@ export async function hunch(userId) {
     const playerData = state.players?.[userId];
     const isHouse = user?.isGM && !playerData?.playingAsNpc;
     if (isHouse) {
-        ui.notifications.warn("The house does not guess.");
+        await notifyUser(userId, "The house does not guess.");
         return state;
     }
 
@@ -86,6 +87,7 @@ export async function hunch(userId) {
 
     // V5.9: Use getActorName
     const userName = getActorName(userId);
+    const safeUserName = getSafeActorName(userId);
     const actor = getActorForUser(userId); // Definition restored for stat access
     const wisMod = actor?.system?.abilities?.wis?.mod ?? 0;
 
@@ -155,7 +157,7 @@ export async function hunch(userId) {
         // Public Log for Effect
         await addLogToAll({
             title: "Foresight",
-            message: `<strong>${userName}</strong> gets a perfect read on the future!<br><em>They know exactly what is coming.</em>`,
+            message: `<strong>${safeUserName}</strong> gets a perfect read on the future!<br><em>They know exactly what is coming.</em>`,
             icon: "fa-solid fa-eye",
             type: "hunch",
             cssClass: "success"
@@ -185,7 +187,7 @@ export async function hunch(userId) {
 
         await addLogToAll({
             title: "Foresight Backfire",
-            message: `<strong>${userName}</strong> spirals into doubt!<br>Locked into a <strong>Blind d20</strong>!`,
+            message: `<strong>${safeUserName}</strong> spirals into doubt!<br>Locked into a <strong>Blind d20</strong>!`,
             icon: "fa-solid fa-eye-slash",
             type: "hunch",
             cssClass: "failure"
@@ -223,7 +225,7 @@ export async function hunch(userId) {
 
         await addLogToAll({
             title: "Foresight",
-            message: `<strong>${userName}</strong> senses the flow of probability.<br><em>They have a hunch...</em>`,
+            message: `<strong>${safeUserName}</strong> senses the flow of probability.<br><em>They have a hunch...</em>`,
             icon: "fa-solid fa-eye",
             type: "hunch",
             cssClass: "success"
@@ -256,7 +258,7 @@ export async function hunch(userId) {
 
         await addLogToAll({
             title: "Foresight Failed",
-            message: `<strong>${userName}'s</strong> intuition fails them.<br>Next roll is <strong>Blind</strong>!`,
+            message: `<strong>${safeUserName}'s</strong> intuition fails them.<br>Next roll is <strong>Blind</strong>!`,
             icon: "fa-solid fa-eye-slash",
             type: "hunch",
             cssClass: "failure"
