@@ -294,7 +294,6 @@ export async function hold(userId) {
 
   const userName = getActorName(userId);
   const safeUserName = getSafeActorName(userId);
-  const safeUserName = getSafeActorName(userId);
 
   // V5.8: Log Hold
   await addLogToAll({
