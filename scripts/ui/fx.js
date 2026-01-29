@@ -156,7 +156,7 @@ export function showBustFanfare(userId) {
  * @param {string} userId
  * @param {number} result - 1 (tails) or 2 (heads)
  */
-export function showCoinFlip(userId, result) {
+export function showCoinFlip(userId, result, bonus = 2) {
   try {
     if (isPerformanceMode()) return;
 
@@ -166,7 +166,7 @@ export function showCoinFlip(userId, result) {
     const isHeads = result === 2;
     const banner = createElement("div", {
       className: `coin-flip-banner ${isHeads ? "heads" : "tails"}`,
-      innerHTML: isHeads ? "COIN FLIP: HEADS +2" : "COIN FLIP: TAILS — DEATH"
+      innerHTML: isHeads ? `COIN FLIP: HEADS +${bonus}` : "COIN FLIP: TAILS — DEATH"
     });
 
     appWindow.appendChild(banner);
@@ -457,10 +457,40 @@ export function showScoreSurge(userId, payload = {}) {
       const delta = payload.delta ?? 0;
       const popText = payload.multiplied ? "x2!" : (delta > 0 ? `+${delta}` : "");
       if (popText) {
-        const pop = createElement("div", { className: `score-pop ${payload.multiplied ? "multiplied" : ""} mega`, innerHTML: popText });
+        const absDelta = Math.abs(delta);
+        const tier = absDelta >= 20 ? "ultra" : absDelta >= 12 ? "mega" : absDelta >= 6 ? "big" : "small";
+        const popScale = Math.min(2.6, 1 + absDelta * 0.06);
+        const popSize = Math.min(96, 32 + absDelta * 2.2);
+        const popShake = Math.min(18, 2 + absDelta * 0.6);
+        const popClasses = [
+          "score-pop",
+          payload.multiplied ? "multiplied" : "",
+          tier
+        ].filter(Boolean).join(" ");
+
+        const pop = createElement("div", {
+          className: popClasses,
+          innerHTML: `<span class="score-pop-text">${popText}</span>`
+        });
+        pop.style.setProperty("--pop-scale", popScale.toFixed(2));
+        pop.style.setProperty("--pop-size", `${popSize}px`);
+        pop.style.setProperty("--pop-shake", `${popShake}px`);
+
         seat.appendChild(pop);
         requestAnimationFrame(() => pop.classList.add("show"));
-        setTimeout(() => pop.remove(), 900);
+        setTimeout(() => pop.remove(), 1100);
+
+        if (absDelta >= 12) {
+          const particleLayer = createElement("div", { className: "cinematic-particles" });
+          seat.appendChild(particleLayer);
+          ParticleFactory.spawnCoinShower(particleLayer, Math.min(40, 12 + absDelta));
+          setTimeout(() => particleLayer.remove(), 1200);
+        }
+
+        if (absDelta >= 18) {
+          seat.classList.add("tavern-shake-heavy");
+          setTimeout(() => seat.classList.remove("tavern-shake-heavy"), 450);
+        }
       }
     }, 60);
   } catch (error) {
@@ -613,6 +643,9 @@ export function showSkillCutIn(type, userId, targetId) {
     else if (type === "STAREDOWN") text = "THE STAREDOWN"; // V4.8.47
     else if (type === "DUEL") text = "DUEL!"; // V4.8.47
     else if (type === "SUDDEN_DEATH") text = "SUDDEN DEATH!";
+    else if (type === "COIN_STAGE") text = "THE COIN";
+    else if (type === "BOOT_EARNED") text = "BOOT EARNED!";
+    else if (type === "BOOT") text = "BOOT!";
 
     CinematicOverlay.show({
       type,

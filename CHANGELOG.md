@@ -1,5 +1,10 @@
 # Changelog
 
+## [5.20.3] - 2026-01-29
+### Score Pop Effects
+- **UI**: Score pop numbers now scale with roll size, with heavier punch and shake for big gains.
+- **FX**: Added extra coin-flair and glow layers for large pops.
+
 ## [5.20.2] - 2026-01-29
 ### Profile Skill Hotfix
 - **Fix**: Resolved a syntax error in `Profile` caused by duplicate `safeUserName` declarations.
