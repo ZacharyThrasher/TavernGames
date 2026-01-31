@@ -1,3 +1,2 @@
-### Score Pop Effects
-- **UI**: Score pop numbers now scale with roll size, with heavier punch and shake for big gains.
-- **FX**: Added extra coin-flair and glow layers for large pops.
+### Goblin Last-Roll Win
+- **Goblin**: If only one non-holding player remains and they are the sole leader, their successful roll immediately wins the round.

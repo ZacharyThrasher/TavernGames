@@ -51,6 +51,23 @@ function getLeaders(state, tableData) {
   return { max, leaders };
 }
 
+function shouldTriggerLastRollWin(state, tableData, userId) {
+  const rollingPlayers = getRollingPlayers(state, tableData);
+  if (rollingPlayers.length !== 1 || rollingPlayers[0] !== userId) return false;
+  const { leaders } = getLeaders(state, tableData);
+  return leaders.length === 1 && leaders[0] === userId;
+}
+
+function shouldOfferHoldOption(state, tableData, userId) {
+  if (tableData.holds?.[userId]) return false;
+  if (tableData.busts?.[userId] || tableData.folded?.[userId] || tableData.caught?.[userId]) return false;
+  const myRolls = tableData.rolls?.[userId] ?? [];
+  if (myRolls.length === 0) return false;
+  const { max } = getLeaders(state, tableData);
+  const myTotal = Number(tableData.totals?.[userId] ?? 0);
+  return myTotal >= max;
+}
+
 async function advanceStageIfNeeded(state, tableData) {
   let updatedTable = { ...tableData };
   const remaining = updatedTable.goblinStageRemaining ?? [];
@@ -61,53 +78,33 @@ async function advanceStageIfNeeded(state, tableData) {
   }
 
   const rollingPlayers = getRollingPlayers(state, updatedTable);
-  const { leaders } = getLeaders(state, updatedTable);
 
   if (updatedTable.goblinSuddenDeathActive) {
-    if (leaders.length <= 1) return { tableData: updatedTable, action: "finish" };
+    if (rollingPlayers.length === 0) return { tableData: updatedTable, action: "finish" };
 
-    const nextRemaining = normalizeRemaining(state, updatedTable, leaders);
-    updatedTable.goblinSuddenDeathParticipants = leaders;
+    const nextRemaining = normalizeRemaining(state, updatedTable, rollingPlayers);
+    updatedTable.goblinSuddenDeathParticipants = nextRemaining;
     updatedTable.goblinSuddenDeathRemaining = nextRemaining;
     updatedTable.goblinStageRemaining = nextRemaining;
     updatedTable.currentPlayer = nextRemaining[0] ?? null;
-    return { tableData: updatedTable, action: "sudden-death-continue", leaders };
+    return { tableData: updatedTable, action: "coin-continue" };
   }
 
   if (rollingPlayers.length === 0) {
-    if (leaders.length > 1) {
-      const updatedHolds = { ...updatedTable.holds };
-      for (const id of leaders) delete updatedHolds[id];
-      const nextRemaining = normalizeRemaining(state, updatedTable, leaders);
-      updatedTable.goblinSuddenDeathActive = true;
-      updatedTable.goblinSuddenDeathParticipants = leaders;
-      updatedTable.goblinSuddenDeathRemaining = nextRemaining;
-      updatedTable.goblinStageRemaining = nextRemaining;
-      updatedTable.goblinStageDie = 2;
-      updatedTable.holds = updatedHolds;
-      updatedTable.currentPlayer = nextRemaining[0] ?? null;
-      return { tableData: updatedTable, action: "sudden-death-start", leaders };
-    }
     return { tableData: updatedTable, action: "finish" };
   }
 
   const stageIndex = Number.isInteger(updatedTable.goblinStageIndex) ? updatedTable.goblinStageIndex : 0;
   const stageDie = GOBLIN_STAGE_DICE[stageIndex] ?? 20;
   if (stageDie === 4) {
-    if (leaders.length > 1) {
-      const updatedHolds = { ...updatedTable.holds };
-      for (const id of leaders) delete updatedHolds[id];
-      const nextRemaining = normalizeRemaining(state, updatedTable, leaders);
-      updatedTable.goblinSuddenDeathActive = true;
-      updatedTable.goblinSuddenDeathParticipants = leaders;
-      updatedTable.goblinSuddenDeathRemaining = nextRemaining;
-      updatedTable.goblinStageRemaining = nextRemaining;
-      updatedTable.goblinStageDie = 2;
-      updatedTable.holds = updatedHolds;
-      updatedTable.currentPlayer = nextRemaining[0] ?? null;
-      return { tableData: updatedTable, action: "sudden-death-start", leaders };
-    }
-    return { tableData: updatedTable, action: "finish" };
+    const nextRemaining = normalizeRemaining(state, updatedTable, rollingPlayers);
+    updatedTable.goblinSuddenDeathActive = true;
+    updatedTable.goblinSuddenDeathParticipants = nextRemaining;
+    updatedTable.goblinSuddenDeathRemaining = nextRemaining;
+    updatedTable.goblinStageRemaining = nextRemaining;
+    updatedTable.goblinStageDie = 2;
+    updatedTable.currentPlayer = nextRemaining[0] ?? null;
+    return { tableData: updatedTable, action: "coin-start" };
   }
 
   const nextIndex = Math.min(stageIndex + 1, GOBLIN_STAGE_DICE.length - 1);
@@ -122,6 +119,53 @@ async function advanceStageIfNeeded(state, tableData) {
   return { tableData: updatedTable, action: "stage-advance", nextDie };
 }
 
+async function finalizeGoblinTurn(state, tableData) {
+  let updatedTable = { ...tableData, pendingAction: null };
+
+  const remaining = updatedTable.goblinStageRemaining ?? [];
+  updatedTable.goblinStageRemaining = remaining.filter(id => id !== updatedTable.currentPlayer);
+  if (updatedTable.goblinSuddenDeathActive) {
+    const suddenRemaining = updatedTable.goblinSuddenDeathRemaining ?? [];
+    updatedTable.goblinSuddenDeathRemaining = suddenRemaining.filter(id => id !== updatedTable.currentPlayer);
+  }
+  updatedTable.currentPlayer = getNextStagePlayer(state, updatedTable);
+  updatedTable.skillUsedThisTurn = false;
+  updatedTable.lastSkillUsed = null;
+
+  const progress = await advanceStageIfNeeded(state, updatedTable);
+  updatedTable = progress.tableData;
+
+  const next = await updateState({ tableData: updatedTable });
+
+  if (progress.action === "stage-advance") {
+    await addLogToAll({
+      title: "The Chamber Shrinks",
+      message: `Next Stage: <strong>d${updatedTable.goblinStageDie}</strong>.`,
+      icon: "fa-solid fa-skull",
+      type: "phase"
+    });
+  } else if (progress.action === "coin-start") {
+    await addLogToAll({
+      title: "THE COIN",
+      message: `The Chamber reaches the <strong>Coin</strong>. Only the bold keep rolling.`,
+      icon: "fa-solid fa-bolt",
+      type: "phase"
+    });
+    tavernSocket.executeForEveryone("showSkillCutIn", "COIN_STAGE");
+  } else if (progress.action === "coin-continue") {
+    await addLogToAll({
+      title: "The Coin Spins",
+      message: `The Chamber demands another flip.`,
+      icon: "fa-solid fa-bolt",
+      type: "phase"
+    });
+  }
+
+  if (progress.action === "finish") return revealDice();
+
+  return next;
+}
+
 export async function submitGoblinRoll({ state, tableData, userId, die }) {
   const stageDie = getStageDie(tableData);
   if (Number(die) !== stageDie) {
@@ -131,6 +175,11 @@ export async function submitGoblinRoll({ state, tableData, userId, die }) {
 
   if (tableData.currentPlayer !== userId) {
     await notifyUser(userId, "It's not your turn.");
+    return state;
+  }
+
+  if (tableData.pendingAction === "goblin_hold") {
+    await notifyUser(userId, "Decide to Hold or Continue before rolling again.");
     return state;
   }
 
@@ -151,21 +200,26 @@ export async function submitGoblinRoll({ state, tableData, userId, die }) {
     await showPublicRollFromData(Number(stageDie), Number(result), userId);
   } catch (e) { }
 
-  if (stageDie === 2) {
-    try {
-      await tavernSocket.executeForEveryone("showCoinFlip", userId, result);
-    } catch (e) { }
+  const rolls = { ...tableData.rolls };
+  const existingRolls = rolls[userId] ?? [];
+  const priorCoinRolls = existingRolls.filter(r => r.die === 2).length;
+  let coinValue = null;
+  if (stageDie === 2 && result === 2) {
+    coinValue = 2 * Math.pow(2, priorCoinRolls);
   }
 
-  const rolls = { ...tableData.rolls };
+  if (stageDie === 2) {
+    try {
+      await tavernSocket.executeForEveryone("showCoinFlip", userId, result, coinValue ?? 2);
+    } catch (e) { }
+  }
+  
   const totals = { ...tableData.totals };
   const visibleTotals = { ...tableData.visibleTotals };
   const busts = { ...tableData.busts };
   const holds = { ...tableData.holds };
   const goblinBoots = { ...tableData.goblinBoots };
-
-  const existingRolls = rolls[userId] ?? [];
-  rolls[userId] = [...existingRolls, { die: stageDie, result, public: true, blind: false }];
+  rolls[userId] = [...existingRolls, { die: stageDie, result, public: true, blind: false, coinValue }];
 
   const previousTotal = Number(totals[userId] ?? 0);
   let currentTotal = previousTotal;
@@ -201,9 +255,10 @@ export async function submitGoblinRoll({ state, tableData, userId, die }) {
     } catch (e) { }
   } else {
     if (stageDie === 2) {
-      currentTotal = previousTotal + 2;
-      message = `${userName} flipped HEADS for +2. Total: ${currentTotal}.`;
-      logMessage = `${safeUserName} flipped HEADS for +2. Total: ${currentTotal}.`;
+      const bonus = coinValue ?? 2;
+      currentTotal = previousTotal + bonus;
+      message = `${userName} flipped HEADS for +${bonus}. Total: ${currentTotal}.`;
+      logMessage = `${safeUserName} flipped HEADS for +${bonus}. Total: ${currentTotal}.`;
     } else {
       currentTotal = previousTotal + result;
       message = `${userName} rolled ${result} on d${stageDie}. Total: ${currentTotal}.`;
@@ -217,6 +272,9 @@ export async function submitGoblinRoll({ state, tableData, userId, die }) {
       message += ` Boot earned!`;
       logMessage += ` <strong>Boot earned!</strong>`;
       cssClass = "success";
+      try {
+        await tavernSocket.executeForEveryone("showSkillCutIn", "BOOT_EARNED", userId);
+      } catch (e) { }
     }
 
     try {
@@ -258,48 +316,18 @@ export async function submitGoblinRoll({ state, tableData, userId, die }) {
     pendingAction: null
   };
 
-  const remaining = updatedTable.goblinStageRemaining ?? [];
-  updatedTable.goblinStageRemaining = remaining.filter(id => id !== userId);
-  if (updatedTable.goblinSuddenDeathActive) {
-    const suddenRemaining = updatedTable.goblinSuddenDeathRemaining ?? [];
-    updatedTable.goblinSuddenDeathRemaining = suddenRemaining.filter(id => id !== userId);
-  }
-  updatedTable.currentPlayer = getNextStagePlayer(state, updatedTable);
-  updatedTable.skillUsedThisTurn = false;
-  updatedTable.lastSkillUsed = null;
-
-  const progress = await advanceStageIfNeeded(state, updatedTable);
-  updatedTable = progress.tableData;
-
-  const next = await updateState({ tableData: updatedTable });
-
-  if (progress.action === "stage-advance") {
-    await addLogToAll({
-      title: "The Chamber Shrinks",
-      message: `Next Stage: <strong>d${updatedTable.goblinStageDie}</strong>.`,
-      icon: "fa-solid fa-skull",
-      type: "phase"
-    });
-  } else if (progress.action === "sudden-death-start") {
-    await addLogToAll({
-      title: "SUDDEN DEATH",
-      message: `<strong>${progress.leaders.map(id => getSafeActorName(id)).join(" vs ")}</strong> are tied!<br><em>The coin decides.</em>`,
-      icon: "fa-solid fa-bolt",
-      type: "phase"
-    });
-    tavernSocket.executeForEveryone("showSkillCutIn", "SUDDEN_DEATH", progress.leaders[0], progress.leaders[1]);
-  } else if (progress.action === "sudden-death-continue") {
-    await addLogToAll({
-      title: "Sudden Death Continues",
-      message: `Tie persists. The coin flips again.`,
-      icon: "fa-solid fa-bolt",
-      type: "phase"
-    });
+  if (!busted && shouldTriggerLastRollWin(state, updatedTable, userId)) {
+    await updateState({ tableData: updatedTable });
+    return revealDice();
   }
 
-  if (progress.action === "finish") return revealDice();
+  if (!busted && shouldOfferHoldOption(state, updatedTable, userId)) {
+    updatedTable.pendingAction = "goblin_hold";
+    updatedTable.currentPlayer = userId;
+    return updateState({ tableData: updatedTable });
+  }
 
-  return next;
+  return finalizeGoblinTurn(state, updatedTable);
 }
 
 export async function holdGoblin({ state, tableData, userId }) {
@@ -310,11 +338,6 @@ export async function holdGoblin({ state, tableData, userId }) {
 
   if (tableData.folded?.[userId] || tableData.busts?.[userId]) {
     await notifyUser(userId, "You've already finished this round.");
-    return state;
-  }
-
-  if (tableData.goblinSuddenDeathActive) {
-    await notifyUser(userId, "No holding in Sudden Death.");
     return state;
   }
 
@@ -340,6 +363,7 @@ export async function holdGoblin({ state, tableData, userId }) {
     holds,
     goblinHoldStage,
     goblinStageRemaining,
+    pendingAction: null,
     skillUsedThisTurn: false,
     lastSkillUsed: null
   };
@@ -374,19 +398,39 @@ export async function holdGoblin({ state, tableData, userId }) {
       icon: "fa-solid fa-skull",
       type: "phase"
     });
-  } else if (progress.action === "sudden-death-start") {
+  } else if (progress.action === "coin-start") {
     await addLogToAll({
-      title: "SUDDEN DEATH",
-      message: `<strong>${progress.leaders.map(id => getSafeActorName(id)).join(" vs ")}</strong> are tied!<br><em>The coin decides.</em>`,
+      title: "THE COIN",
+      message: `The Chamber reaches the <strong>Coin</strong>. Only the bold keep rolling.`,
       icon: "fa-solid fa-bolt",
       type: "phase"
     });
-    tavernSocket.executeForEveryone("showSkillCutIn", "SUDDEN_DEATH", progress.leaders[0], progress.leaders[1]);
+    tavernSocket.executeForEveryone("showSkillCutIn", "COIN_STAGE");
   }
 
   if (progress.action === "finish") return revealDice();
 
   return next;
+}
+
+export async function continueGoblinTurn({ state, tableData, userId }) {
+  if ((tableData.gameMode ?? "standard") !== "goblin") {
+    await notifyUser(userId, "Goblin continue is only available in Goblin Mode.");
+    return state;
+  }
+
+  if (tableData.currentPlayer !== userId) {
+    await notifyUser(userId, "It's not your turn.");
+    return state;
+  }
+
+  if (tableData.pendingAction !== "goblin_hold") {
+    await notifyUser(userId, "No hold decision pending.");
+    return state;
+  }
+
+  const updatedTable = { ...tableData, pendingAction: null };
+  return finalizeGoblinTurn(state, updatedTable);
 }
 
 export async function bootGoblin({ state, tableData, userId, targetId }) {
@@ -448,6 +492,10 @@ export async function bootGoblin({ state, tableData, userId, targetId }) {
     icon: "fa-solid fa-shoe-prints",
     type: "phase"
   });
+
+  try {
+    await tavernSocket.executeForEveryone("showSkillCutIn", "BOOT", userId, targetId);
+  } catch (e) { }
 
   await addHistoryEntry({
     type: "phase",

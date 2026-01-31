@@ -1,5 +1,9 @@
 # Changelog
 
+## [5.20.4] - 2026-01-31
+### Goblin Last-Roll Win
+- **Goblin**: If only one non-holding player remains and they are the sole leader, their successful roll immediately wins the round.
+
 ## [5.20.3] - 2026-01-29
 ### Score Pop Effects
 - **UI**: Score pop numbers now scale with roll size, with heavier punch and shake for big gains.
