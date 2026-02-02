@@ -60,6 +60,38 @@ export function fadeOutAndRemove(element, duration = 500) {
   setTimeout(() => element.remove(), duration);
 }
 
+/**
+ * Quick press animation helper
+ * @param {HTMLElement} element
+ */
+export function applyJuicePress(element) {
+  if (!element) return;
+  element.classList.remove("juice-press");
+  void element.offsetWidth;
+  element.classList.add("juice-press");
+  setTimeout(() => element.classList.remove("juice-press"), 180);
+}
+
+/**
+ * Click burst (spark + ripple) for tactile feedback
+ * @param {HTMLElement} element
+ * @param {string} tone
+ */
+export function showClickBurst(element, tone = "gold") {
+  try {
+    if (!element || isPerformanceMode()) return;
+    const burst = createElement("div", { className: `tavern-click-burst ${tone}` });
+    const ripple = createElement("div", { className: "tavern-ripple" });
+    burst.appendChild(ripple);
+    element.appendChild(burst);
+
+    ParticleFactory.spawnSparkBurst(burst, 14, tone);
+    setTimeout(() => burst.remove(), 700);
+  } catch (error) {
+    console.error("Tavern Twenty-One | Click burst error:", error);
+  }
+}
+
 /* ============================================
    Visual Effects - V13 Best Practices
    All effects use native DOM, error handling,

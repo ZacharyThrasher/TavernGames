@@ -115,4 +115,42 @@ export class ParticleFactory {
             }, (duration + delay) * 1000);
         }
     }
+
+    /**
+     * Spawns a short spark burst (for click/impact feedback)
+     * @param {HTMLElement} container
+     * @param {number} amount
+     * @param {string} theme - gold | ember | arcane | blood | mint
+     */
+    static spawnSparkBurst(container, amount = 14, theme = "gold") {
+        if (!container) return;
+
+        const count = Math.min(amount, 30);
+        for (let i = 0; i < count; i++) {
+            const spark = document.createElement("div");
+            spark.classList.add("tavern-spark", theme);
+
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 18 + Math.random() * 42;
+            const driftX = Math.cos(angle) * distance;
+            const driftY = Math.sin(angle) * distance;
+            const delay = Math.random() * 0.08;
+            const duration = 0.4 + Math.random() * 0.35;
+            const scale = 0.6 + Math.random() * 0.9;
+            const rotation = Math.floor(Math.random() * 360);
+
+            spark.style.setProperty("--spark-x", `${driftX}px`);
+            spark.style.setProperty("--spark-y", `${driftY}px`);
+            spark.style.setProperty("--spark-rot", `${rotation}deg`);
+            spark.style.setProperty("--spark-scale", `${scale}`);
+            spark.style.animationDelay = `${delay}s`;
+            spark.style.animationDuration = `${duration}s`;
+
+            container.appendChild(spark);
+
+            setTimeout(() => {
+                spark.remove();
+            }, (duration + delay) * 1000);
+        }
+    }
 }

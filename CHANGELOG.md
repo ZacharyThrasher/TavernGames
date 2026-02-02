@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.20.5] - 2026-02-02
+### UI Juice Pass
+- **UI**: Added tactile click bursts (spark + ripple) across core actions and dice buttons.
+- **UI**: New hover lift + press animations for seats, dice, and action buttons.
+- **FX**: Ambient parallax glow layers and table motes for a more alive tavern feel.
+- **Perf**: Respects reduced-motion and performance mode for effects.
+
 ## [5.20.4] - 2026-01-31
 ### Goblin Last-Roll Win
 - **Goblin**: If only one non-holding player remains and they are the sole leader, their successful roll immediately wins the round.

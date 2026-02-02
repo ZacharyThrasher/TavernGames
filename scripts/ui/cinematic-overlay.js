@@ -129,12 +129,15 @@ export class CinematicOverlay extends HandlebarsApplicationMixin(ApplicationV2) 
             case "VICTORY": return "var(--tavern-gold-bright)";
             case "DUEL": return "var(--tavern-info)";
             case "SUDDEN_DEATH": return "#e74c3c";
+            case "COIN_STAGE": return "#d4a63a";
             case "FORESIGHT": return "#9b59b6"; // Mystical Purple
             case "GOAD": return "#e67e22";      // Aggressive Orange
             case "PROFILE": return "#1abc9c";   // Detective Cyan
             case "BUMP": return "#d35400";      // Punchy Amber/Red
             case "ACCUSE": return "#c0392b";    // Accusatory Red
             case "STAREDOWN": return "#2c3e50"; // Dramatic Dark Blue/Grey
+            case "BOOT": return "#b86b1a";      // Scuffed Brass
+            case "BOOT_EARNED": return "#c07a1f"; // Goblin Gold
             default: return "var(--tavern-parchment)";
         }
     }

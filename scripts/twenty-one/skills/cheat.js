@@ -230,8 +230,9 @@ export async function cheat(payload, userId) {
                 const isPublic = rollEntry.public ?? true;
                 if (isCoin) {
                     if (rollEntry.result === 2) {
-                        total += 2;
-                        if (isPublic) visibleTotal += 2;
+                        const coinValue = rollEntry.coinValue ?? 2;
+                        total += coinValue;
+                        if (isPublic) visibleTotal += coinValue;
                     } else if (rollEntry.result === 1) {
                         total = 0;
                         if (isPublic) visibleTotal = 0;

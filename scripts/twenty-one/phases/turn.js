@@ -125,7 +125,8 @@ export async function finishTurn(userId) {
     let specialMsg = "";
     if (gameMode === "goblin") {
       if (lastRoll.die === 2) {
-        specialMsg = lastRoll.result === 2 ? " **COIN: +2!**" : " **COIN: DEATH!**";
+        const coinValue = lastRoll.coinValue ?? 2;
+        specialMsg = lastRoll.result === 2 ? ` **COIN: +${coinValue}!**` : " **COIN: DEATH!**";
       } else if (lastRoll.result === 1) {
         specialMsg = " **BUST!**";
       } else if (lastRoll.die === 20 && lastRoll.result === 20) {

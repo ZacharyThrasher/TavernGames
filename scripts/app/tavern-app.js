@@ -22,6 +22,7 @@ import { BootDialog } from "./dialogs/boot-dialog.js";
 import { AccuseDialog } from "./dialogs/accuse-dialog.js";
 import { SideBetDialog } from "./dialogs/side-bet-dialog.js";
 import { HelpDialog } from "./dialogs/help-dialog.js";
+import { applyJuicePress, showClickBurst, isPerformanceMode } from "../ui/fx.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -274,7 +275,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const goblinStageIndex = isGoblinMode ? (tableData.goblinStageIndex ?? 0) : null;
     const goblinSuddenDeathActive = tableData.goblinSuddenDeathActive ?? false;
     const goblinStageLabel = isGoblinMode
-      ? (goblinSuddenDeathActive ? "Sudden Death: Coin" : `Chamber: d${goblinStageDie}`)
+      ? (goblinSuddenDeathActive ? "Chamber: Coin" : `Chamber: d${goblinStageDie}`)
       : null;
 
     // The Cut
@@ -303,14 +304,12 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         && isBettingPhase
         && !isCutPhase
         && !tableData.hunchLocked?.[userId]
-        && !goblinSuddenDeathActive
         && myRollCount > 0
         && isLeader
         && !isFolded
         && !isBusted;
 
-      if (goblinSuddenDeathActive) holdDisabledReason = "Cannot hold during Sudden Death.";
-      else if (myRollCount === 0) holdDisabledReason = "You must roll before holding.";
+      if (myRollCount === 0) holdDisabledReason = "You must roll before holding.";
       else if (!isLeader) holdDisabledReason = "Only the current leader can Hold.";
     }
     const openingRollsRemaining = Math.max(0, 2 - myRolls.length);
@@ -563,7 +562,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       }
       if (roll.die === 2) {
         if (roll.result === 2) {
-          total += 2;
+          total += roll.coinValue ?? 2;
         } else if (roll.result === 1) {
           total = 0;
           break;
@@ -598,7 +597,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     // Add Coin (Goblin only)
     if (isGoblinMode) {
       diceConfig.splice(1, 0, { value: 12, label: "d12", icon: "d12-grey", strategy: "Wildcard" });
-      diceConfig.push({ value: 2, label: "Coin", icon: "circle-dollar", strategy: "Sudden Death" });
+      diceConfig.push({ value: 2, label: "Coin", icon: "circle-dollar", strategy: "Coin Stage" });
     }
 
     const workingConfig = isGoblinMode && goblinStageDie
@@ -613,7 +612,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       // Goblin Mode Logic
       if (isGoblinMode) {
         cost = 0;
-        costLabel = goblinSuddenDeathActive ? "SUDDEN" : "CHAMBER";
+        costLabel = goblinSuddenDeathActive ? "COIN" : "CHAMBER";
       } else {
         // Dared Mechanic (Standard Mode)
         if (isDared && d.value === 8) {
@@ -699,6 +698,79 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
     this.element.addEventListener("pointerover", this._diceHoverHandlers.over, true);
     this.element.addEventListener("pointerout", this._diceHoverHandlers.out, true);
+
+    if (!this._juiceIntroPlayed) {
+      this.element.classList.add("tavern-app-intro");
+      setTimeout(() => this.element.classList.remove("tavern-app-intro"), 900);
+      this._juiceIntroPlayed = true;
+    }
+
+    if (this._juiceHandlers) {
+      this.element.removeEventListener("pointerdown", this._juiceHandlers.down, true);
+      this.element.removeEventListener("pointerover", this._juiceHandlers.enter, true);
+      this.element.removeEventListener("pointerout", this._juiceHandlers.leave, true);
+    }
+
+    this._juiceHandlers = {
+      down: (event) => {
+        const target = event.target.closest(".btn, .btn-die-premium, .btn-retaliation-die, .accuse-portrait, .duel-participant");
+        if (!target) return;
+        if (target.disabled || target.classList.contains("disabled")) return;
+        if (target.closest(".tavern-controls.locked")) return;
+
+        applyJuicePress(target);
+
+        let tone = "gold";
+        if (target.classList.contains("btn-fold")) tone = "blood";
+        else if (target.classList.contains("btn-hold")) tone = "mint";
+        else if (target.classList.contains("btn-skill") || target.classList.contains("btn-hunch") || target.classList.contains("btn-profile")) tone = "arcane";
+        else if (target.classList.contains("btn-bump") || target.classList.contains("btn-goad")) tone = "ember";
+        else if (target.classList.contains("accuse-portrait") || target.classList.contains("btn-accuse")) tone = "blood";
+
+        showClickBurst(target, tone);
+      },
+      enter: (event) => {
+        const target = event.target.closest(".btn, .btn-die-premium, .accuse-portrait, .player-seat, .btn-retaliation-die");
+        if (!target) return;
+        target.classList.add("juice-hover");
+      },
+      leave: (event) => {
+        const target = event.target.closest(".btn, .btn-die-premium, .accuse-portrait, .player-seat, .btn-retaliation-die");
+        if (!target) return;
+        target.classList.remove("juice-hover");
+      }
+    };
+
+    this.element.addEventListener("pointerdown", this._juiceHandlers.down, true);
+    this.element.addEventListener("pointerover", this._juiceHandlers.enter, true);
+    this.element.addEventListener("pointerout", this._juiceHandlers.leave, true);
+
+    if (!isPerformanceMode()) {
+      if (this._parallaxHandlers) {
+        this.element.removeEventListener("pointermove", this._parallaxHandlers.move);
+        this.element.removeEventListener("pointerleave", this._parallaxHandlers.leave);
+      }
+
+      this._parallaxHandlers = {
+        move: (event) => {
+          const rect = this.element.getBoundingClientRect();
+          const x = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
+          const y = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));
+          this.element.style.setProperty("--cursor-x", x.toFixed(3));
+          this.element.style.setProperty("--cursor-y", y.toFixed(3));
+        },
+        leave: () => {
+          this.element.style.setProperty("--cursor-x", "0.5");
+          this.element.style.setProperty("--cursor-y", "0.5");
+        }
+      };
+
+      this.element.addEventListener("pointermove", this._parallaxHandlers.move);
+      this.element.addEventListener("pointerleave", this._parallaxHandlers.leave);
+    } else if (this._parallaxHandlers) {
+      this.element.removeEventListener("pointermove", this._parallaxHandlers.move);
+      this.element.removeEventListener("pointerleave", this._parallaxHandlers.leave);
+    }
 
     // Handle ante input changes (GM only)
     const anteInput = this.element.querySelector('#ante-input');
@@ -893,6 +965,35 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     });
   }
 
+  static async _showGoblinHoldDialog() {
+    return new Promise((resolve) => {
+      const dialog = new Dialog({
+        title: "Hold or Continue?",
+        content: `
+          <div class="tavern-goblin-hold-dialog">
+            <p><strong>You are currently leading.</strong></p>
+            <p>Hold to lock in your score, or continue to keep the Chamber moving.</p>
+          </div>
+        `,
+        buttons: {
+          hold: {
+            icon: '<i class="fa-solid fa-hand"></i>',
+            label: "Hold",
+            callback: () => resolve("hold"),
+          },
+          continue: {
+            icon: '<i class="fa-solid fa-forward"></i>',
+            label: "Continue",
+            callback: () => resolve("continue"),
+          }
+        },
+        default: "continue",
+        close: () => resolve("continue"),
+      }, { classes: ["tavern-goblin-hold"] });
+      dialog.render(true);
+    });
+  }
+
   static async onLeave() {
     await tavernSocket.executeAsGM("leaveTable", game.user.id);
   }
@@ -988,6 +1089,16 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       const updatedState = await tavernSocket.executeAsGM("playerAction", "roll", { die, payWithDrink }, game.user.id);
 
       if (updatedState.tableData?.gameMode === "goblin") {
+        const pending = updatedState.tableData?.pendingAction;
+        const isPendingHold = pending === "goblin_hold" && updatedState.tableData?.currentPlayer === game.user.id;
+        if (isPendingHold) {
+          const decision = await TavernApp._showGoblinHoldDialog();
+          if (decision === "hold") {
+            await tavernSocket.executeAsGM("playerAction", "hold", {}, game.user.id);
+          } else {
+            await tavernSocket.executeAsGM("playerAction", "goblinContinue", {}, game.user.id);
+          }
+        }
         return;
       }
 
