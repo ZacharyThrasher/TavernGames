@@ -1,5 +1,18 @@
 # Changelog
 
+## [5.21.0] - 2026-02-05
+### Table Themes 🎨
+- **Feature**: 5 selectable UI themes — each transforms the entire look and feel of the tavern table.
+  - **Sword Coast Tavern** (Classic) — Warm wood, parchment & candlelight. The original.
+  - **Goblin's Den** — Grimy acid-green, swamp rot, tarnished copper. Sickly torchlight flicker. Perfect for Goblin Mode.
+  - **Underdark Parlor** — Deep purple obsidian, amethyst accents, bioluminescent mushroom motes. Faerzress ambient pulse.
+  - **Gilded Dragon** — Opulent imperial crimson & bright gold on obsidian. Ember glow. A high-roller dragon's hoard.
+  - **Feywild Garden** — Ethereal teal & soft pink, iridescent shimmer, floating pixie motes. Moonlit enchantment.
+- **UI**: Theme selector dropdown added to House Rules panel (GM-only, lobby).
+- **Setting**: New `tableTheme` world setting (also available in Module Settings). All players see the host's chosen theme.
+- **CSS**: New `styles/themes.css` — per-theme overrides for 40+ CSS variables, ambient glow animations, table surfaces, die-face palettes, mote particles, scrollbars, and smooth 0.4s transition on theme switch.
+- **i18n**: Theme names and flavor descriptions added to `en.json`.
+
 ## [5.20.5] - 2026-02-02
 ### UI Juice Pass
 - **UI**: Added tactile click bursts (spark + ripple) across core actions and dice buttons.

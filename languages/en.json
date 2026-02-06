@@ -105,6 +105,19 @@
     },
     "Status": {
       "Holding": "HOLDING"
+    },
+    "Theme": {
+      "Title": "Table Theme",
+      "SwordCoast": "Sword Coast Tavern",
+      "SwordCoastDesc": "Classic warm wood, parchment & candlelight",
+      "GoblinDen": "Goblin's Den",
+      "GoblinDenDesc": "Grimy, chaotic, stained with ale & worse",
+      "Underdark": "Underdark Parlor",
+      "UnderdarkDesc": "Bioluminescent mushroom glow & crystal",
+      "GildedDragon": "Gilded Dragon",
+      "GildedDragonDesc": "Opulent crimson & gold for high-rollers",
+      "Feywild": "Feywild Garden",
+      "FeywildDesc": "Ethereal moonlight & pixie dust"
     }
   },
   "DND5E": {

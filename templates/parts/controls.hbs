@@ -46,6 +46,20 @@
           data-action="setStartingHeat" />
       </div>
     </div>
+    <div class="setting-row">
+      <label for="theme-select">
+        <i class="fa-solid fa-palette"></i> Theme
+      </label>
+      <div class="setting-input">
+        <select id="theme-select" name="tableTheme" data-action="setTheme" style="width: 100px; padding: 2px;">
+          <option value="sword-coast" {{#if (eq tableTheme 'sword-coast')}}selected{{/if}}>Sword Coast</option>
+          <option value="goblin-den" {{#if (eq tableTheme 'goblin-den')}}selected{{/if}}>Goblin's Den</option>
+          <option value="underdark" {{#if (eq tableTheme 'underdark')}}selected{{/if}}>Underdark</option>
+          <option value="gilded-dragon" {{#if (eq tableTheme 'gilded-dragon')}}selected{{/if}}>Gilded Dragon</option>
+          <option value="feywild" {{#if (eq tableTheme 'feywild')}}selected{{/if}}>Feywild</option>
+        </select>
+      </div>
+    </div>
     <p class="hint">Cost to join each round and roll extra dice.</p>
   </div>
 

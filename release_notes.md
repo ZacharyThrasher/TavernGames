@@ -1,5 +1,6 @@
-### UI Juice Pass
-- **UI**: Added tactile click bursts (spark + ripple) across core actions and dice buttons.
-- **UI**: New hover lift + press animations for seats, dice, and action buttons.
-- **FX**: Ambient parallax glow layers and table motes for a more alive tavern feel.
-- **Perf**: Respects reduced-motion and performance mode for effects.
+### Table Themes
+- **Feature**: Added 5 selectable table themes that overhaul the full tavern presentation.
+- **UI**: Added a theme selector dropdown in House Rules (GM-only, lobby).
+- **Setting**: Added persistent `tableTheme` world setting applied to all players.
+- **Visuals**: Added `styles/themes.css` with broad CSS variable overrides, animated ambience, and smooth transitions.
+- **i18n**: Added English localization entries for theme names and flavor descriptions.

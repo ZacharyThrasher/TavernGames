@@ -527,6 +527,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       isDared: tableData.dared?.[userId] ?? false,
       startingHeat: tableData.houseRules?.startingHeat ?? 10,
       uiLocked: TavernApp.uiLocked, // V4.8.56: UI Lock State
+      tableTheme: game.settings.get(MODULE_ID, "tableTheme") ?? "sword-coast", // V5.21: Theme
       gameMode, // V5.14.1: Game Mode for UI
       isGoblinMode, // V5.14.0
       goblinStageDie,
@@ -699,6 +700,10 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     this.element.addEventListener("pointerover", this._diceHoverHandlers.over, true);
     this.element.addEventListener("pointerout", this._diceHoverHandlers.out, true);
 
+    // V5.21: Apply theme as data-attribute
+    const currentTheme = game.settings.get(MODULE_ID, "tableTheme") ?? "sword-coast";
+    this.element.dataset.theme = currentTheme;
+
     if (!this._juiceIntroPlayed) {
       this.element.classList.add("tavern-app-intro");
       setTimeout(() => this.element.classList.remove("tavern-app-intro"), 900);
@@ -831,6 +836,21 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         } else {
           ui.notifications.warn("Heat must be between 5 and 30");
         }
+      });
+    }
+
+    // V5.21: Handle Theme Change (GM only)
+    const themeSelect = this.element.querySelector('#theme-select');
+    if (themeSelect) {
+      themeSelect.addEventListener('change', async (e) => {
+        if (!game.user.isGM) {
+          ui.notifications.warn("Only the GM can change the table theme.");
+          e.target.value = game.settings.get(MODULE_ID, "tableTheme");
+          return;
+        }
+        const newTheme = e.target.value;
+        await game.settings.set(MODULE_ID, "tableTheme", newTheme);
+        ui.notifications.info(`Table theme changed to ${e.target.selectedOptions[0]?.text ?? newTheme}`);
       });
     }
 

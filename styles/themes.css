@@ -1,0 +1,1151 @@
+/* ============================================
+   TAVERN THEMES - Visual Skins for TDM
+   V5.21: Five distinct D&D-themed UI skins
+   ============================================
+   Themes apply via [data-theme="<id>"] on .tavern-dice-master
+   The default "sword-coast" theme is the base tavern.css — no overrides needed.
+   ============================================ */
+
+/* ============================================
+   🟢  GOBLIN'S DEN
+   Grimy, chaotic, green-tinted. Splattered ale,
+   scratched wood, flickering sickly torchlight.
+   Perfect for Goblin Mode.
+   ============================================ */
+
+.tavern-dice-master[data-theme="goblin-den"] {
+  /* --- Palette: Swamp Rot & Tarnished Copper --- */
+  --color-sc-bg-primary: #2a2a1a;
+  --color-sc-bg-secondary: #1f1f12;
+  --color-sc-bg-highlight: #3a3a20;
+
+  --color-sc-text-body: #c4b98a;
+  --color-sc-text-faded: #8a7f5a;
+  --color-sc-text-header: #d4c480;
+
+  --color-sc-border-dark: #1a1a0a;
+  --color-sc-border-main: #3a3520;
+  --color-sc-accent-gold: #8baa2a;
+  --color-sc-accent-silver: #6a7a5a;
+
+  --tavern-wood-dark: #1a1a0a;
+  --tavern-wood-medium: #2a2a15;
+  --tavern-wood-light: #3a3a20;
+  --tavern-wood-highlight: #5a5a30;
+
+  --tavern-gold: #8baa2a;
+  --tavern-gold-bright: #a8cc40;
+  --tavern-gold-dim: #6a8a1a;
+  --tavern-brass: #7a9a3a;
+  --tavern-silver: #6a7a5a;
+
+  --tavern-parchment: #d4c490;
+  --tavern-parchment-dark: #8a7f5a;
+  --tavern-ink: #2a2a1a;
+
+  --tavern-success: #5a8a2a;
+  --tavern-danger: #aa3a1a;
+  --tavern-warning: #cc8a20;
+  --tavern-info: #4a7a5a;
+
+  --tavern-glow: rgba(139, 170, 42, 0.4);
+  --tavern-candle-glow: radial-gradient(ellipse at center, rgba(100, 160, 0, 0.12) 0%, transparent 70%);
+  --tavern-shadow-inset: inset 2px 2px 5px rgba(0, 0, 0, 0.5), inset -1px -1px 2px rgba(100, 100, 50, 0.15);
+
+  /* Grimy noise texture */
+  --texture-parchment: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MDAiIGhlaWdodD0iMTAwJSI+PGZpbHRlciBpZD0ibm9pc2UiPjxmZVR1cmJ1bGVuY2UgdHlwZT0iZnJhY3RhbE5vaXNlIiBiYXNlRnJlcXVlbmN5PSIwLjgiIG51bU9jdGF2ZXM9IjUiIHN0aXRjaFRpbGVzPSJzdGl0Y2giLz48L2ZpbHRlcj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWx0ZXI9InVybCgjbm9pc2UpIiBvcGFjaXR5PSIwLjEiLz48L3N2Zz4=');
+}
+
+/* Goblin Den: Flickering sickly torchlight */
+.tavern-dice-master[data-theme="goblin-den"].active {
+  animation: goblin-torch-flicker 3s infinite alternate ease-in-out;
+}
+
+@keyframes goblin-torch-flicker {
+  0%   { box-shadow: 0 0 30px 8px rgba(100, 160, 0, 0.08), 0 0 60px rgba(0, 0, 0, 0.5); }
+  20%  { box-shadow: 0 0 35px 10px rgba(100, 160, 0, 0.12), 0 0 55px rgba(0, 0, 0, 0.5); }
+  40%  { box-shadow: 0 0 25px 6px rgba(100, 160, 0, 0.06), 0 0 65px rgba(0, 0, 0, 0.5); }
+  60%  { box-shadow: 0 0 38px 12px rgba(120, 170, 0, 0.14), 0 0 50px rgba(0, 0, 0, 0.5); }
+  80%  { box-shadow: 0 0 28px 7px rgba(100, 160, 0, 0.07), 0 0 60px rgba(0, 0, 0, 0.5); }
+  100% { box-shadow: 0 0 32px 9px rgba(100, 160, 0, 0.10), 0 0 55px rgba(0, 0, 0, 0.5); }
+}
+
+/* Goblin Den: Window chrome */
+.tavern-dice-master[data-theme="goblin-den"] .window-header {
+  background: linear-gradient(180deg, #2a2a15 0%, #1a1a0a 100%);
+  border-bottom: 2px solid #5a5a30;
+}
+
+.tavern-dice-master[data-theme="goblin-den"] .window-title {
+  color: #8baa2a;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.9), 0 0 8px rgba(100, 160, 0, 0.3);
+}
+
+/* Goblin Den: Parchment → Grimy Hide */
+.tavern-dice-master[data-theme="goblin-den"] .window-content {
+  background-color: #2a2a1a;
+  background-image:
+    var(--tavern-candle-glow),
+    var(--texture-parchment),
+    radial-gradient(ellipse at center, transparent 30%, rgba(10, 10, 5, 0.4) 100%);
+}
+
+/* Goblin Den: Header - scratched metal & grime */
+.tavern-dice-master[data-theme="goblin-den"] .tavern-header {
+  background-color: #1a1a0a;
+  background-image:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.6) 0%, rgba(20, 30, 10, 0.3) 50%, rgba(0, 0, 0, 0.7) 100%),
+    var(--texture-wood);
+  border-bottom: 4px solid #5a5a30;
+  border-image: linear-gradient(to right, #3a3a1a, #8baa2a, #3a3a1a) 1;
+}
+
+.tavern-dice-master[data-theme="goblin-den"] .tavern-header::after {
+  background: linear-gradient(120deg, transparent 20%, rgba(100, 160, 0, 0.15) 50%, transparent 80%);
+}
+
+/* Goblin Den: Table surface - stained green felt */
+.tavern-dice-master[data-theme="goblin-den"] .tavern-table-area {
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(60, 80, 30, 0.5) 0%, transparent 60%),
+    linear-gradient(180deg, #2a2a15 0%, #1a1a0a 100%);
+  border-color: #5a5a30;
+}
+
+.tavern-dice-master[data-theme="goblin-den"] .tavern-table-area::before {
+  background:
+    radial-gradient(120px 80px at calc(10% + (var(--cursor-x) * 80%)) calc(12% + (var(--cursor-y) * 60%)), rgba(100, 180, 50, 0.15), transparent 70%),
+    radial-gradient(140px 100px at calc(80% - (var(--cursor-x) * 60%)) calc(75% - (var(--cursor-y) * 40%)), rgba(80, 120, 40, 0.1), transparent 75%);
+}
+
+/* Goblin Den: Player seats */
+.tavern-dice-master[data-theme="goblin-den"] .player-seat {
+  background: linear-gradient(135deg, #1a1a0a 0%, rgba(15, 15, 5, 0.95) 100%);
+  border-color: #4a4a25;
+}
+
+.tavern-dice-master[data-theme="goblin-den"] .player-seat.is-current {
+  border-color: #8baa2a;
+  box-shadow: 0 0 20px rgba(139, 170, 42, 0.4), inset 0 0 30px rgba(100, 160, 0, 0.08);
+}
+
+.tavern-dice-master[data-theme="goblin-den"] .player-seat.is-me {
+  background: linear-gradient(135deg, #2a2a15 0%, #1a1a0a 100%);
+}
+
+/* Goblin Den: Buttons - crude, rough-hewn */
+.tavern-dice-master[data-theme="goblin-den"] .btn-primary {
+  background: linear-gradient(180deg, #6a8a1a 0%, #4a6a0a 100%);
+  border-color: #1a1a0a;
+}
+
+.tavern-dice-master[data-theme="goblin-den"] .btn-primary:hover {
+  background: linear-gradient(180deg, #8baa2a 0%, #6a8a1a 100%);
+  box-shadow: 0 0 15px rgba(139, 170, 42, 0.5);
+}
+
+.tavern-dice-master[data-theme="goblin-den"] .btn-success {
+  background: linear-gradient(135deg, #5a8a2a, #3a5a15);
+  border-color: #7aaa4a;
+}
+
+/* Goblin Den: Dice buttons - bone & grime */
+.tavern-dice-master[data-theme="goblin-den"] .btn-die-premium {
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(100, 160, 0, 0.12) 0%, transparent 70%),
+    linear-gradient(180deg, #2a2a15 0%, #1a1a0a 100%);
+  border-color: #4a4a25;
+}
+
+.tavern-dice-master[data-theme="goblin-den"] .btn-die-premium:hover,
+.tavern-dice-master[data-theme="goblin-den"] .btn-die-premium.is-hovered {
+  border-color: #8baa2a;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5), 0 0 20px rgba(100, 160, 0, 0.3);
+}
+
+/* Goblin Den: Logo */
+.tavern-dice-master[data-theme="goblin-den"] .tavern-logo {
+  background: radial-gradient(circle, #8baa2a 0%, #3a3a20 100%);
+  border-color: #1a1a0a;
+}
+
+/* Goblin Den: Ale Splatter pseudo-elements */
+.tavern-dice-master[data-theme="goblin-den"] .tavern-container::before {
+  background:
+    radial-gradient(80px 60px at 12% 85%, rgba(80, 60, 20, 0.25), transparent 70%),
+    radial-gradient(60px 40px at 88% 20%, rgba(60, 80, 20, 0.2), transparent 70%),
+    radial-gradient(100px 70px at 45% 55%, rgba(40, 60, 10, 0.15), transparent 75%);
+  mix-blend-mode: multiply;
+}
+
+/* Goblin Den: Scrollbar */
+.tavern-dice-master[data-theme="goblin-den"] ::-webkit-scrollbar-track {
+  background: #1a1a0a;
+}
+
+.tavern-dice-master[data-theme="goblin-den"] ::-webkit-scrollbar-thumb {
+  background: #4a4a25;
+}
+
+.tavern-dice-master[data-theme="goblin-den"] ::-webkit-scrollbar-thumb:hover {
+  background: #6a6a35;
+}
+
+/* Goblin Den: Footer */
+.tavern-dice-master[data-theme="goblin-den"] .tavern-footer {
+  background: rgba(10, 10, 5, 0.5);
+  border-top-color: #4a4a25;
+}
+
+/* Goblin Den: Controls panel */
+.tavern-dice-master[data-theme="goblin-den"] .tavern-controls-panel,
+.tavern-dice-master[data-theme="goblin-den"] .tavern-history-panel {
+  border-color: #3a3a20;
+  background-color: #1f1f12;
+}
+
+.tavern-dice-master[data-theme="goblin-den"] .control-section.house-rules {
+  background: rgba(0, 0, 0, 0.3);
+  border-color: #4a4a25;
+}
+
+/* Goblin Den: Skill buttons - crude icons */
+.tavern-dice-master[data-theme="goblin-den"] .btn-skill {
+  border-color: #4a4a25;
+}
+
+/* Goblin Den: Your-turn section */
+.tavern-dice-master[data-theme="goblin-den"] .control-section.your-turn {
+  background: rgba(100, 160, 0, 0.08);
+  border-color: #6a8a1a;
+}
+
+/* ============================================
+   🟣  UNDERDARK PARLOR
+   Deep purple/blue, bioluminescent mushroom glow,
+   crystalline accents. Drow elegance meets
+   subterranean mystery.
+   ============================================ */
+
+.tavern-dice-master[data-theme="underdark"] {
+  /* --- Palette: Void Stone & Faerzress --- */
+  --color-sc-bg-primary: #0f0a1a;
+  --color-sc-bg-secondary: #12081f;
+  --color-sc-bg-highlight: #1a0f2a;
+
+  --color-sc-text-body: #c4b8e0;
+  --color-sc-text-faded: #7a6a9a;
+  --color-sc-text-header: #d8c8f0;
+
+  --color-sc-border-dark: #0a051a;
+  --color-sc-border-main: #2a1a4a;
+  --color-sc-accent-gold: #9a6aff;
+  --color-sc-accent-silver: #6a8aaa;
+
+  --tavern-wood-dark: #0a0518;
+  --tavern-wood-medium: #1a0f30;
+  --tavern-wood-light: #2a1a4a;
+  --tavern-wood-highlight: #4a2a7a;
+
+  --tavern-gold: #9a6aff;
+  --tavern-gold-bright: #b88aff;
+  --tavern-gold-dim: #7a4ae0;
+  --tavern-brass: #8a6ad0;
+  --tavern-silver: #6a8aaa;
+
+  --tavern-parchment: #d0c0f0;
+  --tavern-parchment-dark: #7a6a9a;
+  --tavern-ink: #0f0a1a;
+
+  --tavern-success: #3aaa7a;
+  --tavern-danger: #cc3a5a;
+  --tavern-warning: #d4a040;
+  --tavern-info: #4a8acc;
+
+  --tavern-glow: rgba(154, 106, 255, 0.4);
+  --tavern-candle-glow: radial-gradient(ellipse at center, rgba(120, 60, 255, 0.08) 0%, transparent 70%);
+  --tavern-shadow-inset: inset 2px 2px 5px rgba(0, 0, 0, 0.5), inset -1px -1px 2px rgba(120, 80, 200, 0.1);
+
+  --texture-parchment: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MDAiIGhlaWdodD0iMTAwJSI+PGZpbHRlciBpZD0ibm9pc2UiPjxmZVR1cmJ1bGVuY2UgdHlwZT0iZnJhY3RhbE5vaXNlIiBiYXNlRnJlcXVlbmN5PSIwLjQ1IiBudW1PY3RhdmVzPSI0IiBzdGl0Y2hUaWxlcz0ic3RpdGNoIi8+PC9maWx0ZXI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsdGVyPSJ1cmwoI25vaXNlKSIgb3BhY2l0eT0iMC4wNyIvPjwvc3ZnPg==');
+}
+
+/* Underdark: Faerzress ambient glow */
+.tavern-dice-master[data-theme="underdark"].active {
+  animation: faerzress-pulse 5s infinite alternate ease-in-out;
+}
+
+@keyframes faerzress-pulse {
+  0%   { box-shadow: 0 0 40px 10px rgba(120, 60, 255, 0.06), 0 0 80px rgba(60, 0, 180, 0.04); }
+  33%  { box-shadow: 0 0 50px 14px rgba(140, 80, 255, 0.09), 0 0 70px rgba(80, 20, 200, 0.05); }
+  66%  { box-shadow: 0 0 35px 8px rgba(100, 40, 240, 0.05), 0 0 90px rgba(50, 0, 160, 0.04); }
+  100% { box-shadow: 0 0 45px 12px rgba(130, 70, 255, 0.08), 0 0 75px rgba(70, 10, 190, 0.05); }
+}
+
+/* Underdark: Window chrome */
+.tavern-dice-master[data-theme="underdark"] .window-header {
+  background: linear-gradient(180deg, #1a0f30 0%, #0a051a 100%);
+  border-bottom: 2px solid #4a2a7a;
+}
+
+.tavern-dice-master[data-theme="underdark"] .window-title {
+  color: #b88aff;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.9), 0 0 12px rgba(140, 80, 255, 0.4);
+}
+
+/* Underdark: Content area */
+.tavern-dice-master[data-theme="underdark"] .window-content {
+  background-color: #0f0a1a;
+  background-image:
+    var(--tavern-candle-glow),
+    var(--texture-parchment),
+    radial-gradient(ellipse at center, transparent 30%, rgba(5, 2, 15, 0.5) 100%);
+}
+
+/* Underdark: Header - obsidian & amethyst */
+.tavern-dice-master[data-theme="underdark"] .tavern-header {
+  background-color: #0a051a;
+  background-image:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.5) 0%, rgba(20, 10, 40, 0.3) 50%, rgba(0, 0, 0, 0.6) 100%),
+    var(--texture-wood);
+  border-bottom: 4px solid #4a2a7a;
+  border-image: linear-gradient(to right, #1a0f30, #9a6aff, #1a0f30) 1;
+}
+
+.tavern-dice-master[data-theme="underdark"] .tavern-header::after {
+  background: linear-gradient(120deg, transparent 20%, rgba(140, 80, 255, 0.12) 50%, transparent 80%);
+}
+
+/* Underdark: Table surface - dark stone with mushroom glow */
+.tavern-dice-master[data-theme="underdark"] .tavern-table-area {
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(80, 40, 140, 0.3) 0%, transparent 60%),
+    linear-gradient(180deg, #1a0f30 0%, #0a051a 100%);
+  border-color: #4a2a7a;
+}
+
+.tavern-dice-master[data-theme="underdark"] .tavern-table-area::before {
+  background:
+    radial-gradient(100px 70px at calc(10% + (var(--cursor-x) * 80%)) calc(12% + (var(--cursor-y) * 60%)), rgba(120, 60, 255, 0.12), transparent 70%),
+    radial-gradient(80px 60px at calc(80% - (var(--cursor-x) * 60%)) calc(75% - (var(--cursor-y) * 40%)), rgba(60, 200, 180, 0.08), transparent 75%),
+    radial-gradient(60px 50px at calc(30% + (var(--cursor-x) * 30%)) calc(60% + (var(--cursor-y) * 20%)), rgba(200, 80, 255, 0.06), transparent 70%);
+}
+
+/* Underdark: Bioluminescent motes */
+.tavern-dice-master[data-theme="underdark"] .tavern-table-area::after {
+  background:
+    radial-gradient(5px 5px at 15% 25%, rgba(120, 60, 255, 0.4), transparent 60%),
+    radial-gradient(3px 3px at 75% 35%, rgba(60, 200, 180, 0.35), transparent 60%),
+    radial-gradient(4px 4px at 45% 80%, rgba(200, 80, 255, 0.3), transparent 60%),
+    radial-gradient(3px 3px at 60% 15%, rgba(80, 180, 220, 0.25), transparent 60%),
+    radial-gradient(4px 4px at 30% 60%, rgba(140, 80, 255, 0.3), transparent 60%);
+  animation: underdark-motes 10s ease-in-out infinite alternate;
+}
+
+@keyframes underdark-motes {
+  0%   { transform: translate3d(0, 0, 0); opacity: 0.3; }
+  50%  { transform: translate3d(4px, -6px, 0); opacity: 0.6; }
+  100% { transform: translate3d(-3px, 3px, 0); opacity: 0.4; }
+}
+
+/* Underdark: Player seats */
+.tavern-dice-master[data-theme="underdark"] .player-seat {
+  background: linear-gradient(135deg, #0a051a 0%, rgba(15, 8, 30, 0.95) 100%);
+  border-color: #3a1a6a;
+}
+
+.tavern-dice-master[data-theme="underdark"] .player-seat.is-current {
+  border-color: #9a6aff;
+  box-shadow: 0 0 20px rgba(154, 106, 255, 0.4), inset 0 0 30px rgba(120, 60, 255, 0.08);
+}
+
+.tavern-dice-master[data-theme="underdark"] .player-seat.is-me {
+  background: linear-gradient(135deg, #1a0f30 0%, #0a051a 100%);
+}
+
+/* Underdark: Avatar ring */
+.tavern-dice-master[data-theme="underdark"] .player-avatar img {
+  border-color: #6a4aaa;
+}
+
+/* Underdark: Buttons - crystalline */
+.tavern-dice-master[data-theme="underdark"] .btn-primary {
+  background: linear-gradient(180deg, #7a4ae0 0%, #5a2ab0 100%);
+  border-color: #0a051a;
+}
+
+.tavern-dice-master[data-theme="underdark"] .btn-primary:hover {
+  background: linear-gradient(180deg, #9a6aff 0%, #7a4ae0 100%);
+  box-shadow: 0 0 15px rgba(154, 106, 255, 0.5);
+}
+
+.tavern-dice-master[data-theme="underdark"] .btn-secondary {
+  background: linear-gradient(180deg, #2a1a4a 0%, #1a0f30 100%);
+  color: #c4b8e0;
+  border-color: #4a2a7a;
+}
+
+.tavern-dice-master[data-theme="underdark"] .btn-secondary:hover {
+  background: #2a1a4a;
+  border-color: #9a6aff;
+  color: #d8c8f0;
+}
+
+.tavern-dice-master[data-theme="underdark"] .btn-success {
+  background: linear-gradient(135deg, #2a8a6a, #1a5a4a);
+  border-color: #4aaa8a;
+}
+
+/* Underdark: Dice buttons */
+.tavern-dice-master[data-theme="underdark"] .btn-die-premium {
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(120, 60, 255, 0.1) 0%, transparent 70%),
+    linear-gradient(180deg, #1a0f30 0%, #0a051a 100%);
+  border-color: #3a1a6a;
+}
+
+.tavern-dice-master[data-theme="underdark"] .btn-die-premium:hover,
+.tavern-dice-master[data-theme="underdark"] .btn-die-premium.is-hovered {
+  border-color: #9a6aff;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5), 0 0 20px rgba(120, 60, 255, 0.3);
+}
+
+/* Underdark: Logo */
+.tavern-dice-master[data-theme="underdark"] .tavern-logo {
+  background: radial-gradient(circle, #9a6aff 0%, #2a1a4a 100%);
+  border-color: #0a051a;
+  box-shadow: 0 0 20px rgba(154, 106, 255, 0.4), inset 0 2px 4px rgba(200, 180, 255, 0.3);
+}
+
+/* Underdark: Parallax background — cave glow */
+.tavern-dice-master[data-theme="underdark"] .tavern-container::before {
+  background:
+    radial-gradient(100px 80px at 18% 22%, rgba(120, 60, 255, 0.1), transparent 70%),
+    radial-gradient(200px 140px at 78% 12%, rgba(60, 200, 180, 0.06), transparent 70%),
+    radial-gradient(140px 100px at 45% 70%, rgba(200, 80, 255, 0.05), transparent 75%);
+  mix-blend-mode: screen;
+}
+
+/* Underdark: Controls panel */
+.tavern-dice-master[data-theme="underdark"] .tavern-controls-panel,
+.tavern-dice-master[data-theme="underdark"] .tavern-history-panel {
+  border-color: #2a1a4a;
+  background-color: #12081f;
+}
+
+.tavern-dice-master[data-theme="underdark"] .control-section.house-rules {
+  background: rgba(0, 0, 0, 0.3);
+  border-color: #3a1a6a;
+}
+
+/* Underdark: Your-turn */
+.tavern-dice-master[data-theme="underdark"] .control-section.your-turn {
+  background: rgba(120, 60, 255, 0.06);
+  border-color: #5a3aa0;
+}
+
+/* Underdark: Footer */
+.tavern-dice-master[data-theme="underdark"] .tavern-footer {
+  background: rgba(5, 2, 15, 0.5);
+  border-top-color: #3a1a6a;
+}
+
+/* Underdark: Scrollbar */
+.tavern-dice-master[data-theme="underdark"] ::-webkit-scrollbar-track {
+  background: #0a051a;
+}
+
+.tavern-dice-master[data-theme="underdark"] ::-webkit-scrollbar-thumb {
+  background: #3a1a6a;
+}
+
+.tavern-dice-master[data-theme="underdark"] ::-webkit-scrollbar-thumb:hover {
+  background: #5a3a8a;
+}
+
+/* Underdark: Setting inputs */
+.tavern-dice-master[data-theme="underdark"] .setting-input input[type="number"] {
+  background: #0a051a;
+  border-color: #3a1a6a;
+  color: #b88aff;
+}
+
+.tavern-dice-master[data-theme="underdark"] .setting-input input[type="number"]:focus {
+  border-color: #9a6aff;
+  box-shadow: 0 0 8px rgba(154, 106, 255, 0.4);
+}
+
+
+/* ============================================
+   🔴  GILDED DRAGON
+   Opulent red & gold, imperial, dragonscale.
+   Think Waterdeep's finest gambling hall,
+   reserved for nobility and high-rollers.
+   ============================================ */
+
+.tavern-dice-master[data-theme="gilded-dragon"] {
+  /* --- Palette: Dragon Hoard & Imperial Crimson --- */
+  --color-sc-bg-primary: #1a0a0a;
+  --color-sc-bg-secondary: #1f0808;
+  --color-sc-bg-highlight: #2a1010;
+
+  --color-sc-text-body: #e8d4b0;
+  --color-sc-text-faded: #aa8a6a;
+  --color-sc-text-header: #f0dcc0;
+
+  --color-sc-border-dark: #120505;
+  --color-sc-border-main: #4a1515;
+  --color-sc-accent-gold: #e8b840;
+  --color-sc-accent-silver: #c0a88a;
+
+  --tavern-wood-dark: #120505;
+  --tavern-wood-medium: #2a0a0a;
+  --tavern-wood-light: #4a1515;
+  --tavern-wood-highlight: #6a2525;
+
+  --tavern-gold: #e8b840;
+  --tavern-gold-bright: #ffd060;
+  --tavern-gold-dim: #c09030;
+  --tavern-brass: #d0a040;
+  --tavern-silver: #c0a88a;
+
+  --tavern-parchment: #f0dcc0;
+  --tavern-parchment-dark: #aa8a6a;
+  --tavern-ink: #1a0a0a;
+
+  --tavern-success: #3a8a4a;
+  --tavern-danger: #cc2020;
+  --tavern-warning: #e8b840;
+  --tavern-info: #4a7acc;
+
+  --tavern-glow: rgba(232, 184, 64, 0.4);
+  --tavern-candle-glow: radial-gradient(ellipse at center, rgba(232, 184, 64, 0.1) 0%, rgba(180, 40, 40, 0.05) 40%, transparent 70%);
+  --tavern-shadow-inset: inset 2px 2px 5px rgba(0, 0, 0, 0.6), inset -1px -1px 2px rgba(232, 184, 64, 0.1);
+
+  --texture-parchment: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MDAiIGhlaWdodD0iMTAwJSI+PGZpbHRlciBpZD0ibm9pc2UiPjxmZVR1cmJ1bGVuY2UgdHlwZT0iZnJhY3RhbE5vaXNlIiBiYXNlRnJlcXVlbmN5PSIwLjMiIG51bU9jdGF2ZXM9IjMiIHN0aXRjaFRpbGVzPSJzdGl0Y2giLz48L2ZpbHRlcj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWx0ZXI9InVybCgjbm9pc2UpIiBvcGFjaXR5PSIwLjA0Ii8+PC9zdmc+');
+}
+
+/* Gilded Dragon: Warm emberglow */
+.tavern-dice-master[data-theme="gilded-dragon"].active {
+  animation: dragon-emberglow 4s infinite alternate ease-in-out;
+}
+
+@keyframes dragon-emberglow {
+  0%   { box-shadow: 0 0 40px 10px rgba(200, 60, 20, 0.08), 0 0 60px rgba(232, 184, 64, 0.06); }
+  50%  { box-shadow: 0 0 50px 14px rgba(200, 60, 20, 0.12), 0 0 70px rgba(232, 184, 64, 0.09); }
+  100% { box-shadow: 0 0 42px 11px rgba(200, 60, 20, 0.09), 0 0 65px rgba(232, 184, 64, 0.07); }
+}
+
+/* Gilded Dragon: Window chrome - lacquered & gilded */
+.tavern-dice-master[data-theme="gilded-dragon"] .window-header {
+  background: linear-gradient(180deg, #2a0a0a 0%, #120505 100%);
+  border-bottom: 3px solid #e8b840;
+}
+
+.tavern-dice-master[data-theme="gilded-dragon"] .window-title {
+  color: #ffd060;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.9), 0 0 10px rgba(232, 184, 64, 0.4);
+}
+
+/* Gilded Dragon: Content area */
+.tavern-dice-master[data-theme="gilded-dragon"] .window-content {
+  background-color: #1a0a0a;
+  background-image:
+    var(--tavern-candle-glow),
+    var(--texture-parchment),
+    radial-gradient(ellipse at center, transparent 30%, rgba(12, 4, 4, 0.5) 100%);
+}
+
+/* Gilded Dragon: Header - lacquered crimson */
+.tavern-dice-master[data-theme="gilded-dragon"] .tavern-header {
+  background-color: #120505;
+  background-image:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.4) 0%, rgba(40, 10, 10, 0.3) 50%, rgba(0, 0, 0, 0.6) 100%),
+    var(--texture-wood);
+  border-bottom: 4px solid #e8b840;
+  border-image: linear-gradient(to right, #6a2525, #ffd060, #e8b840, #ffd060, #6a2525) 1;
+}
+
+.tavern-dice-master[data-theme="gilded-dragon"] .tavern-header::after {
+  background: linear-gradient(120deg, transparent 15%, rgba(232, 184, 64, 0.2) 50%, transparent 85%);
+}
+
+/* Gilded Dragon: Table surface - deep crimson velvet */
+.tavern-dice-master[data-theme="gilded-dragon"] .tavern-table-area {
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(100, 20, 20, 0.5) 0%, transparent 60%),
+    linear-gradient(180deg, #3a0f0f 0%, #1a0505 100%);
+  border-color: #6a2525;
+  border-width: 3px;
+}
+
+.tavern-dice-master[data-theme="gilded-dragon"] .tavern-table-area::before {
+  background:
+    radial-gradient(120px 80px at calc(10% + (var(--cursor-x) * 80%)) calc(12% + (var(--cursor-y) * 60%)), rgba(232, 184, 64, 0.12), transparent 70%),
+    radial-gradient(140px 100px at calc(80% - (var(--cursor-x) * 60%)) calc(75% - (var(--cursor-y) * 40%)), rgba(200, 60, 20, 0.08), transparent 75%);
+}
+
+/* Gilded Dragon: Floating ember motes */
+.tavern-dice-master[data-theme="gilded-dragon"] .tavern-table-area::after {
+  background:
+    radial-gradient(3px 3px at 20% 30%, rgba(255, 200, 100, 0.3), transparent 60%),
+    radial-gradient(2px 2px at 70% 25%, rgba(255, 160, 60, 0.25), transparent 60%),
+    radial-gradient(4px 4px at 50% 75%, rgba(255, 220, 120, 0.2), transparent 60%),
+    radial-gradient(2px 2px at 85% 60%, rgba(255, 180, 80, 0.25), transparent 60%);
+}
+
+/* Gilded Dragon: Player seats - dark lacquer with gold trim */
+.tavern-dice-master[data-theme="gilded-dragon"] .player-seat {
+  background: linear-gradient(135deg, #1a0505 0%, rgba(12, 4, 4, 0.95) 100%);
+  border: 2px solid #6a2525;
+}
+
+.tavern-dice-master[data-theme="gilded-dragon"] .player-seat.is-current {
+  border-color: #e8b840;
+  box-shadow: 0 0 20px rgba(232, 184, 64, 0.35), inset 0 0 30px rgba(200, 60, 20, 0.06);
+}
+
+.tavern-dice-master[data-theme="gilded-dragon"] .player-seat.is-me {
+  background: linear-gradient(135deg, #2a0a0a 0%, #1a0505 100%);
+}
+
+/* Gilded Dragon: Avatar ring - gold border */
+.tavern-dice-master[data-theme="gilded-dragon"] .player-avatar img {
+  border-color: #d0a040;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5), 0 0 8px rgba(232, 184, 64, 0.2);
+}
+
+/* Gilded Dragon: Buttons - rich & regal */
+.tavern-dice-master[data-theme="gilded-dragon"] .btn-primary {
+  background: linear-gradient(180deg, #e8b840 0%, #c09030 100%);
+  color: #1a0505;
+  border-color: #120505;
+  text-shadow: none;
+  font-weight: 800;
+}
+
+.tavern-dice-master[data-theme="gilded-dragon"] .btn-primary:hover {
+  background: linear-gradient(180deg, #ffd060 0%, #e8b840 100%);
+  box-shadow: 0 0 20px rgba(232, 184, 64, 0.5);
+}
+
+.tavern-dice-master[data-theme="gilded-dragon"] .btn-secondary {
+  background: linear-gradient(180deg, #3a1515 0%, #2a0a0a 100%);
+  color: #e8d4b0;
+  border-color: #6a2525;
+}
+
+.tavern-dice-master[data-theme="gilded-dragon"] .btn-secondary:hover {
+  background: #3a1515;
+  border-color: #e8b840;
+  color: #ffd060;
+}
+
+.tavern-dice-master[data-theme="gilded-dragon"] .btn-success {
+  background: linear-gradient(135deg, #3a8a4a, #2a5a35);
+  border-color: #5aaa6a;
+}
+
+/* Gilded Dragon: Dice buttons - polished obsidian */
+.tavern-dice-master[data-theme="gilded-dragon"] .btn-die-premium {
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(232, 184, 64, 0.1) 0%, transparent 70%),
+    linear-gradient(180deg, #2a0a0a 0%, #120505 100%);
+  border-color: #5a2020;
+}
+
+.tavern-dice-master[data-theme="gilded-dragon"] .btn-die-premium:hover,
+.tavern-dice-master[data-theme="gilded-dragon"] .btn-die-premium.is-hovered {
+  border-color: #e8b840;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5), 0 0 20px rgba(232, 184, 64, 0.25), 0 0 40px rgba(200, 60, 20, 0.1);
+}
+
+/* Gilded Dragon: Logo */
+.tavern-dice-master[data-theme="gilded-dragon"] .tavern-logo {
+  background: radial-gradient(circle, #e8b840 0%, #4a1515 100%);
+  border-color: #120505;
+  box-shadow: 0 0 20px rgba(232, 184, 64, 0.4), inset 0 2px 4px rgba(255, 240, 200, 0.3);
+}
+
+/* Gilded Dragon: Parallax */
+.tavern-dice-master[data-theme="gilded-dragon"] .tavern-container::before {
+  background:
+    radial-gradient(120px 80px at 18% 22%, rgba(232, 184, 64, 0.08), transparent 70%),
+    radial-gradient(220px 140px at 78% 12%, rgba(200, 60, 20, 0.06), transparent 70%),
+    radial-gradient(160px 110px at 45% 70%, rgba(255, 200, 100, 0.04), transparent 75%);
+  mix-blend-mode: screen;
+}
+
+/* Gilded Dragon: Controls panel */
+.tavern-dice-master[data-theme="gilded-dragon"] .tavern-controls-panel,
+.tavern-dice-master[data-theme="gilded-dragon"] .tavern-history-panel {
+  border-color: #4a1515;
+  background-color: #1f0808;
+}
+
+.tavern-dice-master[data-theme="gilded-dragon"] .control-section.house-rules {
+  background: rgba(0, 0, 0, 0.3);
+  border-color: #5a2020;
+}
+
+/* Gilded Dragon: Your-turn */
+.tavern-dice-master[data-theme="gilded-dragon"] .control-section.your-turn {
+  background: rgba(232, 184, 64, 0.06);
+  border-color: #c09030;
+}
+
+/* Gilded Dragon: Footer */
+.tavern-dice-master[data-theme="gilded-dragon"] .tavern-footer {
+  background: rgba(10, 3, 3, 0.5);
+  border-top-color: #5a2020;
+}
+
+/* Gilded Dragon: Scrollbar */
+.tavern-dice-master[data-theme="gilded-dragon"] ::-webkit-scrollbar-track {
+  background: #120505;
+}
+
+.tavern-dice-master[data-theme="gilded-dragon"] ::-webkit-scrollbar-thumb {
+  background: #5a2020;
+}
+
+.tavern-dice-master[data-theme="gilded-dragon"] ::-webkit-scrollbar-thumb:hover {
+  background: #7a3030;
+}
+
+/* Gilded Dragon: Setting inputs */
+.tavern-dice-master[data-theme="gilded-dragon"] .setting-input input[type="number"] {
+  background: #120505;
+  border-color: #5a2020;
+  color: #ffd060;
+}
+
+.tavern-dice-master[data-theme="gilded-dragon"] .setting-input input[type="number"]:focus {
+  border-color: #e8b840;
+  box-shadow: 0 0 8px rgba(232, 184, 64, 0.4);
+}
+
+
+/* ============================================
+   🟢  FEYWILD GARDEN
+   Ethereal pastels, whimsical glows, iridescent
+   shimmer. Like gambling with pixies and satyrs
+   in a moonlit glade.
+   ============================================ */
+
+.tavern-dice-master[data-theme="feywild"] {
+  /* --- Palette: Moonpetal & Starbloom --- */
+  --color-sc-bg-primary: #0a1a18;
+  --color-sc-bg-secondary: #081a16;
+  --color-sc-bg-highlight: #0f2a24;
+
+  --color-sc-text-body: #c8e8d8;
+  --color-sc-text-faded: #6aaa8a;
+  --color-sc-text-header: #d4f0e0;
+
+  --color-sc-border-dark: #051210;
+  --color-sc-border-main: #1a3a30;
+  --color-sc-accent-gold: #40d8a0;
+  --color-sc-accent-silver: #8ac0b0;
+
+  --tavern-wood-dark: #051210;
+  --tavern-wood-medium: #0f2a22;
+  --tavern-wood-light: #1a3a30;
+  --tavern-wood-highlight: #2a5a48;
+
+  --tavern-gold: #40d8a0;
+  --tavern-gold-bright: #60f0b8;
+  --tavern-gold-dim: #30b080;
+  --tavern-brass: #50c898;
+  --tavern-silver: #8ac0b0;
+
+  --tavern-parchment: #d4f0e0;
+  --tavern-parchment-dark: #6aaa8a;
+  --tavern-ink: #0a1a18;
+
+  --tavern-success: #40c870;
+  --tavern-danger: #e05080;
+  --tavern-warning: #e0c050;
+  --tavern-info: #50a0e0;
+
+  --tavern-glow: rgba(64, 216, 160, 0.35);
+  --tavern-candle-glow: radial-gradient(ellipse at center, rgba(64, 216, 160, 0.06) 0%, rgba(120, 80, 200, 0.04) 40%, transparent 70%);
+  --tavern-shadow-inset: inset 2px 2px 5px rgba(0, 0, 0, 0.3), inset -1px -1px 2px rgba(64, 216, 160, 0.08);
+
+  --texture-parchment: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MDAiIGhlaWdodD0iMTAwJSI+PGZpbHRlciBpZD0ibm9pc2UiPjxmZVR1cmJ1bGVuY2UgdHlwZT0iZnJhY3RhbE5vaXNlIiBiYXNlRnJlcXVlbmN5PSIwLjUiIG51bU9jdGF2ZXM9IjMiIHN0aXRjaFRpbGVzPSJzdGl0Y2giLz48L2ZpbHRlcj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWx0ZXI9InVybCgjbm9pc2UpIiBvcGFjaXR5PSIwLjA1Ii8+PC9zdmc+');
+}
+
+/* Feywild: Iridescent shimmer */
+.tavern-dice-master[data-theme="feywild"].active {
+  animation: feywild-shimmer 6s infinite alternate ease-in-out;
+}
+
+@keyframes feywild-shimmer {
+  0%   { box-shadow: 0 0 30px 8px rgba(64, 216, 160, 0.06), 0 0 50px rgba(120, 80, 200, 0.04); }
+  33%  { box-shadow: 0 0 40px 12px rgba(100, 200, 220, 0.08), 0 0 60px rgba(200, 120, 180, 0.05); }
+  66%  { box-shadow: 0 0 35px 10px rgba(64, 216, 160, 0.07), 0 0 55px rgba(80, 160, 220, 0.05); }
+  100% { box-shadow: 0 0 38px 11px rgba(180, 120, 200, 0.07), 0 0 50px rgba(64, 216, 160, 0.04); }
+}
+
+/* Feywild: Window chrome - living wood */
+.tavern-dice-master[data-theme="feywild"] .window-header {
+  background: linear-gradient(180deg, #0f2a22 0%, #051210 100%);
+  border-bottom: 2px solid #2a5a48;
+}
+
+.tavern-dice-master[data-theme="feywild"] .window-title {
+  color: #60f0b8;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.8), 0 0 12px rgba(64, 216, 160, 0.4);
+}
+
+/* Feywild: Content area */
+.tavern-dice-master[data-theme="feywild"] .window-content {
+  background-color: #0a1a18;
+  background-image:
+    var(--tavern-candle-glow),
+    var(--texture-parchment),
+    radial-gradient(ellipse at center, transparent 30%, rgba(4, 12, 10, 0.4) 100%);
+}
+
+/* Feywild: Header - living moss & moonlight */
+.tavern-dice-master[data-theme="feywild"] .tavern-header {
+  background-color: #051210;
+  background-image:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.4) 0%, rgba(10, 30, 25, 0.3) 50%, rgba(0, 0, 0, 0.5) 100%),
+    var(--texture-wood);
+  border-bottom: 4px solid #2a5a48;
+  border-image: linear-gradient(to right, #1a3a30, #40d8a0, #80b0d0, #d080c0, #1a3a30) 1;
+}
+
+.tavern-dice-master[data-theme="feywild"] .tavern-header::after {
+  background: linear-gradient(120deg, transparent 15%, rgba(64, 216, 160, 0.1) 35%, rgba(120, 80, 200, 0.08) 55%, transparent 85%);
+}
+
+/* Feywild: Table surface - enchanted glade */
+.tavern-dice-master[data-theme="feywild"] .tavern-table-area {
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(30, 80, 60, 0.4) 0%, transparent 60%),
+    linear-gradient(180deg, #0f2a22 0%, #051210 100%);
+  border-color: #2a5a48;
+}
+
+.tavern-dice-master[data-theme="feywild"] .tavern-table-area::before {
+  background:
+    radial-gradient(100px 70px at calc(10% + (var(--cursor-x) * 80%)) calc(12% + (var(--cursor-y) * 60%)), rgba(64, 216, 160, 0.1), transparent 70%),
+    radial-gradient(80px 60px at calc(80% - (var(--cursor-x) * 60%)) calc(75% - (var(--cursor-y) * 40%)), rgba(200, 120, 180, 0.08), transparent 75%),
+    radial-gradient(60px 50px at calc(30% + (var(--cursor-x) * 30%)) calc(60% + (var(--cursor-y) * 20%)), rgba(80, 160, 220, 0.06), transparent 70%);
+}
+
+/* Feywild: Pixie motes - floating specks of iridescent light */
+.tavern-dice-master[data-theme="feywild"] .tavern-table-area::after {
+  background:
+    radial-gradient(4px 4px at 15% 20%, rgba(64, 216, 160, 0.5), transparent 60%),
+    radial-gradient(3px 3px at 80% 30%, rgba(200, 120, 200, 0.4), transparent 60%),
+    radial-gradient(5px 5px at 50% 80%, rgba(100, 200, 220, 0.35), transparent 60%),
+    radial-gradient(3px 3px at 35% 50%, rgba(220, 180, 80, 0.3), transparent 60%),
+    radial-gradient(4px 4px at 65% 65%, rgba(160, 100, 220, 0.35), transparent 60%),
+    radial-gradient(3px 3px at 90% 70%, rgba(80, 220, 160, 0.3), transparent 60%);
+  animation: feywild-motes 12s ease-in-out infinite alternate;
+}
+
+@keyframes feywild-motes {
+  0%   { transform: translate3d(0, 0, 0); opacity: 0.4; }
+  25%  { transform: translate3d(6px, -4px, 0); opacity: 0.7; }
+  50%  { transform: translate3d(-3px, -8px, 0); opacity: 0.5; }
+  75%  { transform: translate3d(4px, 2px, 0); opacity: 0.8; }
+  100% { transform: translate3d(-2px, -5px, 0); opacity: 0.5; }
+}
+
+/* Feywild: Player seats */
+.tavern-dice-master[data-theme="feywild"] .player-seat {
+  background: linear-gradient(135deg, #051210 0%, rgba(8, 18, 15, 0.95) 100%);
+  border-color: #1a4a38;
+}
+
+.tavern-dice-master[data-theme="feywild"] .player-seat.is-current {
+  border-color: #40d8a0;
+  box-shadow: 0 0 20px rgba(64, 216, 160, 0.3), inset 0 0 30px rgba(64, 216, 160, 0.06);
+}
+
+.tavern-dice-master[data-theme="feywild"] .player-seat.is-me {
+  background: linear-gradient(135deg, #0f2a22 0%, #051210 100%);
+}
+
+/* Feywild: Avatar ring - iridescent border */
+.tavern-dice-master[data-theme="feywild"] .player-avatar img {
+  border-color: #50c898;
+}
+
+.tavern-dice-master[data-theme="feywild"] .player-seat.is-current .player-avatar img {
+  box-shadow: 0 0 12px rgba(64, 216, 160, 0.5), 0 0 24px rgba(120, 80, 200, 0.25);
+}
+
+/* Feywild: Buttons - natural & magical */
+.tavern-dice-master[data-theme="feywild"] .btn-primary {
+  background: linear-gradient(180deg, #30b080 0%, #20905a 100%);
+  border-color: #051210;
+  color: #fff;
+}
+
+.tavern-dice-master[data-theme="feywild"] .btn-primary:hover {
+  background: linear-gradient(180deg, #40d8a0 0%, #30b080 100%);
+  box-shadow: 0 0 15px rgba(64, 216, 160, 0.5);
+}
+
+.tavern-dice-master[data-theme="feywild"] .btn-secondary {
+  background: linear-gradient(180deg, #1a3a30 0%, #0f2a22 100%);
+  color: #c8e8d8;
+  border-color: #2a5a48;
+}
+
+.tavern-dice-master[data-theme="feywild"] .btn-secondary:hover {
+  background: #1a3a30;
+  border-color: #40d8a0;
+  color: #d4f0e0;
+}
+
+.tavern-dice-master[data-theme="feywild"] .btn-success {
+  background: linear-gradient(135deg, #40c870, #2a8a4a);
+  border-color: #60e890;
+}
+
+/* Feywild: Dice buttons - enchanted wood */
+.tavern-dice-master[data-theme="feywild"] .btn-die-premium {
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(64, 216, 160, 0.08) 0%, transparent 70%),
+    linear-gradient(180deg, #0f2a22 0%, #051210 100%);
+  border-color: #1a4a38;
+}
+
+.tavern-dice-master[data-theme="feywild"] .btn-die-premium:hover,
+.tavern-dice-master[data-theme="feywild"] .btn-die-premium.is-hovered {
+  border-color: #40d8a0;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4), 0 0 16px rgba(64, 216, 160, 0.25), 0 0 24px rgba(120, 80, 200, 0.12);
+}
+
+/* Feywild: Logo - glowing flower */
+.tavern-dice-master[data-theme="feywild"] .tavern-logo {
+  background: radial-gradient(circle, #40d8a0 0%, #1a3a30 100%);
+  border-color: #051210;
+  box-shadow: 0 0 20px rgba(64, 216, 160, 0.4), 0 0 40px rgba(120, 80, 200, 0.15), inset 0 2px 4px rgba(200, 255, 230, 0.3);
+}
+
+/* Feywild: Parallax — forest glow */
+.tavern-dice-master[data-theme="feywild"] .tavern-container::before {
+  background:
+    radial-gradient(120px 80px at 18% 22%, rgba(64, 216, 160, 0.08), transparent 70%),
+    radial-gradient(200px 140px at 78% 12%, rgba(200, 120, 200, 0.06), transparent 70%),
+    radial-gradient(140px 100px at 45% 70%, rgba(80, 160, 220, 0.05), transparent 75%);
+  mix-blend-mode: screen;
+}
+
+/* Feywild: Controls panel */
+.tavern-dice-master[data-theme="feywild"] .tavern-controls-panel,
+.tavern-dice-master[data-theme="feywild"] .tavern-history-panel {
+  border-color: #1a3a30;
+  background-color: #081a16;
+}
+
+.tavern-dice-master[data-theme="feywild"] .control-section.house-rules {
+  background: rgba(0, 0, 0, 0.25);
+  border-color: #1a4a38;
+}
+
+/* Feywild: Your-turn */
+.tavern-dice-master[data-theme="feywild"] .control-section.your-turn {
+  background: rgba(64, 216, 160, 0.06);
+  border-color: #30b080;
+}
+
+/* Feywild: Footer */
+.tavern-dice-master[data-theme="feywild"] .tavern-footer {
+  background: rgba(4, 12, 10, 0.5);
+  border-top-color: #1a4a38;
+}
+
+/* Feywild: Scrollbar */
+.tavern-dice-master[data-theme="feywild"] ::-webkit-scrollbar-track {
+  background: #051210;
+}
+
+.tavern-dice-master[data-theme="feywild"] ::-webkit-scrollbar-thumb {
+  background: #1a4a38;
+}
+
+.tavern-dice-master[data-theme="feywild"] ::-webkit-scrollbar-thumb:hover {
+  background: #2a6a55;
+}
+
+/* Feywild: Setting inputs */
+.tavern-dice-master[data-theme="feywild"] .setting-input input[type="number"] {
+  background: #051210;
+  border-color: #1a4a38;
+  color: #60f0b8;
+}
+
+.tavern-dice-master[data-theme="feywild"] .setting-input input[type="number"]:focus {
+  border-color: #40d8a0;
+  box-shadow: 0 0 8px rgba(64, 216, 160, 0.3);
+}
+
+
+/* ============================================
+   THEME-AWARE ELEMENT OVERRIDES
+   Styles that need to adapt across ALL themes
+   (selects, die-face colors, status badges, etc.)
+   ============================================ */
+
+/* Select inputs for dark themes */
+.tavern-dice-master[data-theme="goblin-den"] select,
+.tavern-dice-master[data-theme="underdark"] select,
+.tavern-dice-master[data-theme="gilded-dragon"] select,
+.tavern-dice-master[data-theme="feywild"] select {
+  background: var(--tavern-wood-dark);
+  color: var(--tavern-parchment);
+  border: 1px solid var(--tavern-wood-highlight);
+  border-radius: var(--tavern-radius-sm);
+}
+
+.tavern-dice-master[data-theme="goblin-den"] select:focus,
+.tavern-dice-master[data-theme="underdark"] select:focus,
+.tavern-dice-master[data-theme="gilded-dragon"] select:focus,
+.tavern-dice-master[data-theme="feywild"] select:focus {
+  border-color: var(--tavern-gold);
+  outline: none;
+  box-shadow: 0 0 6px var(--tavern-glow);
+}
+
+/* Die cost badges adapt via CSS vars automatically */
+
+/* Chat cards for dark themes */
+.tavern-dice-master[data-theme="goblin-den"] .tavern-card,
+.tavern-dice-master[data-theme="underdark"] .tavern-card,
+.tavern-dice-master[data-theme="gilded-dragon"] .tavern-card,
+.tavern-dice-master[data-theme="feywild"] .tavern-card {
+  background: linear-gradient(135deg, var(--tavern-wood-dark) 0%, rgba(0, 0, 0, 0.95) 100%);
+  border-color: var(--tavern-gold-dim);
+}
+
+/* Die-face background overrides for Goblin Den (earthy tones) */
+.tavern-dice-master[data-theme="goblin-den"] .die-face.d4  { background: linear-gradient(135deg, #3a5a2a, #2a4a1a); }
+.tavern-dice-master[data-theme="goblin-den"] .die-face.d6  { background: linear-gradient(135deg, #4a6a30, #3a5a20); }
+.tavern-dice-master[data-theme="goblin-den"] .die-face.d8  { background: linear-gradient(135deg, #6a6a20, #5a5a10); }
+.tavern-dice-master[data-theme="goblin-den"] .die-face.d10 { background: linear-gradient(135deg, #7a6a30, #5a4a20); }
+.tavern-dice-master[data-theme="goblin-den"] .die-face.d20 { background: linear-gradient(135deg, #5a3a1a, #4a2a0a); }
+
+/* Die-face background overrides for Underdark (crystal tones) */
+.tavern-dice-master[data-theme="underdark"] .die-face.d4  { background: linear-gradient(135deg, #2a3a6a, #1a2a5a); }
+.tavern-dice-master[data-theme="underdark"] .die-face.d6  { background: linear-gradient(135deg, #2a5a6a, #1a4a5a); }
+.tavern-dice-master[data-theme="underdark"] .die-face.d8  { background: linear-gradient(135deg, #4a3a6a, #3a2a5a); }
+.tavern-dice-master[data-theme="underdark"] .die-face.d10 { background: linear-gradient(135deg, #6a3a6a, #5a2a5a); }
+.tavern-dice-master[data-theme="underdark"] .die-face.d20 { background: linear-gradient(135deg, #4a1a6a, #3a0a5a); }
+
+/* Die-face background overrides for Gilded Dragon (crimson/obsidian) */
+.tavern-dice-master[data-theme="gilded-dragon"] .die-face.d4  { background: linear-gradient(135deg, #3a5a3a, #2a4a2a); }
+.tavern-dice-master[data-theme="gilded-dragon"] .die-face.d6  { background: linear-gradient(135deg, #2a4a6a, #1a3a5a); }
+.tavern-dice-master[data-theme="gilded-dragon"] .die-face.d8  { background: linear-gradient(135deg, #5a4a2a, #4a3a1a); }
+.tavern-dice-master[data-theme="gilded-dragon"] .die-face.d10 { background: linear-gradient(135deg, #6a3a1a, #5a2a0a); }
+.tavern-dice-master[data-theme="gilded-dragon"] .die-face.d20 { background: linear-gradient(135deg, #6a1a1a, #5a0a0a); }
+
+/* Die-face background overrides for Feywild (jewel tones) */
+.tavern-dice-master[data-theme="feywild"] .die-face.d4  { background: linear-gradient(135deg, #2a5a4a, #1a4a3a); }
+.tavern-dice-master[data-theme="feywild"] .die-face.d6  { background: linear-gradient(135deg, #3a5a6a, #2a4a5a); }
+.tavern-dice-master[data-theme="feywild"] .die-face.d8  { background: linear-gradient(135deg, #4a4a6a, #3a3a5a); }
+.tavern-dice-master[data-theme="feywild"] .die-face.d10 { background: linear-gradient(135deg, #5a3a5a, #4a2a4a); }
+.tavern-dice-master[data-theme="feywild"] .die-face.d20 { background: linear-gradient(135deg, #2a4a6a, #1a3a5a); }
+
+/* Hidden die overrides for dark themes */
+.tavern-dice-master[data-theme="goblin-den"] .die-face.hidden,
+.tavern-dice-master[data-theme="underdark"] .die-face.hidden,
+.tavern-dice-master[data-theme="gilded-dragon"] .die-face.hidden,
+.tavern-dice-master[data-theme="feywild"] .die-face.hidden {
+  background: var(--tavern-wood-medium);
+  border-color: var(--tavern-wood-highlight);
+}
+
+/* Status label overrides for dark themes - keeping high contrast */
+.tavern-dice-master[data-theme="goblin-den"] .player-status-label.active,
+.tavern-dice-master[data-theme="underdark"] .player-status-label.active,
+.tavern-dice-master[data-theme="gilded-dragon"] .player-status-label.active,
+.tavern-dice-master[data-theme="feywild"] .player-status-label.active {
+  background: var(--tavern-gold);
+  color: var(--tavern-wood-dark);
+}
+
+/* Dared warning overrides */
+.tavern-dice-master[data-theme="goblin-den"] .control-section.dared-warning,
+.tavern-dice-master[data-theme="underdark"] .control-section.dared-warning,
+.tavern-dice-master[data-theme="gilded-dragon"] .control-section.dared-warning,
+.tavern-dice-master[data-theme="feywild"] .control-section.dared-warning {
+  background: rgba(180, 40, 20, 0.15);
+  border-color: var(--tavern-danger);
+}
+
+/* Turn hint overrides for dark themes */
+.tavern-dice-master[data-theme="goblin-den"] .turn-hint.phase-opening,
+.tavern-dice-master[data-theme="underdark"] .turn-hint.phase-opening,
+.tavern-dice-master[data-theme="gilded-dragon"] .turn-hint.phase-opening,
+.tavern-dice-master[data-theme="feywild"] .turn-hint.phase-opening {
+  background: rgba(60, 140, 80, 0.15);
+  color: var(--tavern-parchment);
+}
+
+.tavern-dice-master[data-theme="goblin-den"] .turn-hint.phase-betting,
+.tavern-dice-master[data-theme="underdark"] .turn-hint.phase-betting,
+.tavern-dice-master[data-theme="gilded-dragon"] .turn-hint.phase-betting,
+.tavern-dice-master[data-theme="feywild"] .turn-hint.phase-betting {
+  background: rgba(160, 120, 40, 0.15);
+  color: var(--tavern-parchment);
+}
+
+/* Cheat button dark theme */
+.tavern-dice-master[data-theme="underdark"] .btn-cheat {
+  background: linear-gradient(135deg, #2a1a4a 0%, #1a0f30 100%);
+  border-color: #4a2a7a;
+  color: #c0a0e0;
+}
+
+/* ============================================
+   THEME TRANSITION EFFECTS
+   Smooth theme switching with CSS transitions
+   ============================================ */
+
+.tavern-dice-master .tavern-container,
+.tavern-dice-master .tavern-header,
+.tavern-dice-master .tavern-table-area,
+.tavern-dice-master .player-seat,
+.tavern-dice-master .tavern-controls-panel,
+.tavern-dice-master .tavern-history-panel,
+.tavern-dice-master .tavern-footer,
+.tavern-dice-master .btn-die-premium,
+.tavern-dice-master .tavern-logo {
+  transition:
+    background-color 0.4s ease,
+    border-color 0.4s ease,
+    box-shadow 0.4s ease;
+}
+
+/* ============================================
+   THEME SELECTOR DROPDOWN STYLING
+   ============================================ */
+
+.tavern-dice-master #theme-select {
+  background: var(--tavern-wood-dark);
+  color: var(--tavern-parchment);
+  border: 1px solid var(--tavern-wood-highlight);
+  border-radius: var(--tavern-radius-sm);
+  padding: 4px 6px;
+  font-family: var(--font-sc-data);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.tavern-dice-master #theme-select:focus {
+  border-color: var(--tavern-gold);
+  outline: none;
+  box-shadow: 0 0 6px var(--tavern-glow);
+}
+
+.tavern-dice-master #theme-select option {
+  background: var(--tavern-wood-dark);
+  color: var(--tavern-parchment);
+}

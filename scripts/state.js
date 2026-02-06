@@ -47,6 +47,26 @@ export function registerSettings() {
     default: {},
   });
 
+  // V5.21: Table Theme (Visual skin for the UI)
+  game.settings.register(MODULE_ID, "tableTheme", {
+    name: "Table Theme",
+    hint: "Choose a visual theme for the tavern table. Each theme changes the entire look and feel of the UI.",
+    scope: "world",
+    config: true,
+    type: String,
+    choices: {
+      "sword-coast": "Sword Coast Tavern (Classic)",
+      "goblin-den": "Goblin's Den (Grimy & Chaotic)",
+      "underdark": "Underdark Parlor (Bioluminescent)",
+      "gilded-dragon": "Gilded Dragon (Opulent & Imperial)",
+      "feywild": "Feywild Garden (Ethereal & Whimsical)"
+    },
+    default: "sword-coast",
+    onChange: () => {
+      game.tavernDiceMaster?.app?.render();
+    }
+  });
+
   // V5.14.0: Game Mode Setting ("standard" or "goblin")
   game.settings.register(MODULE_ID, "gameMode", {
     name: "Game Mode",
