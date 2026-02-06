@@ -38,6 +38,12 @@ export async function submitRoll(payload, userId) {
     return state;
   }
 
+  // Prevent duplicate/raced rolls while the previous betting roll is awaiting cheat resolution.
+  if (!isGoblinMode && tableData.pendingAction === "cheat_decision") {
+    await notifyUser(userId, "Resolve your current roll before rolling again.");
+    return state;
+  }
+
   const goblinSuddenDeath = (tableData.gameMode ?? "standard") === "goblin"
     && tableData.goblinSuddenDeathActive
     && (tableData.goblinSuddenDeathParticipants ?? []).includes(userId);
@@ -83,6 +89,7 @@ export async function submitRoll(payload, userId) {
 export async function finishTurn(userId) {
   const state = getState();
   const tableData = state.tableData ?? emptyTableData();
+  const gameMode = tableData.gameMode ?? "standard";
 
   if (tableData.currentPlayer !== userId) {
     // maybe admin override

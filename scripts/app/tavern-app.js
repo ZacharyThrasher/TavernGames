@@ -1285,8 +1285,10 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const state = getState();
     const userId = game.user.id;
     const myRolls = state.tableData?.rolls?.[userId] ?? [];
+    const lastDie = myRolls[myRolls.length - 1];
 
     if (myRolls.length === 0) return ui.notifications.warn("You have no dice to cheat with!");
+    if (lastDie?.blind) return ui.notifications.warn("You cannot cheat a blind die.");
 
     if (TavernApp.uiLocked) return;
     TavernApp.uiLocked = true;

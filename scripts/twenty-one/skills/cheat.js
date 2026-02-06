@@ -100,6 +100,10 @@ export async function cheat(payload, userId) {
     }
 
     const targetDie = rolls[dieIndex];
+    if (targetDie?.blind) {
+        await notifyUser(userId, "You cannot cheat a blind die.");
+        return state;
+    }
     const maxValue = targetDie.die;
     const isHoleDie = !(targetDie.public ?? true);
 

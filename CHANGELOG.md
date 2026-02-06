@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.21.1] - 2026-02-06
+### Cheat + Turn Integrity Hotfix
+- **Fix**: Prevented repeat rolls while a cheat decision is pending (`pendingAction: cheat_decision`).
+- **Fix**: Restored reliable turn advancement after cheat resolution by fixing `finishTurn` game mode handling.
+- **Rules**: Cheating a blind die is now blocked server-side.
+- **UI**: Manual cheat action now warns and blocks on blind dice.
+
 ## [5.21.0] - 2026-02-05
 ### Table Themes 🎨
 - **Feature**: 5 selectable UI themes — each transforms the entire look and feel of the tavern table.
