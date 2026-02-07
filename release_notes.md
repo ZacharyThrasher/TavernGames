@@ -1,8 +1,11 @@
-### Atmosphere & Immersion Layer
-- **Feature**: Theme Flavor Engine with per-theme subtitles, icons, turn stingers, risk warnings, and rotating atmosphere lines.
-- **Feature**: Pot Escalation Tiers with visual intensity as gold accumulates.
-- **Feature**: Risk-reactive player seats and dice controls at high totals.
-- **Feature**: Themed turn stingers and warning text across all table themes.
-- **UI**: Themed empty-table states and logo icons for each theme.
-- **CSS/JS**: Added `styles/atmosphere.css` and `scripts/ui/theme-flavor.js`.
-- **Perf**: All new effects respect reduced-motion and performance mode.
+### Fortune's Reveal - Cinematic Dice System
+- **Feature**: New in-app multi-phase dice reveal flow replaces Dice So Nice for table rolls.
+- **Feature**: Queued reveal engine for rapid successive rolls with compressed timing.
+- **Feature**: Context-aware visuals for busts, jackpots/21, natural 20s, and normal rolls.
+- **Feature**: Enhanced seat auras by risk level, including leading-player crown aura.
+- **Theme**: Per-theme color overrides for reveal effects and seat aura styling.
+- **DSN Coexistence**: DSN remains for skill checks, duels, and end-of-opening mass reveal.
+- **Fix**: Blind roll values are no longer leaked through 3D dice visuals.
+- **Fix**: Risk warnings are suppressed in Goblin mode.
+- **CSS/JS**: Added `styles/dice-reveal.css` and `scripts/ui/dice-reveal.js`.
+- **Perf**: Reduced-motion and performance mode behavior is respected across new effects.

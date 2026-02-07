@@ -1,0 +1,570 @@
+/* ============================================
+   FORTUNE'S REVEAL — Cinematic Dice System
+   V5.23: Multi-phase dramatic dice animation.
+
+   Structure:
+   1. Overlay (dim + vignette)
+   2. Die Slam (icon drop + impact ring)
+   3. Number Reel (decelerating cycle)
+   4. Lock-In (flash + particles)
+   5. Flight (center → seat)
+   6. Seat Glow (landing feedback)
+
+   Context variants:
+   - .reveal-normal  → theme accent (default)
+   - .reveal-bust    → crimson / shatter
+   - .reveal-jackpot → gold / celebration
+   - .reveal-nat20   → prismatic / legendary
+
+   All effects respect prefers-reduced-motion.
+   ============================================ */
+
+
+/* ============================================
+   1. OVERLAY — Darkening vignette
+   ============================================ */
+
+.dice-reveal-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 0, 0, 0.05) 0%,
+    rgba(0, 0, 0, 0.5) 100%
+  );
+  opacity: 0;
+  transition: opacity 0.15s ease-out;
+}
+
+.dice-reveal-overlay.active {
+  opacity: 1;
+}
+
+.dice-reveal-overlay.exit {
+  opacity: 0;
+  transition: opacity 0.1s ease-in;
+}
+
+/* Context tinting */
+.dice-reveal-overlay.reveal-bust {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(80, 0, 0, 0.1) 0%,
+    rgba(50, 0, 0, 0.55) 100%
+  );
+}
+
+.dice-reveal-overlay.reveal-jackpot {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(50, 40, 0, 0.05) 0%,
+    rgba(30, 20, 0, 0.5) 100%
+  );
+}
+
+.dice-reveal-overlay.reveal-nat20 {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(50, 30, 80, 0.08) 0%,
+    rgba(20, 10, 40, 0.55) 100%
+  );
+}
+
+
+/* ============================================
+   2. DIE SLAM — Icon drops from above
+   ============================================ */
+
+.dice-reveal-die {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -120%) scale(2.5);
+  opacity: 0;
+  font-size: 48px;
+  color: var(--tavern-gold);
+  text-shadow: 0 0 30px rgba(255, 215, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.dice-reveal-die-label {
+  font-family: var(--font-sc-header);
+  font-size: 14px;
+  font-variant: small-caps;
+  letter-spacing: 2px;
+  color: var(--tavern-parchment);
+  opacity: 0.7;
+}
+
+.dice-reveal-die.slam {
+  animation: reveal-slam 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.dice-reveal-die.fade-die {
+  animation: reveal-die-fade 0.25s ease-out forwards;
+}
+
+/* Context die colors */
+.dice-reveal-die.reveal-bust {
+  color: #cc3030;
+  text-shadow: 0 0 30px rgba(204, 48, 48, 0.5);
+}
+
+.dice-reveal-die.reveal-jackpot {
+  color: #ffd060;
+  text-shadow: 0 0 30px rgba(255, 208, 96, 0.6);
+}
+
+.dice-reveal-die.reveal-nat20 {
+  color: #c080ff;
+  text-shadow: 0 0 30px rgba(192, 128, 255, 0.5);
+}
+
+@keyframes reveal-slam {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -120%) scale(2.5);
+  }
+  50% {
+    opacity: 1;
+  }
+  75% {
+    transform: translate(-50%, -50%) scale(0.85);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes reveal-die-fade {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.6);
+  }
+}
+
+
+/* ============================================
+   3. IMPACT RING — Expands on slam
+   ============================================ */
+
+.dice-reveal-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--tavern-gold);
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 0.8;
+  pointer-events: none;
+  animation: reveal-ring-expand 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes reveal-ring-expand {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.8;
+    border-width: 3px;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(12);
+    opacity: 0;
+    border-width: 0.5px;
+  }
+}
+
+
+/* ============================================
+   4. NUMBER REEL — Cycling display
+   ============================================ */
+
+.dice-reveal-reel {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 2;
+  will-change: transform;
+}
+
+.dice-reveal-reel-number {
+  display: block;
+  font-family: var(--font-sc-header);
+  font-size: 72px;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--tavern-parchment);
+  text-shadow:
+    0 0 20px rgba(255, 215, 0, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.8);
+  text-align: center;
+  min-width: 60px;
+  /* Subtle vertical blur during cycling */
+  filter: blur(0.5px);
+  transition: filter 0.1s;
+}
+
+/* While cycling: motion blur effect */
+.dice-reveal-reel:not(.locked) .dice-reveal-reel-number {
+  animation: reel-blur 0.08s linear infinite alternate;
+}
+
+@keyframes reel-blur {
+  0% { filter: blur(0px); transform: translateY(-1px); }
+  100% { filter: blur(1px); transform: translateY(1px); }
+}
+
+/* Locked state: number is final */
+.dice-reveal-reel.locked .dice-reveal-reel-number {
+  filter: blur(0);
+  animation: reveal-lock-punch 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Context-specific lock colors */
+.dice-reveal-reel.locked.reveal-bust .dice-reveal-reel-number {
+  color: #ff4040;
+  text-shadow:
+    0 0 24px rgba(255, 64, 64, 0.6),
+    0 0 48px rgba(204, 32, 32, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.dice-reveal-reel.locked.reveal-jackpot .dice-reveal-reel-number {
+  color: #ffd060;
+  text-shadow:
+    0 0 24px rgba(255, 208, 96, 0.7),
+    0 0 48px rgba(255, 180, 0, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.dice-reveal-reel.locked.reveal-nat20 .dice-reveal-reel-number {
+  color: #e0b0ff;
+  text-shadow:
+    0 0 24px rgba(192, 128, 255, 0.7),
+    0 0 48px rgba(160, 80, 255, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.8);
+  animation: reveal-lock-punch 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
+             reveal-prismatic 1.5s linear 0.2s infinite;
+}
+
+@keyframes reveal-lock-punch {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.5;
+  }
+  60% {
+    transform: scale(1.3);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes reveal-prismatic {
+  0% { filter: hue-rotate(0deg) brightness(1.1); }
+  100% { filter: hue-rotate(360deg) brightness(1.1); }
+}
+
+
+/* ============================================
+   5. FLASH — Lock-in burst
+   ============================================ */
+
+.dice-reveal-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  animation: reveal-flash-burst 0.35s ease-out forwards;
+}
+
+.dice-reveal-flash.reveal-normal {
+  background: radial-gradient(circle at center, rgba(255, 215, 0, 0.3), transparent 60%);
+}
+
+.dice-reveal-flash.reveal-bust {
+  background: radial-gradient(circle at center, rgba(255, 40, 40, 0.35), transparent 60%);
+}
+
+.dice-reveal-flash.reveal-jackpot {
+  background: radial-gradient(circle at center, rgba(255, 215, 0, 0.5), transparent 60%);
+}
+
+.dice-reveal-flash.reveal-nat20 {
+  background: radial-gradient(circle at center, rgba(192, 128, 255, 0.4), transparent 60%);
+}
+
+@keyframes reveal-flash-burst {
+  0% {
+    opacity: 1;
+    transform: scale(0.5);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2);
+  }
+}
+
+
+/* ============================================
+   6. PARTICLES — Lock-in particle container
+   ============================================ */
+
+.dice-reveal-particles {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+
+/* ============================================
+   7. FLIGHT — Number flies to player seat
+   ============================================ */
+
+.dice-reveal-reel.flight {
+  animation: reveal-flight var(--reveal-flight-duration, 0.4s)
+    cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  --flight-x: 0px;
+  --flight-y: 0px;
+}
+
+.dice-reveal-reel.flight .dice-reveal-reel-number {
+  animation: none;
+}
+
+@keyframes reveal-flight {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  70% {
+    opacity: 0.8;
+  }
+  100% {
+    transform:
+      translate(
+        calc(-50% + var(--flight-x)),
+        calc(-50% + var(--flight-y))
+      )
+      scale(0.35);
+    opacity: 0;
+  }
+}
+
+
+/* ============================================
+   8. SEAT GLOW — Landing feedback
+   ============================================ */
+
+.player-seat.dice-reveal-seat-glow {
+  animation: reveal-seat-glow 0.7s ease-out forwards;
+}
+
+@keyframes reveal-seat-glow {
+  0% {
+    box-shadow: 0 0 0px var(--tavern-gold), inset 0 0 0px var(--tavern-gold);
+  }
+  30% {
+    box-shadow: 0 0 20px var(--tavern-gold), inset 0 0 12px rgba(255, 215, 0, 0.15);
+  }
+  100% {
+    box-shadow: none;
+  }
+}
+
+
+/* ============================================
+   9. PERFORMANCE MODE (quick flash)
+   ============================================ */
+
+.dice-reveal-quick {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.5);
+  opacity: 0;
+  z-index: 50;
+  pointer-events: none;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+              opacity 0.15s ease-out;
+}
+
+.dice-reveal-quick.active {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.dice-reveal-quick.dice-reveal-exit {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(1.1);
+  transition: transform 0.25s ease-in, opacity 0.25s ease-in;
+}
+
+.dice-reveal-quick-number {
+  display: block;
+  font-family: var(--font-sc-header);
+  font-size: 56px;
+  font-weight: 900;
+  color: var(--tavern-parchment);
+  text-shadow: 0 0 16px var(--tavern-glow), 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.dice-reveal-quick.reveal-bust .dice-reveal-quick-number {
+  color: #ff4040;
+  text-shadow: 0 0 16px rgba(255, 64, 64, 0.5);
+}
+
+.dice-reveal-quick.reveal-jackpot .dice-reveal-quick-number {
+  color: #ffd060;
+  text-shadow: 0 0 16px rgba(255, 208, 96, 0.6);
+}
+
+.dice-reveal-quick.reveal-nat20 .dice-reveal-quick-number {
+  color: #e0b0ff;
+  text-shadow: 0 0 16px rgba(192, 128, 255, 0.5);
+}
+
+
+/* ============================================
+   10. THEME OVERRIDES
+   Per-theme accent colors for the reveal.
+   ============================================ */
+
+/* Goblin's Den — sickly green / ember */
+[data-theme="goblin-den"] .dice-reveal-die {
+  color: #a0d060;
+  text-shadow: 0 0 30px rgba(160, 208, 96, 0.4);
+}
+[data-theme="goblin-den"] .dice-reveal-ring {
+  border-color: #80b040;
+}
+[data-theme="goblin-den"] .dice-reveal-flash.reveal-normal {
+  background: radial-gradient(circle at center, rgba(160, 208, 96, 0.3), transparent 60%);
+}
+[data-theme="goblin-den"] .dice-reveal-reel.locked .dice-reveal-reel-number {
+  text-shadow: 0 0 20px rgba(160, 208, 96, 0.5), 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+[data-theme="goblin-den"] .player-seat.dice-reveal-seat-glow {
+  animation-name: reveal-seat-glow-goblin;
+}
+@keyframes reveal-seat-glow-goblin {
+  0% { box-shadow: 0 0 0px #80b040; }
+  30% { box-shadow: 0 0 20px #80b040, inset 0 0 12px rgba(128, 176, 64, 0.15); }
+  100% { box-shadow: none; }
+}
+
+/* Underdark — purple / faerzress */
+[data-theme="underdark"] .dice-reveal-die {
+  color: #b080e0;
+  text-shadow: 0 0 30px rgba(176, 128, 224, 0.4);
+}
+[data-theme="underdark"] .dice-reveal-ring {
+  border-color: #9060c0;
+}
+[data-theme="underdark"] .dice-reveal-flash.reveal-normal {
+  background: radial-gradient(circle at center, rgba(176, 128, 224, 0.3), transparent 60%);
+}
+[data-theme="underdark"] .dice-reveal-reel.locked .dice-reveal-reel-number {
+  text-shadow: 0 0 20px rgba(176, 128, 224, 0.5), 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+[data-theme="underdark"] .player-seat.dice-reveal-seat-glow {
+  animation-name: reveal-seat-glow-underdark;
+}
+@keyframes reveal-seat-glow-underdark {
+  0% { box-shadow: 0 0 0px #9060c0; }
+  30% { box-shadow: 0 0 20px #9060c0, inset 0 0 12px rgba(144, 96, 192, 0.15); }
+  100% { box-shadow: none; }
+}
+
+/* Gilded Dragon — molten gold */
+[data-theme="gilded-dragon"] .dice-reveal-die {
+  color: #ffc840;
+  text-shadow: 0 0 30px rgba(255, 200, 64, 0.5);
+}
+[data-theme="gilded-dragon"] .dice-reveal-ring {
+  border-color: #ffc840;
+}
+[data-theme="gilded-dragon"] .dice-reveal-flash.reveal-normal {
+  background: radial-gradient(circle at center, rgba(255, 200, 64, 0.35), transparent 60%);
+}
+[data-theme="gilded-dragon"] .player-seat.dice-reveal-seat-glow {
+  animation-name: reveal-seat-glow-dragon;
+}
+@keyframes reveal-seat-glow-dragon {
+  0% { box-shadow: 0 0 0px #ffc840; }
+  30% { box-shadow: 0 0 24px #ffc840, inset 0 0 14px rgba(255, 200, 64, 0.18); }
+  100% { box-shadow: none; }
+}
+
+/* Feywild — iridescent shimmer */
+[data-theme="feywild"] .dice-reveal-die {
+  color: #80e0c0;
+  text-shadow: 0 0 30px rgba(128, 224, 192, 0.4);
+}
+[data-theme="feywild"] .dice-reveal-ring {
+  border-color: #60c0a0;
+}
+[data-theme="feywild"] .dice-reveal-flash.reveal-normal {
+  background: radial-gradient(circle at center, rgba(128, 224, 192, 0.3), transparent 60%);
+}
+[data-theme="feywild"] .dice-reveal-reel.locked .dice-reveal-reel-number {
+  animation: reveal-lock-punch 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
+             reveal-feywild-shift 2s linear 0.2s infinite;
+}
+[data-theme="feywild"] .player-seat.dice-reveal-seat-glow {
+  animation-name: reveal-seat-glow-feywild;
+}
+
+@keyframes reveal-feywild-shift {
+  0%   { color: #80e0c0; text-shadow: 0 0 20px rgba(128, 224, 192, 0.5); }
+  33%  { color: #c0a0ff; text-shadow: 0 0 20px rgba(192, 160, 255, 0.5); }
+  66%  { color: #ffb0d0; text-shadow: 0 0 20px rgba(255, 176, 208, 0.5); }
+  100% { color: #80e0c0; text-shadow: 0 0 20px rgba(128, 224, 192, 0.5); }
+}
+
+@keyframes reveal-seat-glow-feywild {
+  0% { box-shadow: 0 0 0px #60c0a0; }
+  30% { box-shadow: 0 0 20px #60c0a0, inset 0 0 12px rgba(96, 192, 160, 0.15); }
+  100% { box-shadow: none; }
+}
+
+
+/* ============================================
+   11. REDUCED MOTION / ACCESSIBILITY
+   ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .dice-reveal-overlay,
+  .dice-reveal-die,
+  .dice-reveal-ring,
+  .dice-reveal-reel,
+  .dice-reveal-flash,
+  .dice-reveal-quick {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .dice-reveal-overlay {
+    display: none !important;
+  }
+}

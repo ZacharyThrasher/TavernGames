@@ -4,7 +4,7 @@
     {{#each players}}
     <div
       class="player-seat {{this.status}} {{#if this.isMe}}is-me{{/if}} {{#if this.isCurrent}}is-current{{/if}} {{#if this.isCaught}}caught{{/if}}"
-      data-user-id="{{this.id}}" {{#if this.seatRiskLevel}}data-risk="{{this.seatRiskLevel}}"{{/if}}>
+      data-user-id="{{this.id}}" {{#if this.seatRiskLevel}}data-risk="{{this.seatRiskLevel}}"{{/if}} {{#if this.isLeading}}data-leading="true"{{/if}}>
       {{!-- Avatar --}}
       <div class="player-avatar">
         <img src="{{this.avatar}}" alt="{{this.name}}" />

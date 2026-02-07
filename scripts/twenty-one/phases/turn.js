@@ -8,7 +8,7 @@ import { emptyTableData, getAllowedDice, getDieCost } from "../constants.js";
 import { revealDice } from "./core.js";
 import { submitGoblinRoll, holdGoblin } from "../rulesets/goblin.js";
 import { submitStandardRoll } from "../rulesets/standard.js";
-import { showPublicRollFromData } from "../../dice.js";
+import { REVEAL_DURATION } from "../../ui/dice-reveal.js";
 
 // V5.14.0: Goblin Rules Branching
 
@@ -161,12 +161,20 @@ export async function finishTurn(userId) {
       message: `${userName} rolled a d${lastRoll.die}${rollCostMsg}...${specialMsg}`,
     });
 
-    // V5.9: Show Public Roll (DSN) for the reveal
-    // This runs on the client effectively (triggered by state update usually, but here likely GM/Actor owner)
-    // If triggered by GM, DSN sync handles it.
+    // V5.23: Fortune's Reveal — public cinematic reveal for all players
+    // This replaces DSN for the dramatic post-cheat betting reveal.
+    // The condition above already gates on !lastRoll.blind, so blind rolls never reach here.
     try {
-      await showPublicRollFromData(Number(lastRoll.die), Number(lastRoll.result), userId);
-    } catch (e) { console.warn("Tavern | DSN Error:", e); }
+      const isNat20 = lastRoll.die === 20 && lastRoll.result === 21;
+      const isBust = (tableData.totals[userId] ?? 0) > 21;
+      const isJackpot = !isBust && (tableData.totals[userId] ?? 0) === 21;
+      tavernSocket.executeForEveryone("showDiceReveal", userId, lastRoll.die, lastRoll.result, {
+        isNat20,
+        isBust,
+        isJackpot,
+      });
+      await new Promise(r => setTimeout(r, REVEAL_DURATION));
+    } catch (e) { console.warn("Tavern | Dice Reveal Error:", e); }
 
     // Show score surge AFTER cheat resolution (public reveal)
     if (gameMode !== "goblin") {

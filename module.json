@@ -7,14 +7,14 @@
                         "name":  "Zachary Thrasher"
                     }
                 ],
-    "version":  "5.22.0",
+    "version":  "5.23.0",
     "compatibility":  {
                           "minimum":  "13",
                           "verified":  "13"
                       },
     "url":  "https://github.com/ZacharyThrasher/TavernGames",
     "manifest":  "https://github.com/ZacharyThrasher/TavernGames/releases/latest/download/module.json",
-    "download":  "https://github.com/ZacharyThrasher/TavernGames/releases/download/v5.22.0/module.zip",
+    "download":  "https://github.com/ZacharyThrasher/TavernGames/releases/download/v5.23.0/module.zip",
     "bugs":  "https://github.com/ZacharyThrasher/TavernGames/issues",
     "socket":  true,
     "esmodules":  [
@@ -23,7 +23,8 @@
     "styles":  [
                    "styles/tavern.css",
                    "styles/themes.css",
-                   "styles/atmosphere.css"
+                   "styles/atmosphere.css",
+                   "styles/dice-reveal.css"
                ],
     "languages":  [
                       {

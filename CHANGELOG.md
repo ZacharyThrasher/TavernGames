@@ -1,5 +1,30 @@
 # Changelog
 
+## [5.23.0] - 2026-02-07
+### Fortune's Reveal — Cinematic Dice System 🎲✨
+- **Feature**: Fortune's Reveal — a multi-phase dramatic in-app dice animation that replaces Dice So Nice for all table rolls, keeping every moment of tension inside the game window.
+  - **Phase 1 — Dim**: Vignette overlay darkens the table, focusing attention.
+  - **Phase 2 — Impact Drop**: Die icon slams center-table from above with impact ring ripple + screen shake.
+  - **Phase 3 — Number Reel**: Decelerating cycle through possible values (30ms → 150ms, quadratic easing) in dramatic font. Blind rolls show scrambled glyphs landing on "?".
+  - **Phase 4 — Lock-In**: Result slams into place with context-colored flash burst + themed spark particles.
+  - **Phase 5 — Flight**: Number CSS-animates from center to the rolling player's seat, landing with a brief golden glow.
+  - **Phase 6 — Cleanup**: Overlay fades, all DOM removed.
+- **Feature**: Queued reveals — rapid successive rolls queue with compressed timing (~1.2s vs ~2s) instead of stacking or conflicting.
+- **Feature**: Context-aware visuals — bust (crimson shatter + blood sparks), jackpot/21 (gold explosion + coin shower), natural 20 (prismatic hue-rotate), normal (theme-accent sparks).
+- **Feature**: Enhanced Player Seat Auras — radial gradient aura pseudo-elements on seats driven by risk level:
+  - Warm (16+): Soft amber radial glow, slow 3s pulse.
+  - Hot (18+): Orange glow with shimmer, 1.8s pulse.
+  - Critical (20): Intense red aura with ember-like box-shadow particles, rapid 1s pulse.
+  - Leading: Golden crown aura on players who hold with the highest score.
+- **Theme**: All reveals and auras have per-theme color overrides — Goblin's Den (sickly green), Underdark (purple/faerzress), Gilded Dragon (molten gold), Feywild (iridescent color-shift).
+- **DSN Coexistence**: Fortune's Reveal replaces DSN for table rolls (standard opening, betting reveals, goblin rolls). Skill checks (bump, goad, profile, hunch), duels, and the end-of-opening mass reveal continue using DSN. DSN remains a soft dependency.
+- **Blind Roll Safety**: Blind rolls (from Foresight failure) show a scrambled glyph reel landing on "?" — no value is ever leaked. Previous DSN integration leaked blind values through 3D dice visuals; this is now fixed.
+- **Fix**: Risk warnings no longer appear in Goblin Mode (where totals routinely exceed 21 and busting at 21 doesn't exist).
+- **JS**: New `scripts/ui/dice-reveal.js` — ~270 lines: reveal engine with queue system, 6-phase animation, performance mode fallback, context coloring, seat targeting.
+- **CSS**: New `styles/dice-reveal.css` — ~470 lines: overlay, die slam, impact ring, number reel, lock-in flash, flight animation, seat glow, per-theme overrides, reduced motion support.
+- **CSS**: Enhanced `styles/atmosphere.css` — seat aura system with `::before` pseudo-elements, `data-leading` attribute styling, per-theme aura overrides.
+- **Perf**: Performance mode collapses the full reveal to a single brief flash + instant number. All new animations respect `prefers-reduced-motion`.
+
 ## [5.22.0] - 2026-02-07
 ### Atmosphere & Immersion Layer 🎭
 - **Feature**: Theme Flavor Engine — every theme now has a unique voice with dynamic subtitles, themed icons, turn stingers, risk warnings, and rotating atmosphere lines.

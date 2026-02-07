@@ -3,8 +3,8 @@ import { tavernSocket } from "../../socket.js";
 import { getActorName, getSafeActorName } from "../utils/actors.js";
 import { notifyUser } from "../utils/game-logic.js";
 import { revealDice } from "../phases/core.js";
-import { showPublicRollFromData } from "../../dice.js";
 import { GOBLIN_STAGE_DICE } from "../constants.js";
+import { REVEAL_DURATION } from "../../ui/dice-reveal.js";
 
 function getStageDie(tableData) {
   if (tableData.goblinSuddenDeathActive) return 2;
@@ -196,9 +196,18 @@ export async function submitGoblinRoll({ state, tableData, userId, die }) {
   const roll = await new Roll(`1d${stageDie}`).evaluate();
   const result = roll.total;
 
+  // V5.23: Fortune's Reveal — public cinematic reveal for goblin rolls
   try {
-    await showPublicRollFromData(Number(stageDie), Number(result), userId);
-  } catch (e) { }
+    const isCoinDeath = stageDie === 2 && result === 1;
+    const isBust = result === 1;
+    const isExplode = stageDie === 20 && result === 20;
+    tavernSocket.executeForEveryone("showDiceReveal", userId, stageDie, result, {
+      isCoinDeath,
+      isBust,
+      isExplode,
+    });
+    await new Promise(r => setTimeout(r, REVEAL_DURATION));
+  } catch (e) { console.warn("Tavern | Dice Reveal Error:", e); }
 
   const rolls = { ...tableData.rolls };
   const existingRolls = rolls[userId] ?? [];

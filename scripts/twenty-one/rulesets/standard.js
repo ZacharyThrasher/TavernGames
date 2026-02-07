@@ -5,6 +5,7 @@ import { getNextOpeningPlayer, allPlayersCompletedOpening, calculateBettingOrder
 import { OPENING_ROLLS_REQUIRED, getDieCost } from "../constants.js";
 import { deductFromActor } from "../../wallet.js";
 import { drinkForPayment } from "../utils/game-logic.js";
+import { REVEAL_DURATION } from "../../ui/dice-reveal.js";
 
 export async function submitStandardRoll({ state, tableData, userId, die, isOpeningPhase, ante, payload }) {
   // V2.0: Variable dice costs in betting phase
@@ -84,15 +85,16 @@ export async function submitStandardRoll({ state, tableData, userId, die, isOpen
 
   // In betting phase, delay visuals until after cheat resolution to avoid double rolls.
   if (isOpeningPhase) {
+    // V5.23: Fortune's Reveal — private to rolling player only (preserves hole die secrecy)
     try {
-      await tavernSocket.executeAsUser("showRoll", userId, {
-        formula: `1d${die}`,
-        die: die,
-        result: result,
-        blind: isBlind
+      tavernSocket.executeAsUser("showDiceReveal", userId, userId, die, result, {
+        isBlind: isBlind,
+        isNat20: die === 20 && result === (21 - (tableData.totals[userId] ?? 0)),
+        isBust: (tableData.totals[userId] ?? 0) + result > 21,
       });
+      await new Promise(r => setTimeout(r, isBlind ? 1200 : REVEAL_DURATION));
     } catch (e) {
-      console.warn("Tavern Twenty-One | Could not show dice to player:", e);
+      console.warn("Tavern Twenty-One | Could not show dice reveal to player:", e);
     }
   }
 

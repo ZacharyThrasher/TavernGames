@@ -109,6 +109,12 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const liquidMode = liquidModeSetting && !isSloppy;
 
     // Build rich player data for display
+    // V5.23: Pre-compute max active total for "leading" seat aura
+    const activeTotals = Object.entries(tableData.totals ?? {})
+      .filter(([id]) => !tableData.busts?.[id] && !tableData.folded?.[id] && !tableData.caught?.[id])
+      .map(([, t]) => Number(t ?? 0));
+    const maxActiveTotal = activeTotals.length ? Math.max(...activeTotals) : 0;
+
     const playerSeats = players.map((player) => {
       const rolls = tableData.rolls?.[player.id] ?? [];
       const total = tableData.totals?.[player.id] ?? 0;
@@ -246,6 +252,11 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         else if (total >= 16) seatRiskLevel = "warm";
       }
 
+      // V5.23: Leading seat aura — holding with the highest score
+      const isLeading = state.status === "PLAYING" && !isGoblinMode
+        && isHolding && !isBusted && !isFolded && !isCaught
+        && total > 0 && total === maxActiveTotal;
+
       return {
         ...player,
         rolls,
@@ -261,6 +272,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         status,
         statusLabel,
         seatRiskLevel,
+        isLeading,
         canAct: isCurrent && isMe && state.status === "PLAYING" && !isHolding && !isBusted && !tableData.pendingAction,
         // Status Badges (V5.3.0)
         isDared: tableData.dared?.[player.id] ?? false,
@@ -325,7 +337,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const openingRollsRemaining = Math.max(0, 2 - myRolls.length);
     const myTotal = tableData.totals?.[userId] ?? 0;
     let riskLevel = null;
-    if (myTurn && isBettingPhase) {
+    if (myTurn && isBettingPhase && !isGoblinMode) {
       if (myTotal >= 20) riskLevel = "critical";
       else if (myTotal >= 18) riskLevel = "hot";
       else if (myTotal >= 16) riskLevel = "warm";
