@@ -150,6 +150,13 @@
   <div class="control-section your-turn">
     <h3><i class="fa-solid fa-dice"></i> Your Turn!</h3>
 
+    {{!-- V5.22: Themed Risk Warning --}}
+    {{#if riskWarningText}}
+    <div class="risk-warning-flavor {{riskLevel}}">
+      <i class="fa-solid fa-triangle-exclamation"></i> {{riskWarningText}}
+    </div>
+    {{/if}}
+
     {{#if isOpeningPhase}}
     <p class="turn-hint phase-opening">
       <strong>Opening Round:</strong> Roll {{openingRollsRemaining}} more {{#if (eq openingRollsRemaining

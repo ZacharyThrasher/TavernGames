@@ -1,5 +1,25 @@
 # Changelog
 
+## [5.22.0] - 2026-02-07
+### Atmosphere & Immersion Layer 🎭
+- **Feature**: Theme Flavor Engine — every theme now has a unique voice with dynamic subtitles, themed icons, turn stingers, risk warnings, and rotating atmosphere lines.
+  - **Sword Coast**: *"A Game of Fortune & Folly"* — warm candlelit prose.
+  - **Goblin's Den**: *"Cheat. Steal. Survive."* — crude, chaotic goblin screaming.
+  - **Underdark**: *"Where Shadows Play for Keeps"* — whispers from the void.
+  - **Gilded Dragon**: *"Where Fortunes Rise & Empires Fall"* — imperial opulence.
+  - **Feywild**: *"A Whimsical Wager Under Starlight"* — playful fey charm.
+- **Feature**: Pot Escalation Tiers — the pot display visually transforms as gold accumulates (warm glow → heated pulse → blazing fire aura with icon animation).
+- **Feature**: Risk-Reactive Player Seats — your seat visually shifts as danger mounts (amber tint at 16+, pulsing orange at 18+, red glow + micro-tremble at 20).
+- **Feature**: Risk-Reactive Dice Buttons — dice button borders and shadows shift to danger tones at hot/critical risk.
+- **Feature**: Turn Stinger — cinematic one-shot text appears over the table when your turn begins (*"The dice are yours…"*, *"ROLL, MEAT!"*, etc.), unique per theme.
+- **Feature**: Themed Risk Warnings — the controls panel shows color-coded thematic warnings (*"The void hungers for you."*, *"THE DRAGON WAKES!"*) instead of generic UI text.
+- **Feature**: Atmosphere Line — the footer status text is replaced by rotating ambient flavor (*"The candle sputters. Someone at this table is lying."*), stable across re-renders.
+- **UI**: Themed empty table states with unique icon, title, and flavor text per theme.
+- **UI**: Themed logo icon per theme (d20, skull, spider, dragon, wand).
+- **CSS**: New `styles/atmosphere.css` — pot tiers, risk seats, stinger animation, atmosphere line, empty table, performance overrides.
+- **JS**: New `scripts/ui/theme-flavor.js` — 300+ lines of thematic creative text data with stable-rotation and per-theme accessor functions.
+- **Perf**: All new effects respect `prefers-reduced-motion` and `performanceMode`.
+
 ## [5.21.1] - 2026-02-06
 ### Cheat + Turn Integrity Hotfix
 - **Fix**: Prevented repeat rolls while a cheat decision is pending (`pendingAction: cheat_decision`).

@@ -715,6 +715,41 @@ export function showSkillResult(type, userId, targetId, resultData) {
 }
 
 /**
+ * V5.22: Turn Stinger
+ * Brief dramatic text that appears over the table when your turn begins.
+ * Respects performance mode and auto-removes after animation.
+ * @param {string} text - The stinger text to display
+ */
+export function showTurnStinger(text) {
+  try {
+    if (isPerformanceMode()) return;
+    if (!text) return;
+
+    const appWindow = document.querySelector(".tavern-dice-master.application");
+    if (!appWindow) return;
+
+    const tableArea = appWindow.querySelector(".tavern-table-area");
+    if (!tableArea) return;
+
+    // Remove any existing stinger
+    const existing = tableArea.querySelector(".turn-stinger");
+    if (existing) existing.remove();
+
+    const stinger = createElement("div", {
+      className: "turn-stinger",
+      innerHTML: text
+    });
+
+    tableArea.appendChild(stinger);
+
+    // Auto-remove after animation completes (matches CSS animation duration)
+    setTimeout(() => stinger.remove(), 3000);
+  } catch (error) {
+    console.error("Tavern Twenty-One | Turn stinger error:", error);
+  }
+}
+
+/**
  * V4.9: Secret Private Feedback (Client-Side Dialog)
  * Shows private result only to the player (hiding it from GM chat logs)
  * @param {string} userId - User ID to show this to

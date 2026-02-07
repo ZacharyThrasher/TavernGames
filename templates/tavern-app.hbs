@@ -1,9 +1,9 @@
-<div class="tavern-container" data-theme="{{tableTheme}}">
+<div class="tavern-container" data-theme="{{tableTheme}}" {{#if riskLevel}}data-risk="{{riskLevel}}"{{/if}} data-pot-tier="{{potTier}}">
   {{!-- Header --}}
   <header class="tavern-header">
     <div class="tavern-title">
       <div class="tavern-logo">
-        <i class="fa-solid fa-dice-d20"></i>
+        <i class="{{flavorIcon}}"></i>
       </div>
       <div class="tavern-title-text">
         <h1>Twenty-One
@@ -18,7 +18,7 @@
             {{/if}}
           </i>
         </h1>
-        <span class="tavern-subtitle">A Game of Fortune & Folly</span>
+        <span class="tavern-subtitle">{{flavorSubtitle}}</span>
       </div>
     </div>
     <div class="tavern-info">
@@ -66,7 +66,11 @@
     {{else}}
     <span class="gm-status offline"><i class="fa-solid fa-circle"></i> GM Required</span>
     {{/if}}
+    {{#if atmosphereLine}}
+    <span class="atmosphere-line" title="{{status}}">{{atmosphereLine}}</span>
+    {{else}}
     <span class="game-status">{{status}}</span>
+    {{/if}}
     {{#if isGM}}
     <button type="button" class="reset-btn" data-action="reset" title="Reset Table">
       <i class="fa-solid fa-rotate-left"></i>

@@ -1,0 +1,422 @@
+/* ============================================
+   ATMOSPHERE ENGINE — Tavern Twenty-One
+   V5.22: Dynamic visual effects that respond
+   to game state for maximum immersion.
+
+   Features:
+   1. Pot Escalation Tiers (data-pot-tier)
+   2. Risk-Reactive Player Seats (data-risk)
+   3. Risk-Reactive Dice Buttons (container data-risk)
+   4. Turn Stinger Banner
+   5. Atmosphere Line (footer flavor text)
+   6. Risk Warning Text (themed controls text)
+
+   All effects respect prefers-reduced-motion.
+   ============================================ */
+
+
+/* ============================================
+   1. POT ESCALATION TIERS
+   The pot display transforms as gold accumulates.
+   data-pot-tier: calm | warm | heated | blazing
+   ============================================ */
+
+/* Warm: soft golden glow begins */
+.tavern-container[data-pot-tier="warm"] .pot-amount {
+  text-shadow: 0 0 8px rgba(255, 215, 0, 0.4), 0 0 16px rgba(255, 180, 0, 0.2);
+}
+
+/* Heated: brighter, rhythmic breathing pulse */
+.tavern-container[data-pot-tier="heated"] .pot-amount {
+  color: var(--tavern-gold-bright);
+  text-shadow:
+    0 0 12px rgba(255, 215, 0, 0.6),
+    0 0 24px rgba(255, 180, 0, 0.3);
+  animation: pot-heated-pulse 1.2s ease-in-out infinite;
+}
+
+.tavern-container[data-pot-tier="heated"] .pot-display i {
+  filter: drop-shadow(0 0 4px rgba(255, 200, 60, 0.4));
+}
+
+@keyframes pot-heated-pulse {
+  0%, 100% {
+    transform: scale(1);
+    text-shadow: 0 0 12px rgba(255, 215, 0, 0.6);
+  }
+  50% {
+    transform: scale(1.06);
+    text-shadow:
+      0 0 18px rgba(255, 215, 0, 0.8),
+      0 0 28px rgba(255, 180, 0, 0.4);
+  }
+}
+
+/* Blazing: DRAMATIC fire glow, intense pulse, icon animation */
+.tavern-container[data-pot-tier="blazing"] .pot-amount {
+  color: #ffd060;
+  text-shadow:
+    0 0 10px rgba(255, 215, 0, 0.9),
+    0 0 22px rgba(255, 180, 0, 0.6),
+    0 0 44px rgba(255, 120, 0, 0.3);
+  animation: pot-blazing-pulse 0.8s ease-in-out infinite;
+}
+
+.tavern-container[data-pot-tier="blazing"] .pot-display i {
+  animation: pot-icon-blaze 1.2s ease-in-out infinite;
+  color: #ffd060;
+  filter: drop-shadow(0 0 6px rgba(255, 180, 0, 0.6));
+}
+
+.tavern-container[data-pot-tier="blazing"] .pot-label {
+  color: var(--tavern-gold-bright);
+  text-shadow: 0 0 6px var(--tavern-glow);
+}
+
+@keyframes pot-blazing-pulse {
+  0%, 100% {
+    transform: scale(1);
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.9), 0 0 22px rgba(255, 180, 0, 0.6);
+  }
+  50% {
+    transform: scale(1.1);
+    text-shadow:
+      0 0 16px rgba(255, 215, 0, 1),
+      0 0 32px rgba(255, 180, 0, 0.8),
+      0 0 50px rgba(255, 100, 0, 0.4);
+  }
+}
+
+@keyframes pot-icon-blaze {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  25% { transform: scale(1.15) rotate(-5deg); }
+  75% { transform: scale(1.15) rotate(5deg); }
+}
+
+/* Pot tier border glow on pot-display */
+.tavern-container[data-pot-tier="heated"] .pot-display,
+.tavern-container[data-pot-tier="blazing"] .pot-display {
+  position: relative;
+}
+
+.tavern-container[data-pot-tier="blazing"] .pot-display::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 8px;
+  background: radial-gradient(ellipse at center, rgba(255, 180, 0, 0.12), transparent 70%);
+  pointer-events: none;
+  animation: pot-aura-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pot-aura-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+
+/* ============================================
+   2. RISK-REACTIVE PLAYER SEATS
+   Your seat transforms as danger mounts.
+   data-risk: warm | hot | critical
+   ============================================ */
+
+/* Warm risk: subtle warm tint on border */
+.player-seat.is-me[data-risk="warm"] {
+  border-color: #c09030 !important;
+  box-shadow: inset 0 0 20px rgba(192, 144, 48, 0.1), 0 0 8px rgba(192, 144, 48, 0.15);
+}
+
+.player-seat.is-me[data-risk="warm"] .player-total {
+  border-left: 2px solid rgba(192, 144, 48, 0.5);
+}
+
+/* Hot risk: pulsing orange border, anxious feel */
+.player-seat.is-me[data-risk="hot"] {
+  animation: risk-hot-pulse 1.5s ease-in-out infinite;
+}
+
+.player-seat.is-me[data-risk="hot"] .player-total {
+  border-left: 2px solid rgba(224, 128, 32, 0.7);
+}
+
+.player-seat.is-me[data-risk="hot"] .total-value {
+  color: #e0a040;
+  text-shadow: 0 0 6px rgba(224, 160, 64, 0.4);
+}
+
+@keyframes risk-hot-pulse {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(224, 128, 32, 0.3), inset 0 0 15px rgba(224, 128, 32, 0.06);
+    border-color: #e08020;
+  }
+  50% {
+    box-shadow: 0 0 18px rgba(224, 128, 32, 0.5), inset 0 0 25px rgba(224, 128, 32, 0.1);
+    border-color: #f0a040;
+  }
+}
+
+/* Critical risk: red glow + nervous micro-tremble */
+.player-seat.is-me[data-risk="critical"] {
+  animation: risk-critical-pulse 1s ease-in-out infinite, risk-tremble 0.15s linear infinite;
+}
+
+.player-seat.is-me[data-risk="critical"] .player-total {
+  background: rgba(204, 32, 32, 0.12);
+  border-left: 3px solid rgba(204, 32, 32, 0.7);
+  border-radius: 4px;
+}
+
+.player-seat.is-me[data-risk="critical"] .total-value {
+  color: #ff6060;
+  text-shadow: 0 0 8px rgba(255, 80, 80, 0.5);
+  font-weight: 800;
+}
+
+@keyframes risk-critical-pulse {
+  0%, 100% {
+    box-shadow: 0 0 12px rgba(204, 32, 32, 0.4), inset 0 0 20px rgba(204, 32, 32, 0.08);
+    border-color: #cc2020;
+  }
+  50% {
+    box-shadow: 0 0 26px rgba(204, 32, 32, 0.7), inset 0 0 30px rgba(204, 32, 32, 0.12);
+    border-color: #ff4040;
+  }
+}
+
+@keyframes risk-tremble {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-0.4px); }
+  75% { transform: translateX(0.4px); }
+}
+
+
+/* ============================================
+   3. RISK-REACTIVE DICE BUTTONS
+   Dice buttons shift appearance as danger mounts.
+   Driven by container [data-risk] attribute.
+   ============================================ */
+
+.tavern-container[data-risk="hot"] .dice-buttons .btn-die-premium:not(:disabled) {
+  border-color: rgba(224, 128, 32, 0.4);
+}
+
+.tavern-container[data-risk="critical"] .dice-buttons .btn-die-premium:not(:disabled) {
+  border-color: rgba(204, 32, 32, 0.35);
+  box-shadow: 0 0 8px rgba(204, 32, 32, 0.12);
+}
+
+.tavern-container[data-risk="critical"] .dice-buttons .die-icon {
+  filter: drop-shadow(0 0 3px rgba(255, 60, 60, 0.3));
+}
+
+
+/* ============================================
+   4. TURN STINGER
+   Brief dramatic text that appears over the
+   table area when your turn begins.
+   Created dynamically via fx.js, animated by CSS.
+   ============================================ */
+
+.turn-stinger {
+  position: absolute;
+  top: 38%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.8);
+  font-family: var(--font-sc-header);
+  font-size: 20px;
+  font-variant: small-caps;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--tavern-gold-bright);
+  text-shadow:
+    0 0 12px var(--tavern-glow),
+    0 2px 4px rgba(0, 0, 0, 0.9);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 10;
+  opacity: 0;
+  animation: stinger-entrance 2.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes stinger-entrance {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.6);
+    letter-spacing: 10px;
+    filter: blur(6px);
+  }
+  12% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.06);
+    letter-spacing: 3px;
+    filter: blur(0);
+  }
+  25% {
+    transform: translate(-50%, -50%) scale(1);
+    letter-spacing: 2px;
+  }
+  65% {
+    opacity: 0.9;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.05) translateY(-8px);
+    filter: blur(3px);
+  }
+}
+
+/* Decorative lines flanking the stinger text */
+.turn-stinger::before,
+.turn-stinger::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 50px;
+  height: 1px;
+  opacity: 0.5;
+}
+
+.turn-stinger::before {
+  right: calc(100% + 10px);
+  background: linear-gradient(to right, transparent, var(--tavern-gold));
+}
+
+.turn-stinger::after {
+  left: calc(100% + 10px);
+  background: linear-gradient(to left, transparent, var(--tavern-gold));
+}
+
+
+/* ============================================
+   5. ATMOSPHERE LINE (Footer)
+   Ambient flavor text that slowly rotates,
+   replacing the dry status label.
+   ============================================ */
+
+.atmosphere-line {
+  font-family: var(--font-sc-body);
+  font-size: 10px;
+  font-style: italic;
+  color: var(--tavern-parchment-dark);
+  opacity: 0;
+  letter-spacing: 0.3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 320px;
+  animation: atmosphere-fade-in 1.5s ease-out 0.3s forwards;
+}
+
+@keyframes atmosphere-fade-in {
+  0% { opacity: 0; transform: translateY(2px); }
+  100% { opacity: 0.65; transform: translateY(0); }
+}
+
+
+/* ============================================
+   6. RISK WARNING TEXT
+   Themed warning text in the controls panel.
+   ============================================ */
+
+.risk-warning-flavor {
+  font-family: var(--font-sc-header);
+  font-variant: small-caps;
+  font-size: 12px;
+  text-align: center;
+  padding: 5px 10px;
+  border-radius: var(--tavern-radius-sm);
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+  line-height: 1.4;
+}
+
+.risk-warning-flavor.warm {
+  color: #c09030;
+  background: rgba(192, 144, 48, 0.1);
+  border: 1px solid rgba(192, 144, 48, 0.2);
+}
+
+.risk-warning-flavor.hot {
+  color: #e08020;
+  background: rgba(224, 128, 32, 0.12);
+  border: 1px solid rgba(224, 128, 32, 0.3);
+  animation: risk-text-pulse 2s ease-in-out infinite;
+}
+
+.risk-warning-flavor.critical {
+  color: #ff5050;
+  background: rgba(204, 32, 32, 0.12);
+  border: 1px solid rgba(204, 32, 32, 0.35);
+  font-weight: 700;
+  animation: risk-text-pulse 1s ease-in-out infinite;
+}
+
+@keyframes risk-text-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+
+/* ============================================
+   7. THEMED EMPTY TABLE ENHANCEMENTS
+   ============================================ */
+
+.empty-table-content .empty-flavor {
+  font-family: var(--font-sc-body);
+  font-style: italic;
+  font-size: 12px;
+  color: var(--tavern-parchment-dark);
+  opacity: 0.75;
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+.empty-table-content i.empty-icon {
+  font-size: 48px;
+  color: var(--tavern-gold-dim);
+  opacity: 0.5;
+  margin-bottom: 12px;
+  display: block;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3));
+  animation: empty-icon-float 4s ease-in-out infinite;
+}
+
+@keyframes empty-icon-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+
+/* ============================================
+   8. PERFORMANCE MODE OVERRIDES
+   Disable heavy animations for accessibility.
+   ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .turn-stinger {
+    animation: none !important;
+    opacity: 0 !important;
+  }
+
+  .player-seat.is-me[data-risk="hot"],
+  .player-seat.is-me[data-risk="critical"] {
+    animation: none !important;
+  }
+
+  .tavern-container[data-pot-tier="heated"] .pot-amount,
+  .tavern-container[data-pot-tier="blazing"] .pot-amount,
+  .tavern-container[data-pot-tier="blazing"] .pot-display i {
+    animation: none !important;
+  }
+
+  .risk-warning-flavor.hot,
+  .risk-warning-flavor.critical {
+    animation: none !important;
+  }
+
+  .empty-table-content i.empty-icon {
+    animation: none !important;
+  }
+}

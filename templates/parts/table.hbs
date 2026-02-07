@@ -4,7 +4,7 @@
     {{#each players}}
     <div
       class="player-seat {{this.status}} {{#if this.isMe}}is-me{{/if}} {{#if this.isCurrent}}is-current{{/if}} {{#if this.isCaught}}caught{{/if}}"
-      data-user-id="{{this.id}}">
+      data-user-id="{{this.id}}" {{#if this.seatRiskLevel}}data-risk="{{this.seatRiskLevel}}"{{/if}}>
       {{!-- Avatar --}}
       <div class="player-avatar">
         <img src="{{this.avatar}}" alt="{{this.name}}" />
@@ -99,9 +99,9 @@
   {{else}}
   <div class="empty-table">
     <div class="empty-table-content">
-      <i class="fa-solid fa-chair"></i>
-      <h3>The Table Awaits</h3>
-      <p>No players have joined yet. Take a seat to begin!</p>
+      <i class="{{flavorEmptyIcon}} empty-icon"></i>
+      <h3>{{flavorEmptyTitle}}</h3>
+      <p>{{flavorEmptyText}}</p>
     </div>
   </div>
   {{/if}}

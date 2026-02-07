@@ -22,7 +22,8 @@ import { BootDialog } from "./dialogs/boot-dialog.js";
 import { AccuseDialog } from "./dialogs/accuse-dialog.js";
 import { SideBetDialog } from "./dialogs/side-bet-dialog.js";
 import { HelpDialog } from "./dialogs/help-dialog.js";
-import { applyJuicePress, showClickBurst, isPerformanceMode } from "../ui/fx.js";
+import { applyJuicePress, showClickBurst, isPerformanceMode, showTurnStinger } from "../ui/fx.js";
+import { getThemeFlavor, getRandomStinger, getAtmosphereLine, getRiskWarning } from "../ui/theme-flavor.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -237,6 +238,14 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         displayTotal = visibleTotal > 0 ? `${visibleTotal}+?` : "?";
       }
 
+      // V5.22: Per-seat risk level (for is-me visual effects)
+      let seatRiskLevel = null;
+      if (isMe && state.status === "PLAYING" && !isGoblinMode && !isBusted && !isFolded && !isHolding) {
+        if (total >= 20) seatRiskLevel = "critical";
+        else if (total >= 18) seatRiskLevel = "hot";
+        else if (total >= 16) seatRiskLevel = "warm";
+      }
+
       return {
         ...player,
         rolls,
@@ -251,6 +260,7 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
         isMe,
         status,
         statusLabel,
+        seatRiskLevel,
         canAct: isCurrent && isMe && state.status === "PLAYING" && !isHolding && !isBusted && !tableData.pendingAction,
         // Status Badges (V5.3.0)
         isDared: tableData.dared?.[player.id] ?? false,
@@ -528,6 +538,34 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       startingHeat: tableData.houseRules?.startingHeat ?? 10,
       uiLocked: TavernApp.uiLocked, // V4.8.56: UI Lock State
       tableTheme: game.settings.get(MODULE_ID, "tableTheme") ?? "sword-coast", // V5.21: Theme
+
+      // V5.22: Atmosphere & Flavor System
+      ...(() => {
+        const currentTheme = game.settings.get(MODULE_ID, "tableTheme") ?? "sword-coast";
+        const flavor = getThemeFlavor(currentTheme);
+
+        // Pot escalation tier
+        let potTier = "calm";
+        const isActiveRound = ["PLAYING", "INSPECTION", "DUEL", "REVEALING"].includes(state.status);
+        if (isActiveRound && state.pot > 0) {
+          const ratio = state.pot / Math.max(ante, 1);
+          if (ratio > 8) potTier = "blazing";
+          else if (ratio > 4) potTier = "heated";
+          else if (ratio > 0) potTier = "warm";
+        }
+
+        return {
+          flavorSubtitle: flavor.subtitle,
+          flavorIcon: flavor.icon,
+          flavorEmptyTitle: flavor.emptyTitle,
+          flavorEmptyText: flavor.emptyText,
+          flavorEmptyIcon: flavor.emptyIcon,
+          potTier,
+          atmosphereLine: getAtmosphereLine(currentTheme, state.status),
+          riskWarningText: getRiskWarning(currentTheme, riskLevel),
+        };
+      })(),
+
       gameMode, // V5.14.1: Game Mode for UI
       isGoblinMode, // V5.14.0
       goblinStageDie,
@@ -703,6 +741,16 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     // V5.21: Apply theme as data-attribute
     const currentTheme = game.settings.get(MODULE_ID, "tableTheme") ?? "sword-coast";
     this.element.dataset.theme = currentTheme;
+
+    // V5.22: Turn Stinger — one-shot dramatic text when your turn begins
+    if (context.myTurn && context.isPlaying && !this._lastStingerShown) {
+      this._lastStingerShown = true;
+      // Small delay so the render settles before the stinger appears
+      setTimeout(() => showTurnStinger(getRandomStinger(currentTheme)), 200);
+    }
+    if (!context.myTurn) {
+      this._lastStingerShown = false;
+    }
 
     if (!this._juiceIntroPlayed) {
       this.element.classList.add("tavern-app-intro");
