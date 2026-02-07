@@ -1,11 +1,10 @@
-### Fortune's Reveal - Cinematic Dice System
-- **Feature**: New in-app multi-phase dice reveal flow replaces Dice So Nice for table rolls.
-- **Feature**: Queued reveal engine for rapid successive rolls with compressed timing.
-- **Feature**: Context-aware visuals for busts, jackpots/21, natural 20s, and normal rolls.
-- **Feature**: Enhanced seat auras by risk level, including leading-player crown aura.
-- **Theme**: Per-theme color overrides for reveal effects and seat aura styling.
-- **DSN Coexistence**: DSN remains for skill checks, duels, and end-of-opening mass reveal.
-- **Fix**: Blind roll values are no longer leaked through 3D dice visuals.
-- **Fix**: Risk warnings are suppressed in Goblin mode.
-- **CSS/JS**: Added `styles/dice-reveal.css` and `scripts/ui/dice-reveal.js`.
-- **Perf**: Reduced-motion and performance mode behavior is respected across new effects.
+### Cinematic Cut-In Overhaul - PIZAZZ Edition
+- **Feature**: Full redesign of all cinematic cut-ins with letterbox bars, radial flash, vignettes, speed lines, stripe echo, and edge sparks.
+- **Feature**: Emblem watermark system with per-type iconography across all 14 cut-in types.
+- **Feature**: Per-type particle systems, including secondary burst waves for high-impact events.
+- **Feature**: Screen shake added for impact types with heavier intensity on Sudden Death.
+- **Feature**: Portrait, title, and target-entry animation overhaul with stronger impact timing.
+- **Feature**: Coordinated exit sequence with staggered outro and tuned durations.
+- **CSS**: Added `styles/cinematic-overlay.css`; removed legacy cinematic block from `styles/tavern.css`.
+- **Template/JS**: Reworked `templates/cinematic-overlay.hbs` and enhanced `scripts/ui/cinematic-overlay.js` for new configs and timing.
+- **Perf**: Honors reduced-motion by collapsing motion-heavy effects.

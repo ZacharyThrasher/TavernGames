@@ -1,22 +1,23 @@
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 import { MODULE_ID, getState } from "../state.js";
-import { ParticleFactory } from "./particle-fx.js"; // V5.12
+import { ParticleFactory } from "./particle-fx.js";
 
 /**
- * Cinematic Overlay for Tavern Games
- * Implements V13 "Frameless Window" pattern for cut-ins.
- * Reference: Foundry V13 Module Development Guide, Section 5.3
+ * Cinematic Overlay for Tavern Games — V5.24 PIZAZZ Overhaul
+ * Anime/Fighting-Game Cut-In meets Dark Fantasy.
+ * Multi-layer parallax entrance, per-type particles, screen shake,
+ * exit sequence, emblem watermarks, chromatic flash.
  */
 export class CinematicOverlay extends HandlebarsApplicationMixin(ApplicationV2) {
     static DEFAULT_OPTIONS = {
         tag: "aside",
         id: "tavern-cinematic-overlay",
         window: {
-            frame: false,       // V13 Guide 5.3.1: Frameless
-            positioned: false,  // CSS fixed positioning
+            frame: false,
+            positioned: false,
             minimizable: false,
-            controls: []        // No header controls
+            controls: []
         },
         position: {
             width: "100%",
@@ -30,21 +31,54 @@ export class CinematicOverlay extends HandlebarsApplicationMixin(ApplicationV2) 
         },
     };
 
+    /** Icon map — large watermark emblem per type (FA6 Free) */
+    static EMBLEM_MAP = {
+        CRITICAL:     "fa-solid fa-star",
+        BUST:         "fa-solid fa-skull",
+        VICTORY:      "fa-solid fa-crown",
+        DUEL:         "fa-solid fa-khanda",
+        SUDDEN_DEATH: "fa-solid fa-skull-crossbones",
+        COIN_STAGE:   "fa-solid fa-coins",
+        FORESIGHT:    "fa-solid fa-eye",
+        GOAD:         "fa-solid fa-hand-fist",
+        PROFILE:      "fa-solid fa-magnifying-glass",
+        BUMP:         "fa-solid fa-hand-back-fist",
+        ACCUSE:       "fa-solid fa-gavel",
+        STAREDOWN:    "fa-solid fa-eye-low-vision",
+        BOOT:         "fa-solid fa-shoe-prints",
+        BOOT_EARNED:  "fa-solid fa-trophy",
+    };
+
+    /** Particle theme map per type */
+    static PARTICLE_MAP = {
+        CRITICAL:     { method: "spawnSparkBurst", args: [40, "gold"] },
+        BUST:         { method: "spawnSparkBurst", args: [35, "blood"] },
+        VICTORY:      { method: "spawnCoinShower", args: [60] },
+        DUEL:         { method: "spawnSparkBurst", args: [30, "ember"] },
+        SUDDEN_DEATH: { method: "spawnSparkBurst", args: [35, "blood"] },
+        COIN_STAGE:   { method: "spawnCoinShower", args: [30] },
+        FORESIGHT:    { method: "spawnArcaneBurst", args: [35] },
+        GOAD:         { method: "spawnSparkBurst", args: [25, "ember"] },
+        PROFILE:      { method: "spawnSparkBurst", args: [20, "arcane"] },
+        BUMP:         { method: "spawnSparkBurst", args: [30, "ember"] },
+        ACCUSE:       { method: "spawnSparkBurst", args: [25, "blood"] },
+        STAREDOWN:    { method: "spawnArcaneBurst", args: [20] },
+        BOOT:         { method: "spawnSparkBurst", args: [25, "mint"] },
+        BOOT_EARNED:  { method: "spawnSparkBurst", args: [30, "gold"] },
+    };
+
+    /** Types that shake the screen on impact */
+    static SHAKE_TYPES = new Set([
+        "BUST", "BUMP", "SUDDEN_DEATH", "ACCUSE", "BOOT", "DUEL", "CRITICAL"
+    ]);
+
     /**
      * Show a cinematic cut-in
-     * @param {Object} options
-     * @param {string} options.type - "CRITICAL", "BUST", "VICTORY", "DUEL", "SUDDEN_DEATH"
-     * @param {string} options.userId - User ID of the subject
-     * @param {string} [options.text] - Override text (optional)
-     * @returns {Promise<void>}
      */
     static async show(options) {
-        // 1. Check Performance Mode
         const performanceMode = game.settings.get(MODULE_ID, "performanceMode");
         if (performanceMode) return;
 
-        // 2. Resolve Art & Name from State/Token (V4.7.1 Fix)
-        // 2. Resolve Art & Name from State/Token
         const state = getState();
 
         const resolveActorInfo = (uid) => {
@@ -53,25 +87,17 @@ export class CinematicOverlay extends HandlebarsApplicationMixin(ApplicationV2) 
             const u = game.users.get(uid);
             const actor = u?.character;
 
-            // 1. Try State Data (if valid)
             let img = pData?.avatar || pData?.img;
             let name = pData?.name;
 
-            // 2. Fallback to Live Actor Data if state is missing or "mystery-man"
             const isDefault = !img || img.includes("mystery-man");
             if (isDefault) {
-                // Try Token Image first (if unlinked/specific)
                 const token = actor?.token ?? (actor ? canvas.tokens.placeables.find(t => t.actor?.id === actor.id) : null);
                 if (token) img = token.texture?.src || token.img;
-
-                // Then Actor Image
                 if ((!img || img.includes("mystery-man")) && actor) img = actor.img;
-
-                // Then User Avatar
                 if ((!img || img.includes("mystery-man")) && u) img = u.avatar;
             }
 
-            // 3. Fallback Name
             if (!name) name = actor?.name || u?.name || "Player";
             if (!img) img = "icons/svg/mystery-man.svg";
 
@@ -81,22 +107,15 @@ export class CinematicOverlay extends HandlebarsApplicationMixin(ApplicationV2) 
         const actorInfo = resolveActorInfo(options.userId);
         const targetInfo = options.targetId ? resolveActorInfo(options.targetId) : null;
 
-        // 3. Instantiate & Render
         const overlay = new CinematicOverlay({
             window: { title: "Cinematic" }
         });
 
-        // Pass data via context
-        // Pass data via context
-        // V4.8.56: Versus Mode completely scrapped per user request.
-        // Duel & Staredown = System Event (Text Only)
-        // Skills (Bump/Goad) = Standard (Single Portrait)
         const isSystemEvent = options.type === "DUEL" || options.type === "STAREDOWN" || options.type === "SUDDEN_DEATH";
-        const isVersus = false; // Always false now
+        const isVersus = false;
 
         overlay.cutInData = {
             type: options.type,
-            // Force null image for system events to prevent portrait rendering
             img: isSystemEvent ? null : actorInfo?.img,
             name: actorInfo?.name || "",
             targetImg: isSystemEvent ? null : targetInfo?.img,
@@ -104,18 +123,25 @@ export class CinematicOverlay extends HandlebarsApplicationMixin(ApplicationV2) 
             isVersus: isVersus,
             text: options.text || options.type,
             color: CinematicOverlay.getColorForType(options.type),
-            // V4.7.6: Result Data
+            emblemIcon: CinematicOverlay.EMBLEM_MAP[options.type] || null,
             resultData: options.resultData
         };
 
         try {
             await overlay.render(true);
 
-            // 4. Auto-close after animation duration
-            // Animation is usually ~2-3s
+            // Exit animation before close
+            const DISPLAY_DURATION = 4200;
+            const EXIT_DURATION = 450;
+
+            setTimeout(() => {
+                const cutIn = overlay.element?.querySelector(".cinematic-cut-in");
+                if (cutIn) cutIn.classList.add("cin-exiting");
+            }, DISPLAY_DURATION);
+
             setTimeout(() => {
                 overlay.close();
-            }, 5000);
+            }, DISPLAY_DURATION + EXIT_DURATION);
 
         } catch (err) {
             console.error("Tavern Games | Cinematic Render Error:", err);
@@ -124,20 +150,20 @@ export class CinematicOverlay extends HandlebarsApplicationMixin(ApplicationV2) 
 
     static getColorForType(type) {
         switch (type) {
-            case "CRITICAL": return "var(--tavern-gold)";
-            case "BUST": return "var(--tavern-danger)";
-            case "VICTORY": return "var(--tavern-gold-bright)";
-            case "DUEL": return "var(--tavern-info)";
-            case "SUDDEN_DEATH": return "#e74c3c";
+            case "CRITICAL": return "#ffd700";
+            case "BUST": return "#dc3545";
+            case "VICTORY": return "#ffd700";
+            case "DUEL": return "#f1c40f";
+            case "SUDDEN_DEATH": return "#ff3c2a";
             case "COIN_STAGE": return "#d4a63a";
-            case "FORESIGHT": return "#9b59b6"; // Mystical Purple
-            case "GOAD": return "#e67e22";      // Aggressive Orange
-            case "PROFILE": return "#1abc9c";   // Detective Cyan
-            case "BUMP": return "#d35400";      // Punchy Amber/Red
-            case "ACCUSE": return "#c0392b";    // Accusatory Red
-            case "STAREDOWN": return "#2c3e50"; // Dramatic Dark Blue/Grey
-            case "BOOT": return "#b86b1a";      // Scuffed Brass
-            case "BOOT_EARNED": return "#c07a1f"; // Goblin Gold
+            case "FORESIGHT": return "#9b59b6";
+            case "GOAD": return "#e67e22";
+            case "PROFILE": return "#1abc9c";
+            case "BUMP": return "#d35400";
+            case "ACCUSE": return "#c0392b";
+            case "STAREDOWN": return "#3498db";
+            case "BOOT": return "#6ab04c";
+            case "BOOT_EARNED": return "#c07a1f";
             default: return "var(--tavern-parchment)";
         }
     }
@@ -158,22 +184,68 @@ export class CinematicOverlay extends HandlebarsApplicationMixin(ApplicationV2) 
     _onRender(context, options) {
         super._onRender(context, options);
 
-        // V5.12: Victory Effects
-        if (this.cutInData.type === "VICTORY") {
-            const container = this.element.querySelector(".cinematic-particles");
-            if (container) {
-                // Dynamically import to avoid circular dep issues in some contexts, or just standard import
-                // Using standard import at top of file is better, we'll add that.
-                ParticleFactory.spawnCoinShower(container, 50);
-            }
+        const type = this.cutInData.type;
+        const container = this.element.querySelector(".cin-particles");
 
-            // Rolling Counter
+        // ── Type-specific particles ──
+        const particleConfig = CinematicOverlay.PARTICLE_MAP[type];
+        if (particleConfig && container) {
+            const method = ParticleFactory[particleConfig.method];
+            if (method) {
+                // Stagger particle spawn slightly after entrance
+                setTimeout(() => {
+                    method.call(ParticleFactory, container, ...particleConfig.args);
+                }, 450);
+            }
+        }
+
+        // ── Screen shake on impact types ──
+        if (CinematicOverlay.SHAKE_TYPES.has(type)) {
+            setTimeout(() => {
+                try {
+                    const body = document.body;
+                    const intensity = type === "SUDDEN_DEATH" ? 6 : 4;
+                    const dur = type === "SUDDEN_DEATH" ? 500 : 350;
+                    body.style.transition = "none";
+                    let steps = 0;
+                    const shakeInterval = setInterval(() => {
+                        const x = (Math.random() - 0.5) * intensity * 2;
+                        const y = (Math.random() - 0.5) * intensity * 2;
+                        body.style.transform = `translate(${x}px, ${y}px)`;
+                        steps++;
+                        if (steps > dur / 30) {
+                            clearInterval(shakeInterval);
+                            body.style.transform = "";
+                            body.style.transition = "";
+                        }
+                    }, 30);
+                } catch { /* shake is optional visual */ }
+            }, 350);
+        }
+
+        // ── Victory: Coin shower + gold counter ──
+        if (type === "VICTORY") {
+            if (container) {
+                setTimeout(() => ParticleFactory.spawnCoinShower(container, 50), 600);
+            }
             if (this.cutInData.resultData?.amount) {
-                const amountEl = this.element.querySelector(".gold-text");
+                const amountEl = this.element.querySelector(".cin-victory-overlay .gold-text");
                 if (amountEl) {
-                    this._animateCounter(amountEl, 0, this.cutInData.resultData.amount, 1500);
+                    setTimeout(() => {
+                        this._animateCounter(amountEl, 0, this.cutInData.resultData.amount, 1500);
+                    }, 900);
                 }
             }
+        }
+
+        // ── Critical: Extra gold sparks ──
+        if (type === "CRITICAL" && container) {
+            setTimeout(() => ParticleFactory.spawnSparkBurst(container, 25, "gold"), 700);
+        }
+
+        // ── Bust: Second wave of blood sparks ──
+        if (type === "BUST" && container) {
+            setTimeout(() => ParticleFactory.spawnSparkBurst(container, 20, "blood"), 800);
         }
     }
 
@@ -197,7 +269,6 @@ export class CinematicOverlay extends HandlebarsApplicationMixin(ApplicationV2) 
                 requestAnimationFrame(update);
             } else {
                 element.classList.remove("rolling");
-                // Final pop
                 element.style.transform = "scale(1.5)";
                 setTimeout(() => element.style.transform = "scale(1)", 200);
             }
@@ -206,3 +277,4 @@ export class CinematicOverlay extends HandlebarsApplicationMixin(ApplicationV2) 
         requestAnimationFrame(update);
     }
 }
+

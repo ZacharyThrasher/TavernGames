@@ -1,11 +1,36 @@
-<div class="cinematic-cut-in type-{{type}} {{#if isVersus}}versus-mode{{/if}}">
-    <div class="cinematic-stripe" style="--stripe-color: {{color}}"></div>
+<div class="cinematic-cut-in type-{{type}} {{#if isVersus}}versus-mode{{/if}}" style="--cin-color: {{color}}">
 
-    <div class="cinematic-content">
+    {{!-- Letterbox Bars --}}
+    <div class="cin-letterbox-top"></div>
+    <div class="cin-letterbox-bottom"></div>
+
+    {{!-- Full-screen flash --}}
+    <div class="cin-flash" style="background: radial-gradient(ellipse at center, {{color}} 0%, transparent 70%)"></div>
+
+    {{!-- Vignette darken --}}
+    <div class="cin-vignette"></div>
+
+    {{!-- Speed lines burst --}}
+    <div class="cin-speed-lines"></div>
+
+    {{!-- Stripe + Echo --}}
+    <div class="cin-stripe"></div>
+    <div class="cin-stripe-echo"></div>
+
+    {{!-- Emblem watermark icon --}}
+    {{#if emblemIcon}}
+    <div class="cin-emblem">
+        <i class="{{emblemIcon}}"></i>
+    </div>
+    {{/if}}
+
+    {{!-- Content layer --}}
+    <div class="cin-content">
+
         {{#if isVersus}}
-        {{!-- Versus Mode: Split Screen --}}
-        <div class="portrait-container versus left">
-            <img src="{{img}}" alt="{{name}}" class="portrait-img" />
+        {{!-- Versus Mode (preserved for future use) --}}
+        <div class="vs-portrait left">
+            <img src="{{img}}" alt="{{name}}" />
             <div class="portrait-name">{{name}}</div>
             {{#if resultData}}
             <div class="portrait-result">{{resultData.attackerRoll}}</div>
@@ -16,57 +41,69 @@
             {{#if resultData}}
             <div class="versus-outcome {{resultData.outcomeClass}}">{{resultData.outcome}}</div>
             {{else}}
-            <h1 class="cinematic-title">{{text}}</h1>
+            <h1 class="cin-title">{{text}}</h1>
             <div class="versus-badge">VS</div>
             {{/if}}
         </div>
 
-        <div class="portrait-container versus right">
-            <img src="{{targetImg}}" alt="{{targetName}}" class="portrait-img" />
+        <div class="vs-portrait right">
+            <img src="{{targetImg}}" alt="{{targetName}}" />
             <div class="portrait-name">{{targetName}}</div>
             {{#if resultData}}
             <div class="portrait-result">{{resultData.defenderRoll}}</div>
             {{/if}}
         </div>
+
         {{else}}
-        {{!-- Classic Single Mode --}}
-        <div class="single-mode-container {{#unless targetImg}}single-portrait{{/unless}}">
-            {{#if img}}
-            <div class="portrait-container single initiator">
-                <img src="{{img}}" alt="{{name}}" class="portrait-img" />
-                <div class="portrait-name">{{name}}</div>
-            </div>
-            {{/if}}
+        {{!-- ════ Single Mode (Primary) ════ --}}
 
-            <div class="text-container">
-                {{#if resultData}}
-                {{!-- Impactful Result Text --}}
-                <div class="main-result {{resultData.outcomeClass}}">{{resultData.outcome}}</div>
-                {{#if resultData.amount}}
-                <div class="result-detail">Wins <span class="gold-text">{{resultData.amount}}gp</span>!</div>
-                {{else if resultData.detail}}
-                <div class="result-detail">{{{resultData.detail}}}</div>
-                {{/if}}
-                {{else}}
-                <h1 class="cinematic-title">{{text}}</h1>
-                {{/if}}
-            </div>
-
-            {{#if targetImg}}
-            <div class="portrait-container single target">
-                <img src="{{targetImg}}" alt="{{targetName}}" class="portrait-img" />
-                <div class="portrait-name">{{targetName}}</div>
-            </div>
-            {{/if}}
+        {{!-- Initiator Portrait --}}
+        {{#if img}}
+        <div class="cin-portrait initiator">
+            <img src="{{img}}" alt="{{name}}" class="cin-portrait-img" />
+            <div class="cin-portrait-name">{{name}}</div>
         </div>
         {{/if}}
 
-        {{!-- V5.12: Particle Container --}}
-        <div class="cinematic-particles"></div>
+        {{!-- Text group --}}
+        <div class="cin-text-group">
+            {{#if resultData}}
+            <div class="cin-result {{resultData.outcomeClass}}">{{resultData.outcome}}</div>
+            {{#if resultData.amount}}
+            <div class="cin-result-detail">Wins <span class="gold-text">{{resultData.amount}}gp</span>!</div>
+            {{else if resultData.detail}}
+            <div class="cin-result-detail">{{{resultData.detail}}}</div>
+            {{/if}}
+            {{else}}
+            <h1 class="cin-title" data-text="{{text}}">{{text}}</h1>
+            {{/if}}
+        </div>
+
+        {{!-- Target Portrait (left side) --}}
+        {{#if targetImg}}
+        <div class="cin-target-portrait target">
+            <img src="{{targetImg}}" alt="{{targetName}}" class="cin-portrait-img" />
+            <div class="cin-portrait-name">{{targetName}}</div>
+        </div>
+        {{/if}}
+
+        {{/if}}
+
+        {{!-- Particle Container --}}
+        <div class="cin-particles"></div>
     </div>
 
-    {{!-- V13 Juice: Sparkles for Victory/Critical --}}
+    {{!-- Sparkles for Victory/Critical --}}
     {{#if (or isVictory isCritical)}}
-    <div class="cinematic-sparkles"></div>
+    <div class="cin-sparkles"></div>
+    {{/if}}
+
+    {{!-- Victory gold counter overlay --}}
+    {{#if isVictory}}
+    {{#if resultData.amount}}
+    <div class="cin-victory-overlay">
+        <span class="gold-text">0gp</span>
+    </div>
+    {{/if}}
     {{/if}}
 </div>

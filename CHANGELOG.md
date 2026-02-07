@@ -1,5 +1,42 @@
 # Changelog
 
+## [5.24.0] - 2026-02-07
+### Cinematic Cut-In Overhaul — PIZAZZ Edition 🎬💥
+- **Feature**: Complete visual redesign of all 14 cinematic cut-in types with anime/fighting-game inspired multi-layer presentation.
+  - **Letterbox Bars**: Black cinematic bars slam in from top and bottom for instant movie-frame drama.
+  - **Radial Flash**: Type-colored full-screen burst on entrance — gold for CRITICAL, crimson for BUST, purple for FORESIGHT, etc.
+  - **Vignette Darken**: Per-type vignette overlays focus attention — blood-red for BUST/SUDDEN_DEATH, deep purple for FORESIGHT, cold blue for STAREDOWN.
+  - **Speed Lines**: Rotating conic-gradient radial burst with per-type hue/saturation filters for directional energy.
+  - **Dual Stripe + Echo**: Primary stripe with a trailing ghost echo that follows with blur and fade — doubles the sense of motion.
+  - **Stripe Edge Sparks**: White-hot gradient lines on stripe borders for that razor-sharp slash feel.
+- **Feature**: Emblem Watermark System — massive semi-transparent Font Awesome icon bursts in behind text for each type:
+  - CRITICAL → ⭐ Star, BUST → 💀 Skull, VICTORY → 👑 Crown, DUEL → ⚔️ Khanda, SUDDEN_DEATH → ☠️ Skull & Crossbones, COIN_STAGE → 🪙 Coins, FORESIGHT → 👁️ Eye, GOAD → ✊ Fist, PROFILE → 🔍 Magnifying Glass, BUMP → 🤜 Back Fist, ACCUSE → ⚖️ Gavel, STAREDOWN → 👁️‍🗨️ Eye Low Vision, BOOT → 👢 Shoe Prints, BOOT_EARNED → 🏆 Trophy.
+- **Feature**: Per-type particle effects on every cut-in — gold spark bursts for CRITICAL, blood sparks for BUST, coin showers for VICTORY/COIN_STAGE, arcane motes for FORESIGHT/STAREDOWN, ember bursts for GOAD/BUMP/DUEL, mint sparks for BOOT. Secondary particle waves for CRITICAL and BUST for extra intensity.
+- **Feature**: Screen shake on impact types — BUST, BUMP, SUDDEN_DEATH, ACCUSE, BOOT, DUEL, and CRITICAL shake the entire viewport. SUDDEN_DEATH gets heavier intensity.
+- **Feature**: Portrait overhaul — overshoot bounce entrance, radial energy aura pulse (`::before`), white flash on land (`::after`), name bar with type-colored accent underline. Target portraits now mirror in from the left.
+- **Feature**: Title treatment upgrade — chromatic aberration text-shadow (red/blue color split), three-phase animation (slam → settle → chromatic snap), gradient underline stamp bar.
+- **Feature**: 14 unique visual identities — each type has its own: stripe gradient, speed-line filter, title color + shadows, looping secondary animation, and vignette tint:
+  - **CRITICAL**: Golden radiance with pulsing glow halo.
+  - **BUST**: Crimson shatter with screen shake and blood-red vignette.
+  - **VICTORY**: Grand gold with premium metallic stripe gradient and scale pulse.
+  - **DUEL**: Red-gold crossed-energy stripe with subtle flicker.
+  - **SUDDEN_DEATH**: Intensifying blood-red with dark vignette, shake, and death pulse.
+  - **COIN_STAGE**: Golden spotlight with shimmer filter.
+  - **FORESIGHT**: Arcane purple with mystic float and deep purple vignette.
+  - **GOAD**: Aggressive orange-fire with taunting scale oscillation.
+  - **PROFILE**: Digital teal with scan-line stripe, monospace font, and glitch jumps.
+  - **BUMP**: Seismic red-amber with heavy impact bounce.
+  - **ACCUSE**: Accusatory red with dark vignette and shake.
+  - **STAREDOWN**: Cold blue intensity with slow pulse glow and muted speed lines.
+  - **BOOT**: Goblin chaos green with dark-to-bright stripe and shake.
+  - **BOOT_EARNED**: Goblin gold achievement with metallic stripe and victory pulse.
+- **Feature**: Coordinated exit sequence — `.cin-exiting` class triggers staggered departure: stripe slides out, portrait slides off, text scales away, letterbox bars retract, effects fade. Display duration tuned to 4.2s entrance + 450ms exit (previously hard 5s cut).
+- **CSS**: New `styles/cinematic-overlay.css` — ~530 lines: complete cinematic system with `@layer animations`, all entrance/exit keyframes, 14 type overrides, versus mode (preserved), results styling, reduced motion support.
+- **CSS**: Removed ~600 lines of old cinematic overlay CSS from `styles/tavern.css` (old `@layer animations` block, versus mode, portrait results, dead `.single-mode-container` rules).
+- **Template**: Redesigned `cinematic-overlay.hbs` (80 → 109 lines) — layered structure: letterbox → flash → vignette → speed lines → stripe + echo → emblem → content → particles → sparkles → victory overlay.
+- **JS**: Enhanced `cinematic-overlay.js` (209 → 281 lines) — `EMBLEM_MAP`, `PARTICLE_MAP`, `SHAKE_TYPES` static configs; staggered particle spawning; secondary particle waves; self-contained screen shake; exit animation timing.
+- **Perf**: All new animations respect `prefers-reduced-motion` (speed lines and sparkles fully hidden, all animations collapsed to 0.01ms).
+
 ## [5.23.0] - 2026-02-07
 ### Fortune's Reveal — Cinematic Dice System 🎲✨
 - **Feature**: Fortune's Reveal — a multi-phase dramatic in-app dice animation that replaces Dice So Nice for all table rolls, keeping every moment of tension inside the game window.

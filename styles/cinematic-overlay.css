@@ -1,0 +1,1001 @@
+/* ============================================
+   Cinematic Overlay — Premium Cut-In System
+   V5.24: "PIZAZZ" Overhaul
+   Anime/Fighting-Game Cut-In meets Dark Fantasy
+   ============================================ */
+
+/* ── Container ── */
+#tavern-cinematic-overlay {
+  pointer-events: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1000;
+  background: transparent;
+}
+
+/* ============================================
+   LAYER: Cinematic Animations
+   ============================================ */
+@layer animations {
+
+  /* ── Root Cut-In ── */
+  .cinematic-cut-in {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  /* ── Letterbox Bars (top/bottom) ── */
+  .cin-letterbox-top,
+  .cin-letterbox-bottom {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 8vh;
+    background: #000;
+    z-index: 50;
+    transform: scaleY(0);
+    transform-origin: top;
+  }
+  .cin-letterbox-top {
+    top: 0;
+    transform-origin: top;
+    animation: letterbox-in 0.25s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+  .cin-letterbox-bottom {
+    bottom: 0;
+    transform-origin: bottom;
+    animation: letterbox-in 0.25s cubic-bezier(0.22, 1, 0.36, 1) 0.05s forwards;
+  }
+
+  @keyframes letterbox-in {
+    0% { transform: scaleY(0); }
+    100% { transform: scaleY(1); }
+  }
+
+  /* ── Full-Screen Flash ── */
+  .cin-flash {
+    position: absolute;
+    inset: 0;
+    z-index: 40;
+    opacity: 0;
+    pointer-events: none;
+    mix-blend-mode: screen;
+    animation: cin-flash-pop 0.5s ease-out 0.2s;
+  }
+  /* Type-colored flash backgrounds set via inline style */
+  @keyframes cin-flash-pop {
+    0%   { opacity: 0.9; }
+    100% { opacity: 0; }
+  }
+
+  /* ── Vignette Darken ── */
+  .cin-vignette {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    background: radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.7) 100%);
+    opacity: 0;
+    animation: vignette-fade 0.4s ease-out 0.1s forwards;
+  }
+  @keyframes vignette-fade {
+    to { opacity: 1; }
+  }
+
+  /* ── Speed Lines (Conic Gradient Radial Burst) ── */
+  .cin-speed-lines {
+    position: absolute;
+    inset: -50%;
+    z-index: 3;
+    opacity: 0;
+    animation: speed-lines-in 0.6s ease-out 0.15s forwards;
+    mix-blend-mode: screen;
+    background: conic-gradient(
+      from 0deg,
+      transparent 0deg, rgba(255,255,255,0.04) 2deg, transparent 4deg,
+      transparent 10deg, rgba(255,255,255,0.06) 12deg, transparent 14deg,
+      transparent 20deg, rgba(255,255,255,0.03) 22deg, transparent 24deg,
+      transparent 30deg, rgba(255,255,255,0.05) 32deg, transparent 34deg,
+      transparent 45deg, rgba(255,255,255,0.04) 47deg, transparent 49deg,
+      transparent 60deg, rgba(255,255,255,0.06) 62deg, transparent 64deg,
+      transparent 72deg, rgba(255,255,255,0.03) 74deg, transparent 76deg,
+      transparent 85deg, rgba(255,255,255,0.05) 87deg, transparent 89deg,
+      transparent 100deg, rgba(255,255,255,0.04) 102deg, transparent 104deg,
+      transparent 115deg, rgba(255,255,255,0.06) 117deg, transparent 119deg,
+      transparent 130deg, rgba(255,255,255,0.03) 132deg, transparent 134deg,
+      transparent 145deg, rgba(255,255,255,0.05) 147deg, transparent 149deg,
+      transparent 160deg, rgba(255,255,255,0.04) 162deg, transparent 164deg,
+      transparent 175deg, rgba(255,255,255,0.06) 177deg, transparent 179deg,
+      transparent 190deg, rgba(255,255,255,0.03) 192deg, transparent 194deg,
+      transparent 205deg, rgba(255,255,255,0.05) 207deg, transparent 209deg,
+      transparent 220deg, rgba(255,255,255,0.04) 222deg, transparent 224deg,
+      transparent 240deg, rgba(255,255,255,0.06) 242deg, transparent 244deg,
+      transparent 255deg, rgba(255,255,255,0.03) 257deg, transparent 259deg,
+      transparent 270deg, rgba(255,255,255,0.05) 272deg, transparent 274deg,
+      transparent 290deg, rgba(255,255,255,0.04) 292deg, transparent 294deg,
+      transparent 310deg, rgba(255,255,255,0.06) 312deg, transparent 314deg,
+      transparent 330deg, rgba(255,255,255,0.03) 332deg, transparent 334deg,
+      transparent 350deg, rgba(255,255,255,0.05) 352deg, transparent 354deg,
+      transparent 360deg
+    );
+    animation: speed-lines-in 0.6s ease-out 0.15s forwards, speed-lines-rotate 4s linear 0.15s infinite;
+  }
+  @keyframes speed-lines-in {
+    0%   { opacity: 0; transform: scale(0.5); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  @keyframes speed-lines-rotate {
+    to { transform: rotate(360deg); }
+  }
+
+  /* ── Stripe (Primary) ── */
+  .cin-stripe {
+    position: absolute;
+    top: 50%;
+    left: -60%;
+    width: 220%;
+    height: 280px;
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      var(--cin-color, var(--tavern-gold)) 15%,
+      var(--cin-color, var(--tavern-gold)) 85%,
+      transparent 100%
+    );
+    transform: translateY(-50%) rotate(-15deg) translateX(-120%);
+    opacity: 0.92;
+    z-index: 5;
+    box-shadow:
+      0 0 60px color-mix(in srgb, var(--cin-color, var(--tavern-gold)) 60%, transparent),
+      inset 0 2px 0 rgba(255,255,255,0.35),
+      inset 0 -2px 0 rgba(255,255,255,0.35);
+    animation: cin-stripe-slash 0.45s cubic-bezier(0.16, 1, 0.3, 1) 0.12s forwards;
+  }
+
+  /* ── Stripe Echo (delayed ghost) ── */
+  .cin-stripe-echo {
+    position: absolute;
+    top: 50%;
+    left: -60%;
+    width: 220%;
+    height: 280px;
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      var(--cin-color, var(--tavern-gold)) 15%,
+      var(--cin-color, var(--tavern-gold)) 85%,
+      transparent 100%
+    );
+    transform: translateY(-50%) rotate(-15deg) translateX(-120%);
+    opacity: 0;
+    z-index: 4;
+    filter: blur(8px);
+    animation: cin-stripe-echo 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.18s forwards;
+  }
+
+  @keyframes cin-stripe-slash {
+    0%   { transform: translateY(-50%) rotate(-15deg) translateX(-120%); }
+    100% { transform: translateY(-50%) rotate(-15deg) translateX(0%); }
+  }
+  @keyframes cin-stripe-echo {
+    0%   { transform: translateY(-50%) rotate(-15deg) translateX(-120%); opacity: 0; }
+    50%  { opacity: 0.4; }
+    100% { transform: translateY(-50%) rotate(-15deg) translateX(2%); opacity: 0; }
+  }
+
+  /* ── Stripe Edge Sparks (top & bottom) ── */
+  .cin-stripe::before,
+  .cin-stripe::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: linear-gradient(90deg, transparent 5%, rgba(255,255,255,0.9) 30%, rgba(255,255,255,0.95) 50%, rgba(255,255,255,0.9) 70%, transparent 95%);
+    box-shadow: 0 0 12px rgba(255,255,255,0.6);
+  }
+  .cin-stripe::before { top: 0; }
+  .cin-stripe::after  { bottom: 0; }
+
+  /* ── Content Layer ── */
+  .cin-content {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ── Portrait ── */
+  .cin-portrait {
+    position: absolute;
+    bottom: -20px;
+    right: 3vw;
+    width: 38vh;
+    height: 55vh;
+    z-index: 12;
+    transform: translateX(120%) scale(1.1);
+    opacity: 0;
+    animation: cin-portrait-entrance 0.55s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
+    mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+    filter: drop-shadow(0 0 30px rgba(0,0,0,0.7));
+  }
+
+  .cin-portrait-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 6px;
+  }
+
+  /* Portrait energy aura */
+  .cin-portrait::before {
+    content: "";
+    position: absolute;
+    inset: -12px;
+    border-radius: 10px;
+    z-index: -1;
+    opacity: 0;
+    background: radial-gradient(ellipse at center,
+      color-mix(in srgb, var(--cin-color) 40%, transparent) 0%,
+      transparent 70%
+    );
+    animation: portrait-aura-pulse 1.8s ease-in-out 0.6s infinite;
+  }
+
+  /* Portrait flash on entrance */
+  .cin-portrait::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: white;
+    border-radius: 6px;
+    opacity: 0;
+    mix-blend-mode: overlay;
+    animation: cin-portrait-flash 0.35s ease-out 0.65s;
+    pointer-events: none;
+  }
+
+  .cin-portrait-name {
+    position: absolute;
+    bottom: 22%;
+    left: 0;
+    width: 100%;
+    text-align: center;
+    font-family: var(--tavern-font-primary);
+    font-size: 1.6em;
+    font-weight: 700;
+    color: white;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.5);
+    opacity: 0;
+    transform: translateY(10px);
+    animation: cin-name-fade 0.4s ease-out 0.55s forwards;
+  }
+  .cin-portrait-name::after {
+    content: "";
+    display: block;
+    margin: 4px auto 0;
+    width: 60%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--cin-color, var(--tavern-gold)), transparent);
+    opacity: 0.7;
+  }
+
+  @keyframes cin-portrait-entrance {
+    0%   { transform: translateX(120%) scale(1.1); opacity: 0; }
+    70%  { transform: translateX(-3%) scale(1.02); opacity: 1; }
+    100% { transform: translateX(0%) scale(1); opacity: 1; }
+  }
+  @keyframes cin-portrait-flash {
+    0%   { opacity: 0.7; }
+    100% { opacity: 0; }
+  }
+  @keyframes portrait-aura-pulse {
+    0%, 100% { opacity: 0.3; transform: scale(1); }
+    50%      { opacity: 0.6; transform: scale(1.05); }
+  }
+  @keyframes cin-name-fade {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Target Portrait (left side mirror) ── */
+  .cin-target-portrait {
+    position: absolute;
+    bottom: -20px;
+    left: 3vw;
+    width: 30vh;
+    height: 45vh;
+    z-index: 11;
+    transform: translateX(-120%) scale(1.1);
+    opacity: 0;
+    animation: cin-target-entrance 0.55s cubic-bezier(0.16, 1, 0.3, 1) 0.3s forwards;
+    mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+    filter: drop-shadow(0 0 25px rgba(0,0,0,0.6));
+  }
+  .cin-target-portrait .cin-portrait-img {
+    border-radius: 6px;
+  }
+  .cin-target-portrait .cin-portrait-name {
+    bottom: 22%;
+  }
+
+  @keyframes cin-target-entrance {
+    0%   { transform: translateX(-120%) scale(1.1); opacity: 0; }
+    70%  { transform: translateX(3%) scale(1.02); opacity: 1; }
+    100% { transform: translateX(0%) scale(1); opacity: 1; }
+  }
+
+  /* ── Emblem (Large Watermark Icon) ── */
+  .cin-emblem {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    z-index: 6;
+    font-size: 28vh;
+    color: rgba(255,255,255,0.06);
+    pointer-events: none;
+    animation: cin-emblem-burst 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.15s forwards;
+    text-shadow: 0 0 60px color-mix(in srgb, var(--cin-color, var(--tavern-gold)) 20%, transparent);
+  }
+  @keyframes cin-emblem-burst {
+    0%   { transform: translate(-50%, -50%) scale(0) rotate(-15deg); opacity: 0; }
+    60%  { transform: translate(-50%, -50%) scale(1.1) rotate(-15deg); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(1) rotate(-15deg); opacity: 1; }
+  }
+
+  /* ── Text Group (Title + Detail) ── */
+  .cin-text-group {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-15deg);
+    z-index: 20;
+    text-align: center;
+    width: 100%;
+    pointer-events: none;
+  }
+
+  /* ── Title ── */
+  .cin-title {
+    font-family: var(--tavern-font-primary);
+    font-size: clamp(6rem, 15vh, 12rem);
+    font-weight: 900;
+    color: white;
+    text-transform: uppercase;
+    font-style: italic;
+    line-height: 0.9;
+    margin: 0;
+    transform: scale(4) rotate(3deg);
+    opacity: 0;
+    /* Chromatic aberration via text-shadow */
+    text-shadow:
+      -3px 0 0 rgba(255, 50, 50, 0.5),
+      3px 0 0 rgba(50, 100, 255, 0.5),
+      0 0 20px var(--cin-color, var(--tavern-gold)),
+      4px 4px 0 rgba(0,0,0,0.9);
+    animation:
+      cin-title-slam 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.28s forwards,
+      cin-title-settle 0.12s ease-out 0.56s,
+      cin-title-chromatic 0.15s ease-out 0.28s;
+  }
+
+  /* Underline accent bar */
+  .cin-title::after {
+    content: "";
+    display: block;
+    margin: 10px auto 0;
+    width: 38vw;
+    max-width: 560px;
+    height: 5px;
+    background: linear-gradient(90deg, transparent, var(--cin-color, var(--tavern-gold)), white, var(--cin-color, var(--tavern-gold)), transparent);
+    box-shadow: 0 0 20px color-mix(in srgb, var(--cin-color) 70%, transparent);
+    opacity: 0;
+    transform: scaleX(0);
+    animation: cin-underline-stamp 0.3s cubic-bezier(0.16, 1, 0.3, 1) 0.55s forwards;
+  }
+
+  @keyframes cin-title-slam {
+    0%   { transform: scale(4) rotate(3deg); opacity: 0; filter: blur(6px); }
+    60%  { transform: scale(0.95) rotate(0deg); opacity: 1; filter: blur(0); }
+    80%  { transform: scale(1.05) rotate(0deg); }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; filter: blur(0); }
+  }
+  @keyframes cin-title-settle {
+    0%   { transform: scale(1.03); }
+    100% { transform: scale(1); }
+  }
+  @keyframes cin-title-chromatic {
+    0%   { text-shadow: -8px 0 0 rgba(255,50,50,0.8), 8px 0 0 rgba(50,100,255,0.8), 0 0 40px var(--cin-color), 4px 4px 0 rgba(0,0,0,0.9); }
+    100% { text-shadow: -3px 0 0 rgba(255,50,50,0.5), 3px 0 0 rgba(50,100,255,0.5), 0 0 20px var(--cin-color), 4px 4px 0 rgba(0,0,0,0.9); }
+  }
+  @keyframes cin-underline-stamp {
+    0%   { opacity: 0; transform: scaleX(0); }
+    70%  { opacity: 1; transform: scaleX(1.05); }
+    100% { opacity: 1; transform: scaleX(1); }
+  }
+
+  /* ── Result Text (skill outcomes) ── */
+  .cin-result {
+    font-family: var(--tavern-font-primary);
+    font-size: clamp(4rem, 10vh, 8rem);
+    font-weight: 900;
+    color: white;
+    text-transform: uppercase;
+    margin: 0;
+    text-shadow: 0 0 20px var(--cin-color), 4px 4px 0 rgba(0,0,0,0.8);
+    transform: scale(3);
+    opacity: 0;
+    animation: cin-title-slam 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.28s forwards;
+  }
+  .cin-result.success { color: #6dff6d; text-shadow: 0 0 30px rgba(50,255,50,0.6), 3px 3px 0 #000; }
+  .cin-result.failure { color: #ff6d6d; text-shadow: 0 0 30px rgba(255,50,50,0.6), 3px 3px 0 #000; }
+
+  .cin-result-detail {
+    font-family: var(--tavern-font-body);
+    font-size: clamp(1.5rem, 4vh, 3rem);
+    font-weight: 700;
+    color: var(--tavern-parchment, #f4e4c1);
+    margin-top: 8px;
+    opacity: 0;
+    transform: translateY(20px);
+    animation: cin-detail-fade 0.5s ease-out 0.6s forwards;
+    text-shadow: 2px 2px 6px rgba(0,0,0,0.9);
+  }
+  .cin-result-detail .gold-text {
+    color: var(--tavern-gold-bright, #ffd700);
+    font-size: 1.2em;
+    text-shadow: 0 0 15px rgba(255,215,0,0.6);
+  }
+
+  @keyframes cin-detail-fade {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Particle Container ── */
+  .cin-particles {
+    position: absolute;
+    inset: 0;
+    z-index: 15;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  /* ── Sparkle Overlay (Victory/Critical) ── */
+  .cin-sparkles {
+    position: absolute;
+    inset: 0;
+    z-index: 16;
+    pointer-events: none;
+    background:
+      radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.8), transparent),
+      radial-gradient(1px 1px at 40% 70%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(1.5px 1.5px at 60% 20%, rgba(255,255,255,0.9), transparent),
+      radial-gradient(1px 1px at 80% 50%, rgba(255,255,255,0.7), transparent),
+      radial-gradient(1.5px 1.5px at 10% 80%, rgba(255,255,255,0.8), transparent),
+      radial-gradient(1px 1px at 70% 85%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(1.5px 1.5px at 90% 15%, rgba(255,255,255,0.9), transparent),
+      radial-gradient(1px 1px at 50% 50%, rgba(255,255,255,0.5), transparent);
+    background-size: 200% 200%;
+    animation: cin-sparkle-drift 3s linear infinite;
+  }
+  @keyframes cin-sparkle-drift {
+    0%   { background-position: 0% 0%; }
+    100% { background-position: 200% 200%; }
+  }
+
+  /* ==========================================================
+     TYPE-SPECIFIC VISUAL IDENTITIES
+     Each type gets unique: stripe color, emblem tint, title
+     style, speed-line blend, portrait aura, and particles
+     ========================================================== */
+
+  /* ── CRITICAL (Golden Radiance) ── */
+  .type-CRITICAL { --cin-color: #ffd700; }
+  .type-CRITICAL .cin-speed-lines { filter: sepia(0.3) brightness(1.5) hue-rotate(-10deg); }
+  .type-CRITICAL .cin-title {
+    color: #fff8dc;
+    text-shadow: -3px 0 0 rgba(255,180,0,0.6), 3px 0 0 rgba(255,255,100,0.4), 0 0 40px #ffd700, 0 0 80px rgba(255,215,0,0.4), 4px 4px 0 #000;
+    animation:
+      cin-title-slam 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.28s forwards,
+      cin-title-settle 0.12s ease-out 0.52s,
+      cin-critical-glow 2s ease-in-out 0.8s infinite;
+  }
+  @keyframes cin-critical-glow {
+    0%, 100% { text-shadow: -3px 0 0 rgba(255,180,0,0.6), 3px 0 0 rgba(255,255,100,0.4), 0 0 40px #ffd700, 4px 4px 0 #000; }
+    50%      { text-shadow: -3px 0 0 rgba(255,180,0,0.6), 3px 0 0 rgba(255,255,100,0.4), 0 0 80px #ffd700, 0 0 120px rgba(255,215,0,0.3), 4px 4px 0 #000; }
+  }
+
+  /* ── BUST (Crimson Shatter) ── */
+  .type-BUST { --cin-color: #dc3545; }
+  .type-BUST .cin-vignette {
+    background: radial-gradient(ellipse at center, transparent 20%, rgba(80,0,0,0.75) 100%);
+  }
+  .type-BUST .cin-speed-lines { filter: hue-rotate(-30deg) saturate(2) brightness(0.8); }
+  .type-BUST .cin-title {
+    color: #ff8888;
+    text-shadow: -4px 0 0 rgba(255,0,0,0.7), 4px 0 0 rgba(100,0,0,0.5), 0 0 30px #dc3545, 4px 4px 0 #000;
+    animation:
+      cin-title-slam 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.25s forwards,
+      cin-bust-shake 0.5s ease-in-out 0.6s;
+  }
+  @keyframes cin-bust-shake {
+    0%, 100% { transform: translate(0); }
+    10% { transform: translate(-4px, -3px) rotate(-1deg); }
+    20% { transform: translate(5px, 2px) rotate(1deg); }
+    30% { transform: translate(-3px, 4px) rotate(-0.5deg); }
+    40% { transform: translate(4px, -2px) rotate(0.5deg); }
+    50% { transform: translate(-2px, 3px); }
+    60% { transform: translate(3px, -1px); }
+    70% { transform: translate(-1px, 2px); }
+    80% { transform: translate(2px, -1px); }
+    90% { transform: translate(-1px, 1px); }
+  }
+
+  /* ── VICTORY (Grand Gold) ── */
+  .type-VICTORY { --cin-color: #ffd700; }
+  .type-VICTORY .cin-speed-lines { filter: sepia(0.5) brightness(1.6) hue-rotate(-10deg); }
+  .type-VICTORY .cin-stripe {
+    height: 320px;
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      #b8860b 10%,
+      #ffd700 40%,
+      #fff8dc 50%,
+      #ffd700 60%,
+      #b8860b 90%,
+      transparent 100%
+    );
+  }
+  .type-VICTORY .cin-title {
+    color: #fff;
+    font-size: clamp(7rem, 18vh, 14rem);
+    text-shadow: -4px 0 0 rgba(255,200,0,0.7), 4px 0 0 rgba(255,255,150,0.5), 0 0 50px #ffd700, 0 0 100px rgba(255,215,0,0.3), 5px 5px 0 #000;
+    animation:
+      cin-title-slam 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.28s forwards,
+      cin-victory-pulse 1.5s ease-in-out 0.8s infinite;
+  }
+  @keyframes cin-victory-pulse {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.03); }
+  }
+
+  /* ── DUEL (Crossed Swords Energy) ── */
+  .type-DUEL { --cin-color: #f1c40f; }
+  .type-DUEL .cin-speed-lines { filter: hue-rotate(30deg) brightness(1.3); }
+  .type-DUEL .cin-stripe {
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      #c0392b 15%,
+      #f1c40f 50%,
+      #c0392b 85%,
+      transparent 100%
+    );
+  }
+  .type-DUEL .cin-title {
+    color: #f1c40f;
+    font-style: italic;
+    letter-spacing: 8px;
+    text-shadow: 3px 3px 0 #c0392b, -3px 0 0 rgba(255,50,50,0.5), 3px 0 0 rgba(255,200,0,0.5), 0 0 30px #f1c40f, 5px 5px 0 #000;
+    animation:
+      cin-title-slam 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.25s forwards,
+      cin-duel-flicker 2s step-end 0.8s infinite;
+  }
+  @keyframes cin-duel-flicker {
+    0%, 96%, 100% { opacity: 1; }
+    97% { opacity: 0.8; }
+    98% { opacity: 1; }
+    99% { opacity: 0.85; }
+  }
+
+  /* ── SUDDEN DEATH (Blood Red Intensify) ── */
+  .type-SUDDEN_DEATH { --cin-color: #ff3c2a; }
+  .type-SUDDEN_DEATH .cin-vignette {
+    background: radial-gradient(ellipse at center, transparent 10%, rgba(60,0,0,0.85) 100%);
+  }
+  .type-SUDDEN_DEATH .cin-speed-lines { filter: hue-rotate(-40deg) saturate(3) brightness(0.7); }
+  .type-SUDDEN_DEATH .cin-stripe {
+    background: linear-gradient(180deg, transparent 0%, #2b0f0f 15%, #ff3c2a 50%, #2b0f0f 85%, transparent 100%);
+  }
+  .type-SUDDEN_DEATH .cin-title {
+    color: #ff5a3c;
+    letter-spacing: 8px;
+    text-shadow: 4px 4px 0 #2b0f0f, 0 0 30px rgba(255,60,42,0.8), -4px 0 0 rgba(255,0,0,0.6), 4px 0 0 rgba(100,0,0,0.5);
+    animation:
+      cin-title-slam 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.22s forwards,
+      cin-bust-shake 0.6s ease-in-out 0.6s,
+      cin-death-pulse 1s ease-in-out 1.2s infinite;
+  }
+  @keyframes cin-death-pulse {
+    0%, 100% { text-shadow: 4px 4px 0 #2b0f0f, 0 0 30px rgba(255,60,42,0.8); filter: brightness(1); }
+    50%      { text-shadow: 4px 4px 0 #2b0f0f, 0 0 60px rgba(255,60,42,1), 0 0 100px rgba(255,0,0,0.4); filter: brightness(1.15); }
+  }
+
+  /* ── COIN STAGE (Golden Spotlight) ── */
+  .type-COIN_STAGE { --cin-color: #d4a63a; }
+  .type-COIN_STAGE .cin-vignette {
+    background: radial-gradient(ellipse at center, rgba(212,166,58,0.1) 0%, rgba(0,0,0,0.8) 100%);
+  }
+  .type-COIN_STAGE .cin-title {
+    color: #f3d07a;
+    letter-spacing: 6px;
+    text-shadow: 4px 4px 0 #4a3312, 0 0 25px rgba(243,208,122,0.7), -3px 0 0 rgba(255,200,50,0.4), 3px 0 0 rgba(200,150,0,0.4);
+    animation:
+      cin-title-slam 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.25s forwards,
+      cin-coin-shimmer 2.5s ease-in-out 0.8s infinite;
+  }
+  @keyframes cin-coin-shimmer {
+    0%, 100% { filter: brightness(1); }
+    50%      { filter: brightness(1.2) drop-shadow(0 0 20px rgba(255,215,0,0.4)); }
+  }
+
+  /* ── FORESIGHT (Arcane Mystic) ── */
+  .type-FORESIGHT { --cin-color: #9b59b6; }
+  .type-FORESIGHT .cin-vignette {
+    background: radial-gradient(ellipse at center, rgba(155,89,182,0.08) 0%, rgba(20,0,30,0.85) 100%);
+  }
+  .type-FORESIGHT .cin-speed-lines { filter: hue-rotate(200deg) brightness(1.2) saturate(1.5); }
+  .type-FORESIGHT .cin-title {
+    color: #d6a2e8;
+    text-shadow: 0 0 15px #8e44ad, 0 0 40px #9b59b6, -3px 0 0 rgba(200,100,255,0.5), 3px 0 0 rgba(100,50,200,0.5), 4px 4px 0 #000;
+    animation:
+      cin-title-slam 0.4s ease 0.3s forwards,
+      cin-foresight-float 3s ease-in-out 0.9s infinite;
+  }
+  .type-FORESIGHT .cin-portrait-img {
+    box-shadow: 0 0 35px rgba(155,89,182,0.5);
+  }
+  @keyframes cin-foresight-float {
+    0%, 100% { transform: translateY(0) scale(1); filter: blur(0); }
+    50%      { transform: translateY(-6px) scale(1.02); filter: blur(0.5px); }
+  }
+
+  /* ── GOAD (Aggressive Fire) ── */
+  .type-GOAD { --cin-color: #e67e22; }
+  .type-GOAD .cin-speed-lines { filter: hue-rotate(-20deg) saturate(1.8) brightness(1.2); }
+  .type-GOAD .cin-stripe {
+    background: linear-gradient(180deg, transparent 0%, #d35400 15%, #e67e22 50%, #d35400 85%, transparent 100%);
+  }
+  .type-GOAD .cin-title {
+    color: #ff9f43;
+    text-shadow: 3px 3px 0 #d35400, -3px -2px 0 #000, 0 0 25px rgba(230,126,34,0.6), -3px 0 0 rgba(255,100,0,0.5), 3px 0 0 rgba(255,200,0,0.3);
+    animation:
+      cin-title-slam 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.28s forwards,
+      cin-goad-taunt 0.4s ease-in-out 0.8s infinite alternate;
+  }
+  .type-GOAD .cin-portrait-img {
+    box-shadow: 0 0 30px rgba(230,126,34,0.5);
+  }
+  @keyframes cin-goad-taunt {
+    from { transform: scale(1) rotate(-0.5deg); }
+    to   { transform: scale(1.06) rotate(0.5deg); }
+  }
+
+  /* ── PROFILE (Digital Scan) ── */
+  .type-PROFILE { --cin-color: #1abc9c; }
+  .type-PROFILE .cin-speed-lines { filter: hue-rotate(120deg) brightness(1.3) saturate(0.8); }
+  .type-PROFILE .cin-stripe {
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      rgba(26,188,156,0.7) 15%,
+      #1abc9c 50%,
+      rgba(26,188,156,0.7) 85%,
+      transparent 100%
+    );
+    /* Scan line overlay */
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.15) 4px),
+      linear-gradient(180deg, transparent 0%, rgba(26,188,156,0.7) 15%, #1abc9c 50%, rgba(26,188,156,0.7) 85%, transparent 100%);
+  }
+  .type-PROFILE .cin-title {
+    color: #5dffcc;
+    font-family: "Courier New", monospace;
+    letter-spacing: 6px;
+    text-shadow: 0 0 8px #16a085, 0 0 30px rgba(26,188,156,0.5), -2px 0 0 rgba(0,255,200,0.4), 2px 0 0 rgba(0,200,150,0.3);
+    animation:
+      cin-title-slam 0.4s ease 0.3s forwards,
+      cin-profile-glitch 3s step-end 0.9s infinite;
+  }
+  .type-PROFILE .cin-portrait-img {
+    box-shadow: 0 0 30px rgba(26,188,156,0.5);
+  }
+  @keyframes cin-profile-glitch {
+    0%, 92% { transform: translate(0); opacity: 1; }
+    93%     { transform: translate(3px, -1px); opacity: 0.85; text-shadow: 3px 0 #ff0040, -3px 0 #0ff; }
+    94%     { transform: translate(-2px, 1px); opacity: 1; }
+    95%     { transform: translate(0); }
+    96%     { transform: translate(-3px, 2px) skew(2deg); opacity: 0.9; }
+    97%     { transform: translate(2px, -1px) skew(-1deg); opacity: 1; }
+    98%, 100% { transform: translate(0); }
+  }
+
+  /* ── BUMP (Seismic Impact) ── */
+  .type-BUMP { --cin-color: #d35400; }
+  .type-BUMP .cin-speed-lines { filter: hue-rotate(-30deg) saturate(2) brightness(1.1); }
+  .type-BUMP .cin-title {
+    color: #ff6b6b;
+    text-shadow: 0 6px 0 #c0392b, 0 12px 12px rgba(0,0,0,0.5), -4px 0 0 rgba(255,50,50,0.6), 4px 0 0 rgba(200,50,0,0.4);
+    animation:
+      cin-title-slam 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.25s forwards,
+      cin-bump-impact 0.35s ease-out 0.6s;
+  }
+  .type-BUMP .cin-portrait-img {
+    box-shadow: 0 0 30px rgba(211,84,0,0.5);
+  }
+  @keyframes cin-bump-impact {
+    0%   { transform: scale(1); }
+    30%  { transform: scale(1.35) rotate(2deg); }
+    60%  { transform: scale(0.97) rotate(-1deg); }
+    100% { transform: scale(1) rotate(0deg); }
+  }
+
+  /* ── ACCUSE (Accusatory Red) ── */
+  .type-ACCUSE { --cin-color: #c0392b; }
+  .type-ACCUSE .cin-vignette {
+    background: radial-gradient(ellipse at center, transparent 20%, rgba(60,0,0,0.7) 100%);
+  }
+  .type-ACCUSE .cin-title {
+    color: #ff4444;
+    text-shadow: 4px 4px 0 #000, 0 0 35px rgba(255,0,0,0.6), -3px 0 0 rgba(255,0,0,0.5), 3px 0 0 rgba(200,0,0,0.4);
+    animation:
+      cin-title-slam 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.28s forwards,
+      cin-bust-shake 0.4s ease-in-out 0.7s;
+  }
+
+  /* ── STAREDOWN (Cold Blue Intensity) ── */
+  .type-STAREDOWN { --cin-color: #3498db; }
+  .type-STAREDOWN .cin-vignette {
+    background: radial-gradient(ellipse at center, rgba(52,152,219,0.05) 0%, rgba(0,10,30,0.85) 100%);
+  }
+  .type-STAREDOWN .cin-speed-lines { filter: hue-rotate(180deg) brightness(1.1) saturate(0.7); opacity: 0.6; }
+  .type-STAREDOWN .cin-title {
+    color: #ecf0f1;
+    letter-spacing: 12px;
+    text-shadow: 0 0 15px #3498db, 0 0 40px #2980b9, -3px 0 0 rgba(50,150,255,0.5), 3px 0 0 rgba(100,200,255,0.3), 4px 4px 0 #000;
+    animation:
+      cin-title-slam 0.5s ease 0.3s forwards,
+      cin-staredown-pulse 2.5s ease-in-out 1s infinite;
+  }
+  @keyframes cin-staredown-pulse {
+    0%, 100% { text-shadow: 0 0 15px #3498db, 0 0 40px #2980b9, 4px 4px 0 #000; filter: brightness(1); }
+    50%      { text-shadow: 0 0 30px #ecf0f1, 0 0 60px #3498db, 0 0 100px #2980b9, 4px 4px 0 #000; filter: brightness(1.1); }
+  }
+
+  /* ── BOOT (Goblin Chaos Green) ── */
+  .type-BOOT { --cin-color: #6ab04c; }
+  .type-BOOT .cin-speed-lines { filter: hue-rotate(80deg) saturate(1.5) brightness(1.1); }
+  .type-BOOT .cin-stripe {
+    background: linear-gradient(180deg, transparent 0%, #244019 15%, #6ab04c 50%, #244019 85%, transparent 100%);
+  }
+  .type-BOOT .cin-title {
+    color: #9bd35a;
+    letter-spacing: 8px;
+    text-shadow: 4px 4px 0 #244019, 0 0 25px rgba(155,211,90,0.6), -3px 0 0 rgba(100,255,50,0.4), 3px 0 0 rgba(50,150,0,0.4);
+    animation:
+      cin-title-slam 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.22s forwards,
+      cin-bust-shake 0.5s ease-in-out 0.6s;
+  }
+
+  /* ── BOOT EARNED (Goblin Gold Achievement) ── */
+  .type-BOOT_EARNED { --cin-color: #c07a1f; }
+  .type-BOOT_EARNED .cin-speed-lines { filter: sepia(0.4) brightness(1.3); }
+  .type-BOOT_EARNED .cin-stripe {
+    background: linear-gradient(180deg, transparent 0%, #5a3a12 15%, #c07a1f 40%, #f0c060 50%, #c07a1f 60%, #5a3a12 85%, transparent 100%);
+  }
+  .type-BOOT_EARNED .cin-title {
+    color: #f0c060;
+    letter-spacing: 5px;
+    text-shadow: 3px 3px 0 #5a3a12, 0 0 25px rgba(240,192,96,0.7), -3px 0 0 rgba(255,200,50,0.4), 3px 0 0 rgba(200,150,50,0.3);
+    animation:
+      cin-title-slam 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.28s forwards,
+      cin-victory-pulse 1.8s ease-in-out 0.9s infinite;
+  }
+
+  /* ==========================================================
+     VICTORY OVERLAY — Gold Counter & Particles
+     ========================================================== */
+  .cin-victory-overlay {
+    position: absolute;
+    bottom: 15vh;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 25;
+    text-align: center;
+    opacity: 0;
+    animation: cin-detail-fade 0.5s ease-out 0.8s forwards;
+  }
+  .cin-victory-overlay .gold-text {
+    font-family: var(--tavern-font-primary);
+    font-size: clamp(2rem, 6vh, 5rem);
+    font-weight: 900;
+    color: #ffd700;
+    text-shadow: 0 0 20px rgba(255,215,0,0.5), 3px 3px 0 rgba(0,0,0,0.8);
+  }
+  .cin-victory-overlay .gold-text.rolling {
+    animation: cin-counter-pulse 0.15s ease-in-out infinite alternate;
+  }
+  @keyframes cin-counter-pulse {
+    from { transform: scale(1); }
+    to   { transform: scale(1.05); }
+  }
+
+  /* ==========================================================
+     EXIT ANIMATION
+     ========================================================== */
+  .cinematic-cut-in.cin-exiting .cin-letterbox-top,
+  .cinematic-cut-in.cin-exiting .cin-letterbox-bottom {
+    animation: letterbox-out 0.3s ease-in forwards;
+  }
+  .cinematic-cut-in.cin-exiting .cin-stripe,
+  .cinematic-cut-in.cin-exiting .cin-stripe-echo {
+    animation: cin-stripe-exit 0.4s ease-in forwards;
+  }
+  .cinematic-cut-in.cin-exiting .cin-portrait {
+    animation: cin-portrait-exit 0.35s ease-in forwards;
+  }
+  .cinematic-cut-in.cin-exiting .cin-target-portrait {
+    animation: cin-target-exit 0.35s ease-in forwards;
+  }
+  .cinematic-cut-in.cin-exiting .cin-text-group,
+  .cinematic-cut-in.cin-exiting .cin-emblem {
+    animation: cin-text-exit 0.3s ease-in forwards;
+  }
+  .cinematic-cut-in.cin-exiting .cin-speed-lines,
+  .cinematic-cut-in.cin-exiting .cin-vignette,
+  .cinematic-cut-in.cin-exiting .cin-flash,
+  .cinematic-cut-in.cin-exiting .cin-sparkles {
+    animation: cin-fade-exit 0.4s ease-in forwards;
+  }
+
+  @keyframes letterbox-out {
+    to { transform: scaleY(0); }
+  }
+  @keyframes cin-stripe-exit {
+    to { transform: translateY(-50%) rotate(-15deg) translateX(120%); opacity: 0; }
+  }
+  @keyframes cin-portrait-exit {
+    to { transform: translateX(120%) scale(0.9); opacity: 0; }
+  }
+  @keyframes cin-target-exit {
+    to { transform: translateX(-120%) scale(0.9); opacity: 0; }
+  }
+  @keyframes cin-text-exit {
+    to { transform: translate(-50%, -50%) rotate(-15deg) scale(0.8); opacity: 0; }
+  }
+  @keyframes cin-fade-exit {
+    to { opacity: 0; }
+  }
+
+  /* ==========================================================
+     VERSUS MODE (preserved — currently unused)
+     ========================================================== */
+  .cinematic-cut-in.versus-mode .cin-content {
+    position: absolute;
+    top: 50%;
+    left: -50%;
+    width: 200%;
+    height: 280px;
+    transform: translateY(-50%) rotate(-15deg);
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 100;
+    padding: 0 25%;
+    box-sizing: border-box;
+  }
+
+  .cinematic-cut-in.versus-mode .vs-portrait {
+    position: relative;
+    width: 140px;
+    height: 140px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    overflow: visible;
+    opacity: 1;
+    z-index: 100;
+  }
+  .cinematic-cut-in.versus-mode .vs-portrait.left {
+    animation: versus-slide-left 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  }
+  .cinematic-cut-in.versus-mode .vs-portrait.right {
+    animation: versus-slide-right 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  }
+  .cinematic-cut-in.versus-mode .vs-portrait img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid var(--tavern-gold);
+    background: #000;
+    box-shadow: 0 0 20px rgba(0,0,0,0.8);
+  }
+  .cinematic-cut-in.versus-mode .versus-center {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    z-index: 10;
+  }
+  .cinematic-cut-in.versus-mode .versus-badge {
+    font-family: var(--tavern-font-primary);
+    font-size: 5em;
+    font-weight: 700;
+    color: var(--tavern-gold-bright);
+    text-shadow: 0 0 20px rgba(212,160,74,0.8);
+    animation: cin-emblem-burst 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s backwards;
+  }
+
+  @keyframes versus-slide-left {
+    from { transform: translateX(-100%) scale(0.5); opacity: 0; }
+    to   { transform: translateX(0) scale(1); opacity: 1; }
+  }
+  @keyframes versus-slide-right {
+    from { transform: translateX(100%) scale(0.5); opacity: 0; }
+    to   { transform: translateX(0) scale(1); opacity: 1; }
+  }
+
+  /* ==========================================================
+     RESULTS (skill showdown)
+     ========================================================== */
+  .portrait-result {
+    position: absolute;
+    bottom: -50px;
+    left: 0;
+    width: 100%;
+    text-align: center;
+    font-family: var(--tavern-font-primary);
+    font-size: 3em;
+    color: #fff;
+    text-shadow: 0 0 10px #000, 0 0 20px var(--tavern-gold);
+    font-weight: bold;
+    opacity: 0;
+    animation: cin-detail-fade 0.5s ease 0.5s forwards;
+  }
+
+  .versus-outcome {
+    font-family: var(--tavern-font-primary);
+    font-size: 5em;
+    color: var(--tavern-gold-bright);
+    text-transform: uppercase;
+    text-shadow: 0 0 20px rgba(0,0,0,0.8);
+    animation: cin-emblem-burst 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    line-height: 1;
+  }
+  .versus-outcome.success {
+    color: #ffffff;
+    text-shadow: 0 0 10px var(--tavern-success), 0 0 20px var(--tavern-success), 2px 2px 0 #000;
+  }
+  .versus-outcome.failure {
+    color: #ffffff;
+    text-shadow: 0 0 10px var(--tavern-danger), 0 0 20px var(--tavern-danger), 2px 2px 0 #000;
+  }
+
+} /* end @layer animations */
+
+/* ==========================================================
+   ACCESSIBILITY: Reduced Motion
+   ========================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .cinematic-cut-in,
+  .cinematic-cut-in * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .cin-speed-lines { display: none !important; }
+  .cin-sparkles { display: none !important; }
+}
