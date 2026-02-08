@@ -1,11 +1,14 @@
-### Table Pulse Broadcast HUD
-- **New cinematic HUD strip** across the top of the table with live cards for:
-  - Phase intelligence
-  - Pot Heat meter
-  - Table Pressure meter
-  - Spotlight focus
-  - Oracle guidance (safest die / bust odds)
-- **Live feedline** under the HUD showing recent table events with icons and concise cleaned text.
-- **Premium visual language** for the new layer: angular broadcast cards, animated shimmer sweep, dynamic pressure-state styling, and responsive layout behavior.
-- **Accessibility/performance**: all new animations honor reduced-motion preferences.
-- **Stability fix**: corrected an unclosed `@keyframes pulse-badge` block in `styles/tavern.css`.
+### Premium Effects Engine — "Addicted to the Table" 🎰✨
+- **Feature**: Added a new premium effects engine with holographic 3D-tilt dice, enchanted cursor dust, animated crowns, sacred geometry table enchantments, and layered interaction polish.
+- **Feature**: Introduced an odometer-style tumbling pot counter with slot-reel digit animation and shimmer updates.
+- **Feature**: Added streak-based visual momentum systems (win flame aura tiers, loss reset handling, avatar ring effects).
+- **Feature**: Added cinematic environmental effects tied to gameplay events:
+  - coin flip animation on pot changes
+  - table ripple on dice SLAM
+  - premium spotlight and tension visuals
+- **Integration**:
+  - `scripts/ui/premium-fx.js` (new)
+  - `styles/premium-fx.css` (new)
+  - wiring updates in `scripts/app/tavern-app.js`, `scripts/ui/fx.js`, and `scripts/ui/dice-reveal.js`
+- **Compatibility**: Preserves Goblin Mode used-dice visuals and coexists with existing seat/status systems.
+- **Performance**: All new effects respect performance mode and reduced-motion settings.

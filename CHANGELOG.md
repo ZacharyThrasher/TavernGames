@@ -1,5 +1,40 @@
 # Changelog
 
+## [5.26.0] - 2026-02-08
+### Premium Effects Engine — "Addicted to the Table" 🎰✨
+- **Feature**: Holographic 3D-Tilt Dice Buttons — Pokémon-card style prismatic rainbow refraction that follows the cursor across each die button, with `mix-blend-mode: overlay`, per-button perspective transforms (±16° rotateX/Y), and specular highlight tracking. Scoped to `:not(.is-used)` to coexist with the Goblin "USED" stamp.
+- **Feature**: Odometer-Style Tumbling Gold Counter — pot display digits rebuild as individual slot-machine reels that cascade to their target value with cubic-bezier easing. Comma separators for thousands. Gold shimmer text-shadow on value change. First render skips animation; subsequent updates tumble.
+- **Feature**: Heartbeat Tension Border — a living, breathing `::after` border on the game window that pulses with a realistic lub-DUB double-beat pattern at three risk tiers:
+  - **Warm** (16+): Slow 2.5s amber pulse.
+  - **Hot** (18+): Anxious 1.5s orange pulse.
+  - **Critical** (20): Rapid 0.8s crimson alarm pulse.
+- **Feature**: Win Streak Flame Aura — NBA Jam "HE'S ON FIRE!" tiered flame system on player avatars during consecutive wins:
+  - **Streak 1**: Soft ember glow with radial gradient.
+  - **Streak 2**: Medium flame aura with 🔥 emoji badge.
+  - **Streak 3+**: Full inferno with multi-layer radial flames, blazing 🔥 icon, and "ON FIRE!" name badge.
+- **Feature**: Enchanted Gold Dust Cursor Trail — magical particle motes that follow the cursor inside the table area with upward drift, fade, and per-theme color overrides (green for Goblin, purple for Underdark, teal for Feywild, bright gold for Gilded Dragon). Throttled to 60ms intervals, max 30 concurrent motes.
+- **Feature**: Living Felt Table Surface — sacred geometry warding circles (nested rotating rings with cross-line patterns) that breathe in and out at ultra-low opacity. Intensity increases with pot escalation tiers (`heated` → `blazing`). Per-theme color overrides.
+- **Feature**: Animated Crown on Leading Player — floating golden Font Awesome crown icon above the leading player's avatar with sparkle particles (`✦`) and multi-phase bob animation.
+- **Feature**: Glass Morphism Pulse Band — frosted glass `backdrop-filter: blur(8px)` on pulse cards with `@property --border-angle` rotating gradient border that activates at `charged`/`volatile`/`critical` intensity. Includes a sweeping glass reflection highlight.
+- **Feature**: "Your Turn" Spotlight — dramatic conic-gradient theatrical spotlight that sweeps across the controls panel when it's your turn, with a pulsing gold edge sparkle line.
+- **Feature**: Premium Hover Orbs on Die Faces — rolled dice in player seats lift with `scale(1.25) translateY(-4px)` and glow with gold box-shadow on hover.
+- **Feature**: Cinematic Seat Entrance Stagger — player seats cascade in with staggered animation (0.05s–0.4s delays), including 3D `rotateX(15deg)` entrance, blur fade, and overshoot bounce.
+- **Feature**: Fortune's Shimmer Loading State — animated gold sweep that slides across waiting player seats during turn transitions.
+- **Feature**: Sacred Geometry Background — subliminal rotating geometric pattern (concentric circles + cross/diagonal lines) behind the table at 1.5% opacity with 120s rotation. Per-theme color overrides for all 5 themes.
+- **Feature**: Button Enchantment Trails — skewed light sweep that slides across action buttons on hover (`btn-primary`, `btn-success`, `btn-skill`, `btn-hold`).
+- **Feature**: Avatar Ring of Power — rotating dashed arcane ring on the active player's avatar. Implemented as an injected DOM element (not `::before`) to coexist with streak flame auras.
+- **Feature**: Natural 1 Omen Cracks — hairline CSS fracture overlay on die faces showing a Natural 1, with four intersecting crack lines in red and a 0.3s crack-appear entrance animation.
+- **Feature**: Gold Coin Flip on Pot Changes — flipping coin icon (`fa-coins`) that appears above the pot display when gold is added, with 3D `rotateY` flip and upward drift.
+- **Feature**: Table Ripple on Dice Roll — expanding ring effect on the table surface during the dice reveal SLAM phase, like a stone dropped in water.
+- **Feature**: Win/Loss Streak Tracking — `StreakTracker` records consecutive wins/losses per player via `showVictoryFanfare`/`showBustFanfare`, applies `data-streak` attributes to seats for CSS flame auras, and resets on bust.
+- **JS**: New `scripts/ui/premium-fx.js` — ~540 lines: 11 exported systems (`HolographicTilt`, `GoldOdometer`, `GoldDustTrail`, `spawnTableRipple`, `injectCrownJewels`, `injectTableEnchantment`, `spawnPotCoinFlip`, `injectArcaneRing`, `StreakTracker`, `initPremiumEffects`, `teardownPremiumEffects`).
+- **CSS**: New `styles/premium-fx.css` — ~1,180 lines: 17 effect systems with per-theme overrides and full `prefers-reduced-motion` support.
+- **Integration**: Wired into `tavern-app.js` `_onRender` (teardown/init cycle), `fx.js` (streak tracking in victory/bust fanfares, coin flip in pot pulse), and `dice-reveal.js` (table ripple on SLAM phase).
+- **Fix**: Resolved `::after` pseudo-element collision between heartbeat tension border and sacred geometry background on `.tavern-container` — heartbeat rules now explicitly reset inherited geometry properties.
+- **Fix**: Avoided `::before` collision between streak flame auras and arcane ring on `.player-avatar` — ring uses injected DOM element instead.
+- **Fix**: Scoped holographic `::after` overlay to `.btn-die-premium:not(.is-used)` to preserve Goblin Mode "USED" stamp.
+- **Perf**: All 17 CSS systems and 11 JS systems respect `isPerformanceMode()` and `prefers-reduced-motion: reduce`. Cursor-driven effects use passive event listeners and throttling.
+
 ## [5.25.0] - 2026-02-08
 ### Table Pulse Broadcast HUD
 - **Feature**: Added a new cinematic top-of-table HUD strip (`tavern-pulseband`) with five live cards:

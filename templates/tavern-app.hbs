@@ -43,53 +43,6 @@
     </div>
   </header>
 
-  <section class="tavern-pulseband" data-intensity="{{tableIntensity}}">
-    <article class="pulse-card pulse-phase">
-      <span class="pulse-label">Phase</span>
-      <span class="pulse-value">{{phasePulseLabel}}</span>
-      <span class="pulse-note">{{phasePulseHint}}</span>
-    </article>
-
-    <article class="pulse-card pulse-pot">
-      <span class="pulse-label">Pot Heat</span>
-      <span class="pulse-value">{{potHeatLabel}}</span>
-      <div class="pulse-meter" role="presentation">
-        <span class="pulse-meter-fill" style="--pulse-fill: {{potHeatPct}};"></span>
-      </div>
-    </article>
-
-    <article class="pulse-card pulse-pressure">
-      <span class="pulse-label">Table Pressure</span>
-      <span class="pulse-value">{{pressureLabel}}</span>
-      <div class="pulse-meter" role="presentation">
-        <span class="pulse-meter-fill" style="--pulse-fill: {{pressurePct}};"></span>
-      </div>
-    </article>
-
-    <article class="pulse-card pulse-spotlight">
-      <span class="pulse-label">Spotlight</span>
-      <span class="pulse-value">{{spotlightName}}</span>
-      <span class="pulse-note">{{spotlightHint}}</span>
-    </article>
-
-    <article class="pulse-card pulse-oracle {{oracleTone}}">
-      <span class="pulse-label">Oracle</span>
-      <span class="pulse-value">{{oracleLabel}}</span>
-      <span class="pulse-note">{{oracleHint}}</span>
-    </article>
-  </section>
-
-  {{#if pulseFeed.length}}
-  <section class="tavern-feedline" aria-live="polite">
-    {{#each pulseFeed}}
-    <div class="feedline-item {{this.typeClass}}">
-      <i class="{{this.icon}}"></i>
-      <span>{{this.text}}</span>
-    </div>
-    {{/each}}
-  </section>
-  {{/if}}
-
   {{!-- Main game area --}}
   <main class="tavern-main">
     {{!-- Table area with players --}}

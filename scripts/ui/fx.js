@@ -1,6 +1,7 @@
 import { MODULE_ID } from "../state.js";
 import { CinematicOverlay } from "./cinematic-overlay.js";
 import { ParticleFactory } from "./particle-fx.js";
+import { StreakTracker, spawnPotCoinFlip } from "./premium-fx.js";
 
 /* ============================================
    V13 Best Practices: Utility Functions
@@ -147,6 +148,9 @@ export function showVictoryFanfare(winnerId, amount) {
       } : undefined
     });
 
+    // V5.26: Track win streak for flame aura
+    StreakTracker.recordWin(winnerId);
+
   } catch (error) {
     // V13: Graceful error handling - log but don't crash game logic
     console.error("Tavern Twenty-One | Victory fanfare error:", error);
@@ -177,6 +181,9 @@ export function showBustFanfare(userId) {
 
     // Vignette flash for impact
     showVignetteFlash();
+
+    // V5.26: Reset win streak on bust
+    StreakTracker.recordLoss(userId);
 
   } catch (error) {
     console.error("Tavern Twenty-One | Bust fanfare error:", error);
@@ -546,6 +553,10 @@ export function showPotPulse() {
       void potEl.offsetWidth;
       potEl.classList.add("pot-breathe");
       setTimeout(() => potEl.classList.remove("pot-breathe"), 700);
+
+      // V5.26: Coin flip animation on pot change
+      const potDisplay = appWindow.querySelector(".pot-display");
+      spawnPotCoinFlip(potDisplay);
     }, 60);
   } catch (error) {
     console.error("Tavern Twenty-One | Pot pulse error:", error);

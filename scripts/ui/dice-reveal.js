@@ -18,6 +18,7 @@
 import { MODULE_ID } from "../state.js";
 import { createElement, isPerformanceMode, shake } from "./fx.js";
 import { ParticleFactory } from "./particle-fx.js";
+import { spawnTableRipple } from "./premium-fx.js";
 
 /* ============================================
    CONSTANTS
@@ -214,6 +215,9 @@ async function _performReveal(userId, dieType, result, context, compressed) {
   // Impact ring
   const ring = createElement("div", { className: "dice-reveal-ring" });
   overlay.appendChild(ring);
+
+  // V5.26: Table ripple on dice slam
+  spawnTableRipple();
 
   // Screen shake
   try {
