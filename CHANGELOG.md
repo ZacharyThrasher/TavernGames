@@ -1,5 +1,19 @@
 # Changelog
 
+## [5.25.0] - 2026-02-08
+### Table Pulse Broadcast HUD
+- **Feature**: Added a new cinematic top-of-table HUD strip (`tavern-pulseband`) with five live cards:
+  - **Phase** (smart round/phase labeling with contextual hinting)
+  - **Pot Heat** (dynamic meter driven by pot-to-ante ratio)
+  - **Table Pressure** (computed volatility score using pot, eliminations, status, and risk)
+  - **Spotlight** (current focus actor and action cue)
+  - **Oracle** (live “safest die” bust-risk guidance during active betting turns)
+- **Feature**: Added a real-time event feedline sourced from recent history entries with iconized chips and sanitized/truncated copy for readability.
+- **UI/Style**: Introduced a bespoke premium visual language for the HUD/feedline:
+  - angular clipped cards, shimmer sweep, animated meter fills, pressure-state border escalation (`charged`, `volatile`, `critical`), and responsive mobile breakpoints.
+- **Accessibility/Perf**: Added reduced-motion fallbacks for all new HUD/feedline animation paths.
+- **Fix**: Corrected an unclosed `@keyframes pulse-badge` block in `styles/tavern.css` that could invalidate/absorb trailing CSS in some parsers.
+
 ## [5.24.0] - 2026-02-07
 ### Cinematic Cut-In Overhaul — PIZAZZ Edition 🎬💥
 - **Feature**: Complete visual redesign of all 14 cinematic cut-in types with anime/fighting-game inspired multi-layer presentation.

@@ -1,10 +1,11 @@
-### Cinematic Cut-In Overhaul - PIZAZZ Edition
-- **Feature**: Full redesign of all cinematic cut-ins with letterbox bars, radial flash, vignettes, speed lines, stripe echo, and edge sparks.
-- **Feature**: Emblem watermark system with per-type iconography across all 14 cut-in types.
-- **Feature**: Per-type particle systems, including secondary burst waves for high-impact events.
-- **Feature**: Screen shake added for impact types with heavier intensity on Sudden Death.
-- **Feature**: Portrait, title, and target-entry animation overhaul with stronger impact timing.
-- **Feature**: Coordinated exit sequence with staggered outro and tuned durations.
-- **CSS**: Added `styles/cinematic-overlay.css`; removed legacy cinematic block from `styles/tavern.css`.
-- **Template/JS**: Reworked `templates/cinematic-overlay.hbs` and enhanced `scripts/ui/cinematic-overlay.js` for new configs and timing.
-- **Perf**: Honors reduced-motion by collapsing motion-heavy effects.
+### Table Pulse Broadcast HUD
+- **New cinematic HUD strip** across the top of the table with live cards for:
+  - Phase intelligence
+  - Pot Heat meter
+  - Table Pressure meter
+  - Spotlight focus
+  - Oracle guidance (safest die / bust odds)
+- **Live feedline** under the HUD showing recent table events with icons and concise cleaned text.
+- **Premium visual language** for the new layer: angular broadcast cards, animated shimmer sweep, dynamic pressure-state styling, and responsive layout behavior.
+- **Accessibility/performance**: all new animations honor reduced-motion preferences.
+- **Stability fix**: corrected an unclosed `@keyframes pulse-badge` block in `styles/tavern.css`.

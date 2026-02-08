@@ -473,6 +473,65 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       }, 500);
     }
 
+    const currentTheme = game.settings.get(MODULE_ID, "tableTheme") ?? "sword-coast";
+    const flavor = getThemeFlavor(currentTheme);
+
+    let potTier = "calm";
+    const isActiveRound = ["PLAYING", "INSPECTION", "DUEL", "REVEALING"].includes(state.status);
+    const potRatio = state.pot / Math.max(ante, 1);
+    if (isActiveRound && state.pot > 0) {
+      if (potRatio > 8) potTier = "blazing";
+      else if (potRatio > 4) potTier = "heated";
+      else if (potRatio > 0) potTier = "warm";
+    }
+
+    const potHeatPct = Math.max(0, Math.min(100, Math.round((potRatio / 8) * 100)));
+    const potHeatLabelMap = {
+      calm: "Quiet",
+      warm: "Warming",
+      heated: "Boiling",
+      blazing: "Dragonfire"
+    };
+    const potHeatLabel = potHeatLabelMap[potTier] ?? "Quiet";
+
+    const phasePulse = this._buildPhasePulse(
+      state.status,
+      phase,
+      isGoblinMode,
+      goblinStageLabel,
+      tableData.duel?.round ?? 1
+    );
+
+    const pressureModel = this._buildPressureModel({
+      state,
+      players,
+      tableData,
+      ante,
+      riskLevel
+    });
+
+    const spotlightModel = this._buildSpotlightModel({
+      myTurn,
+      currentPlayer,
+      status: state.status,
+      phase,
+      isGoblinMode
+    });
+
+    const oracleModel = this._buildOracleModel({
+      myTurn,
+      isBettingPhase,
+      isGoblinMode,
+      myTotal,
+      isBusted,
+      isFolded,
+      isHolding,
+      currentPlayer,
+      goblinStageLabel
+    });
+
+    const pulseFeed = this._buildPulseFeed(state.history ?? []);
+
     return {
       moduleId: MODULE_ID,
       state,
@@ -549,34 +608,30 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       isDared: tableData.dared?.[userId] ?? false,
       startingHeat: tableData.houseRules?.startingHeat ?? 10,
       uiLocked: TavernApp.uiLocked, // V4.8.56: UI Lock State
-      tableTheme: game.settings.get(MODULE_ID, "tableTheme") ?? "sword-coast", // V5.21: Theme
+      tableTheme: currentTheme, // V5.21: Theme
 
-      // V5.22: Atmosphere & Flavor System
-      ...(() => {
-        const currentTheme = game.settings.get(MODULE_ID, "tableTheme") ?? "sword-coast";
-        const flavor = getThemeFlavor(currentTheme);
-
-        // Pot escalation tier
-        let potTier = "calm";
-        const isActiveRound = ["PLAYING", "INSPECTION", "DUEL", "REVEALING"].includes(state.status);
-        if (isActiveRound && state.pot > 0) {
-          const ratio = state.pot / Math.max(ante, 1);
-          if (ratio > 8) potTier = "blazing";
-          else if (ratio > 4) potTier = "heated";
-          else if (ratio > 0) potTier = "warm";
-        }
-
-        return {
-          flavorSubtitle: flavor.subtitle,
-          flavorIcon: flavor.icon,
-          flavorEmptyTitle: flavor.emptyTitle,
-          flavorEmptyText: flavor.emptyText,
-          flavorEmptyIcon: flavor.emptyIcon,
-          potTier,
-          atmosphereLine: getAtmosphereLine(currentTheme, state.status),
-          riskWarningText: getRiskWarning(currentTheme, riskLevel),
-        };
-      })(),
+      // V5.22+: Atmosphere, Flavor, and Broadcast Pulse UI
+      flavorSubtitle: flavor.subtitle,
+      flavorIcon: flavor.icon,
+      flavorEmptyTitle: flavor.emptyTitle,
+      flavorEmptyText: flavor.emptyText,
+      flavorEmptyIcon: flavor.emptyIcon,
+      potTier,
+      atmosphereLine: getAtmosphereLine(currentTheme, state.status),
+      riskWarningText: getRiskWarning(currentTheme, riskLevel),
+      tableIntensity: pressureModel.intensity,
+      phasePulseLabel: phasePulse.label,
+      phasePulseHint: phasePulse.hint,
+      potHeatLabel,
+      potHeatPct,
+      pressureLabel: pressureModel.label,
+      pressurePct: pressureModel.percent,
+      spotlightName: spotlightModel.name,
+      spotlightHint: spotlightModel.hint,
+      oracleLabel: oracleModel.label,
+      oracleHint: oracleModel.hint,
+      oracleTone: oracleModel.tone,
+      pulseFeed,
 
       gameMode, // V5.14.1: Game Mode for UI
       isGoblinMode, // V5.14.0
@@ -724,6 +779,190 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
       case "goad": return "fa-solid fa-comments";
       default: return "fa-solid fa-circle";
     }
+  }
+
+  _buildPhasePulse(status, phase, isGoblinMode, goblinStageLabel, duelRound = 1) {
+    if (status === "LOBBY") {
+      return { label: "Open Seating", hint: "Waiting for challengers." };
+    }
+    if (status === "PLAYING") {
+      if (phase === "opening") {
+        return { label: "Opening Deal", hint: "Everyone rolls into position." };
+      }
+      if (phase === "cut") {
+        return { label: "The Cut", hint: "Lowest opener decides the reroll." };
+      }
+      if (isGoblinMode) {
+        return { label: goblinStageLabel ?? "The Chamber", hint: "Shared die pressure for all." };
+      }
+      return { label: "Betting Run", hint: "Push, hold, or fold." };
+    }
+    if (status === "INSPECTION") {
+      return { label: "The Staredown", hint: "Cheaters can still be exposed." };
+    }
+    if (status === "REVEALING") {
+      return { label: "Reveal", hint: "Hidden dice are turning face-up." };
+    }
+    if (status === "DUEL") {
+      return { label: `Duel R${duelRound}`, hint: "Final clash for the pot." };
+    }
+    if (status === "PAYOUT") {
+      return { label: "Payout", hint: "Coin and consequences are dealt." };
+    }
+    return { label: "In Motion", hint: "The table is shifting." };
+  }
+
+  _buildPressureModel({ state, players, tableData, ante, riskLevel }) {
+    const playerIds = (state.turnOrder?.length ? state.turnOrder : players.map(p => p.id)) ?? [];
+    const activeCount = playerIds.filter(id => !tableData.busts?.[id] && !tableData.folded?.[id] && !tableData.caught?.[id]).length;
+    const eliminatedCount = Math.max(0, playerIds.length - activeCount);
+    const potPressure = Math.min(48, Math.round((state.pot / Math.max(ante, 1)) * 9));
+
+    let score = 12 + potPressure + Math.min(20, eliminatedCount * 7);
+    if (state.status === "DUEL") score += 24;
+    if (state.status === "INSPECTION") score += 12;
+    if (riskLevel === "hot") score += 10;
+    if (riskLevel === "critical") score += 18;
+
+    const percent = Math.max(0, Math.min(100, score));
+
+    let label = "Measured";
+    let intensity = "calm";
+    if (percent >= 85) {
+      label = "Pandemonium";
+      intensity = "critical";
+    } else if (percent >= 65) {
+      label = "Volatile";
+      intensity = "volatile";
+    } else if (percent >= 40) {
+      label = "Charged";
+      intensity = "charged";
+    }
+
+    return { percent, label, intensity };
+  }
+
+  _buildSpotlightModel({ myTurn, currentPlayer, status, phase, isGoblinMode }) {
+    if (myTurn) {
+      return {
+        name: "You",
+        hint: isGoblinMode ? "Drive the Chamber." : "All eyes on your next move."
+      };
+    }
+    if (currentPlayer?.name) {
+      return {
+        name: currentPlayer.name,
+        hint: (status === "PLAYING" && phase === "cut")
+          ? "Deciding The Cut."
+          : "Playing the live turn."
+      };
+    }
+    if (status === "DUEL") return { name: "Duelists", hint: "Winner takes the table." };
+    if (status === "INSPECTION") return { name: "Accusers", hint: "Truth is expensive." };
+    if (status === "PAYOUT") return { name: "Collectors", hint: "Counting coin and scars." };
+    if (status === "LOBBY") return { name: "Open Seats", hint: "Waiting for players." };
+    return { name: "The Table", hint: "Momentum is building." };
+  }
+
+  _buildOracleModel({
+    myTurn,
+    isBettingPhase,
+    isGoblinMode,
+    myTotal,
+    isBusted,
+    isFolded,
+    isHolding,
+    currentPlayer,
+    goblinStageLabel
+  }) {
+    if (myTurn && isBettingPhase && !isGoblinMode && !isBusted && !isFolded && !isHolding) {
+      const odds = this._computeBustOdds(myTotal);
+      const safest = odds[0];
+
+      if (!safest || safest.bustPct >= 100) {
+        return {
+          label: "No Safe Die",
+          hint: "Every option can bust from this total.",
+          tone: "danger"
+        };
+      }
+
+      const survivePct = Math.max(0, 100 - safest.bustPct);
+      let tone = "safe";
+      if (safest.bustPct >= 70) tone = "danger";
+      else if (safest.bustPct >= 40) tone = "warning";
+
+      return {
+        label: `Safest d${safest.die}`,
+        hint: `${safest.bustPct}% bust | ${survivePct}% survive`,
+        tone
+      };
+    }
+
+    if (isGoblinMode && isBettingPhase) {
+      return {
+        label: goblinStageLabel ?? "The Chamber",
+        hint: "Shared die means shared chaos.",
+        tone: "warning"
+      };
+    }
+
+    if (currentPlayer?.name) {
+      return {
+        label: "Reading Table",
+        hint: `${currentPlayer.name} is in the hot seat.`,
+        tone: "neutral"
+      };
+    }
+
+    return {
+      label: "Awaiting Turn",
+      hint: "Odds lock in when action begins.",
+      tone: "neutral"
+    };
+  }
+
+  _computeBustOdds(total) {
+    const numericTotal = Number(total);
+    if (!Number.isFinite(numericTotal)) return [];
+
+    const diceValues = [4, 6, 8, 10, 20];
+    return diceValues.map((die) => {
+      const safeOutcomes = Math.max(0, Math.min(die, Math.floor(21 - numericTotal)));
+      const bustOutcomes = Math.max(0, die - safeOutcomes);
+      const bustPct = Math.round((bustOutcomes / die) * 100);
+      return { die, bustPct };
+    }).sort((a, b) => (a.bustPct - b.bustPct) || (b.die - a.die));
+  }
+
+  _buildPulseFeed(historyEntries = []) {
+    const recent = historyEntries.slice(-4).reverse();
+    if (!recent.length) {
+      return [{
+        icon: "fa-solid fa-sparkles",
+        text: "Start a round to ignite the table.",
+        typeClass: "phase"
+      }];
+    }
+
+    return recent.map((entry) => ({
+      icon: this._getHistoryIcon(entry.type),
+      text: this._truncateText(this._stripHtml(entry.message) || "The table shifts.", 88),
+      typeClass: String(entry.type ?? "event").toLowerCase().replace(/[^a-z0-9_-]/g, "-")
+    }));
+  }
+
+  _stripHtml(value = "") {
+    return String(value)
+      .replace(/<br\s*\/?>/gi, " ")
+      .replace(/<[^>]*>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  _truncateText(value = "", limit = 80) {
+    if (value.length <= limit) return value;
+    return `${value.slice(0, Math.max(0, limit - 1)).trimEnd()}…`;
   }
 
   _onRender(context, options) {
