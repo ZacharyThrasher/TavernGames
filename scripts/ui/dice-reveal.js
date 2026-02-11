@@ -110,11 +110,23 @@ function _getTheme() {
 }
 
 function _getApp() {
-  return document.querySelector(".tavern-dice-master.application");
+  return document.querySelector(".window-app.tavern-dice-master")
+    ?? document.querySelector(".tavern-dice-master.application")
+    ?? document.querySelector(".tavern-dice-master");
 }
 
 function _getTableArea() {
   return _getApp()?.querySelector(".tavern-table-area");
+}
+
+async function _waitForTableArea(timeoutMs = 1200, pollMs = 50) {
+  const end = Date.now() + timeoutMs;
+  while (Date.now() < end) {
+    const tableArea = _getTableArea();
+    if (tableArea) return tableArea;
+    await _sleep(pollMs);
+  }
+  return null;
 }
 
 function _getSeat(userId) {
@@ -133,7 +145,7 @@ function _contextClass(ctx) {
    ============================================ */
 
 async function _performQuick(userId, dieType, result, context) {
-  const tableArea = _getTableArea();
+  const tableArea = await _waitForTableArea();
   if (!tableArea) return;
 
   const ctxClass = _contextClass(context);
@@ -165,7 +177,7 @@ async function _performReveal(userId, dieType, result, context, compressed) {
     return _performQuick(userId, dieType, result, context);
   }
 
-  const tableArea = _getTableArea();
+  const tableArea = await _waitForTableArea();
   if (!tableArea) return;
 
   const theme = _getTheme();

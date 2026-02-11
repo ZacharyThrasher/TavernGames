@@ -1,5 +1,13 @@
 # Changelog
 
+## [5.27.3] - 2026-02-11
+### Standard Roll Reveal Reliability Hotfix
+- **Fix**: Restored Standard-mode betting roll animation reliability by hardening end-of-turn reveal logic in `scripts/twenty-one/phases/turn.js`.
+- **Fix**: Reveal dispatch now keys off `pendingAction === "cheat_decision"` and resolves the most recent unrevealed non-blind roll, preventing silent skips when cheat flow mutates state timing.
+- **Fix**: Added DOM-settle resilience in `scripts/ui/dice-reveal.js` by waiting for `.tavern-table-area` to exist before playing reveal FX.
+- **Fix**: Broadened app root lookup fallback in `scripts/ui/dice-reveal.js` to handle transient render states.
+- **Impact**: Goblin mode behavior remains unchanged; Standard mode now consistently plays roll reveal animation after the cheat window/turn resolution.
+
 ## [5.27.2] - 2026-02-11
 ### UI Regression Hotfix (Post-PARTS Refactor)
 - **Fix**: Restored stable full-app render path to resolve incomplete UI rendering introduced by partial PARTS updates.

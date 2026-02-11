@@ -84,46 +84,69 @@ export async function finishTurn(userId) {
   const rolls = tableData.rolls[userId] ?? [];
   const lastRollIndex = rolls.length - 1;
   const lastRoll = rolls[lastRollIndex];
+  const awaitingCheatDecision = tableData.pendingAction === "cheat_decision";
 
-  if (lastRoll && tableData.phase === "betting" && !lastRoll.public && !lastRoll.blind && (tableData.gameMode ?? "standard") !== "goblin") {
-    // It was hidden for cheat opportunity - time to reveal
-    const updatedRolls = [...rolls];
-    updatedRolls[lastRollIndex] = { ...lastRoll, public: true };
+  const hiddenRevealIndex = (() => {
+    for (let i = rolls.length - 1; i >= 0; i--) {
+      const roll = rolls[i];
+      if (!roll) continue;
+      if ((roll.public ?? true) || roll.blind) continue;
+      return i;
+    }
+    return -1;
+  })();
 
+  const revealIndex = hiddenRevealIndex >= 0
+    ? hiddenRevealIndex
+    : (awaitingCheatDecision && lastRoll && !lastRoll.blind ? lastRollIndex : -1);
+  const revealRoll = revealIndex >= 0 ? rolls[revealIndex] : null;
+  const shouldRevealStandardRoll =
+    Boolean(revealRoll)
+    && awaitingCheatDecision
+    && tableData.phase === "betting"
+    && !revealRoll.blind
+    && (tableData.gameMode ?? "standard") !== "goblin";
+
+  if (shouldRevealStandardRoll) {
+    // Standard betting rolls are hidden during the cheat window and revealed at end-of-turn.
+    const wasHidden = !(revealRoll.public ?? true);
     const updatedVisibleTotals = { ...tableData.visibleTotals };
     const previousVisibleTotal = updatedVisibleTotals[userId] ?? 0;
-    updatedVisibleTotals[userId] = (updatedVisibleTotals[userId] ?? 0) + lastRoll.result;
 
-    tableData.rolls = { ...tableData.rolls, [userId]: updatedRolls };
-    tableData.visibleTotals = updatedVisibleTotals;
+    if (wasHidden) {
+      const updatedRolls = [...rolls];
+      updatedRolls[revealIndex] = { ...revealRoll, public: true };
+      updatedVisibleTotals[userId] = (updatedVisibleTotals[userId] ?? 0) + revealRoll.result;
+      tableData.rolls = { ...tableData.rolls, [userId]: updatedRolls };
+      tableData.visibleTotals = updatedVisibleTotals;
+    }
 
     const userName = getActorName(userId);
-    // Check cost again for log consistency
     let rollCostMsg = "";
     if (gameMode !== "goblin") {
-      // Simplified cost check
-      const cost = getDieCost(lastRoll.die, ante);
+      const cost = getDieCost(revealRoll.die, ante);
       if (cost === 0) rollCostMsg = " (FREE)";
       else rollCostMsg = ` (${cost}gp)`;
     }
 
     let specialMsg = "";
     if (gameMode === "goblin") {
-      if (lastRoll.die === 2) {
-        const coinValue = lastRoll.coinValue ?? 2;
-        specialMsg = lastRoll.result === 2 ? ` **COIN: +${coinValue}!**` : " **COIN: DEATH!**";
-      } else if (lastRoll.result === 1) {
+      if (revealRoll.die === 2) {
+        const coinValue = revealRoll.coinValue ?? 2;
+        specialMsg = revealRoll.result === 2 ? ` **COIN: +${coinValue}!**` : " **COIN: DEATH!**";
+      } else if (revealRoll.result === 1) {
         specialMsg = " **BUST!**";
-      } else if (lastRoll.die === 20 && lastRoll.result === 20) {
+      } else if (revealRoll.die === 20 && revealRoll.result === 20) {
         specialMsg = " **NAT 20: EXPLODE!**";
       }
     } else {
-      if (lastRoll.die === 20 && lastRoll.result === 21) specialMsg = " **NATURAL 20 = INSTANT 21!**";
-      else if (lastRoll.die !== 20 && lastRoll.result === 1) specialMsg = " *Spilled drink! 1gp cleaning fee.*";
+      if (revealRoll.die === 20 && revealRoll.result === 21) specialMsg = " **NATURAL 20 = INSTANT 21!**";
+      else if (revealRoll.die !== 20 && revealRoll.result === 1) specialMsg = " *Spilled drink! 1gp cleaning fee.*";
     }
+
     await addLogToAll({
-      title: `${userName} rolled d${lastRoll.die}`,
-      message: `Result: <strong>${lastRoll.result}</strong>${rollCostMsg}${specialMsg}`,
+      title: `${userName} rolled d${revealRoll.die}`,
+      message: `Result: <strong>${revealRoll.result}</strong>${rollCostMsg}${specialMsg}`,
       icon: "fa-solid fa-dice",
       type: "roll"
     });
@@ -131,26 +154,25 @@ export async function finishTurn(userId) {
     await addHistoryEntry({
       type: "roll",
       player: userName,
-      die: `d${lastRoll.die}`,
-      result: lastRoll.result,
+      die: `d${revealRoll.die}`,
+      result: revealRoll.result,
       total: tableData.totals[userId],
-      message: `${userName} rolled a d${lastRoll.die}${rollCostMsg}...${specialMsg}`,
+      message: `${userName} rolled a d${revealRoll.die}${rollCostMsg}...${specialMsg}`,
     });
-    // This replaces DSN for the dramatic post-cheat betting reveal.
-    // The condition above already gates on !lastRoll.blind, so blind rolls never reach here.
-    const isNat20 = lastRoll.die === 20 && lastRoll.result === 21;
+
+    const isNat20 = revealRoll.die === 20 && revealRoll.result === 21;
     const isBust = (tableData.totals[userId] ?? 0) > 21;
     const isJackpot = !isBust && (tableData.totals[userId] ?? 0) === 21;
-    await withWarning("Dice reveal error", () => tavernSocket.executeForEveryone("showDiceReveal", userId, lastRoll.die, lastRoll.result, {
+    await withWarning("Dice reveal error", () => tavernSocket.executeForEveryone("showDiceReveal", userId, revealRoll.die, revealRoll.result, {
       isNat20,
       isBust,
       isJackpot,
     }));
     await delay(REVEAL_DURATION);
 
-    // Show score surge AFTER cheat resolution (public reveal)
-    if (gameMode !== "goblin") {
-      const delta = lastRoll.result;
+    // Only surge when this reveal actually changed visible score.
+    if (gameMode !== "goblin" && wasHidden) {
+      const delta = revealRoll.result;
       if (delta > 0) {
         await withWarning("Could not show score surge", () => tavernSocket.executeForEveryone("showScoreSurge", userId, {
           from: previousVisibleTotal,
