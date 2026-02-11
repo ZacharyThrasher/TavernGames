@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.27.5] - 2026-02-11
+### Standard Reveal Rerender Guard Hotfix
+- **Fix**: Moved Standard-mode betting reveal execution ahead of log/history writes in `scripts/twenty-one/phases/turn.js` so reveal animations are not interrupted by state-write rerenders.
+- **Fix**: Added reveal-active render deferral in `scripts/main.js` for `updateSetting`-driven full app refreshes while `.dice-reveal-overlay` / `.dice-reveal-quick` are active.
+- **Fix**: Added matching reveal-active deferral in `scripts/app/tavern-client-actions.js` for direct `app.render()` calls during UI lock transitions.
+- **Impact**: Aligns Standard reveal timing behavior closer to Goblin mode and prevents mid-reveal DOM replacement that can hide reel motion.
+
 ## [5.27.4] - 2026-02-11
 ### Reel Animation Visibility Hotfix
 - **Fix**: Replaced wall-clock reel cutoff in `scripts/ui/dice-reveal.js` with a guaranteed multi-step spin sequence.

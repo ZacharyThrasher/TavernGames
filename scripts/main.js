@@ -31,6 +31,14 @@ const openTavern = () => {
   game.tavernDiceMaster?.open();
 };
 
+const REVEAL_ACTIVE_SELECTOR = ".dice-reveal-overlay, .dice-reveal-quick";
+const UI_REFRESH_DEFER_MS = 60;
+const UI_REFRESH_MAX_DEFERRALS = 120;
+
+function hasActiveDiceReveal() {
+  return Boolean(document.querySelector(REVEAL_ACTIVE_SELECTOR));
+}
+
 /* ============================================
    Hook Registrations
    ============================================ */
@@ -86,11 +94,19 @@ Hooks.once("ready", async () => {
   const app = new TavernApp();
   const logs = new LogsWindow();
   let renderScheduled = false;
+  let refreshDeferrals = 0;
 
   const scheduleUiRefresh = () => {
     if (renderScheduled) return;
     renderScheduled = true;
     setTimeout(() => {
+      if (hasActiveDiceReveal() && refreshDeferrals < UI_REFRESH_MAX_DEFERRALS) {
+        refreshDeferrals += 1;
+        renderScheduled = false;
+        setTimeout(scheduleUiRefresh, UI_REFRESH_DEFER_MS);
+        return;
+      }
+      refreshDeferrals = 0;
       renderScheduled = false;
       if (app.rendered) {
         app.render();

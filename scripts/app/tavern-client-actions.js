@@ -24,6 +24,15 @@ import { delay, fireAndForget } from "../twenty-one/utils/runtime.js";
 import { localizeOrFallback } from "../twenty-one/utils/i18n.js";
 
 const t = (key, fallback, data = {}) => localizeOrFallback(key, fallback, data);
+const REVEAL_ACTIVE_SELECTOR = ".dice-reveal-overlay, .dice-reveal-quick";
+const APP_RENDER_DEFER_MS = 60;
+const APP_RENDER_MAX_DEFERRALS = 120;
+let renderDeferrals = 0;
+let renderRetryHandle = null;
+
+function hasActiveDiceReveal() {
+  return Boolean(document.querySelector(REVEAL_ACTIVE_SELECTOR));
+}
 
 function requireAssignedCharacter(actionKey, fallbackActionName) {
   if (game.user.character) return true;
@@ -34,7 +43,26 @@ function requireAssignedCharacter(actionKey, fallbackActionName) {
 }
 
 export function renderAppIfPresent() {
-  if (game.tavernDiceMaster?.app) game.tavernDiceMaster.app.render();
+  const app = game.tavernDiceMaster?.app;
+  if (!app) return;
+
+  if (hasActiveDiceReveal() && renderDeferrals < APP_RENDER_MAX_DEFERRALS) {
+    renderDeferrals += 1;
+    if (!renderRetryHandle) {
+      renderRetryHandle = setTimeout(() => {
+        renderRetryHandle = null;
+        renderAppIfPresent();
+      }, APP_RENDER_DEFER_MS);
+    }
+    return;
+  }
+
+  renderDeferrals = 0;
+  if (renderRetryHandle) {
+    clearTimeout(renderRetryHandle);
+    renderRetryHandle = null;
+  }
+  app.render();
 }
 
 export async function withUiLock(AppClass, action) {

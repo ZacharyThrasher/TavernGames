@@ -144,6 +144,18 @@ export async function finishTurn(userId) {
       else if (revealRoll.die !== 20 && revealRoll.result === 1) specialMsg = " *Spilled drink! 1gp cleaning fee.*";
     }
 
+    // Fire reveal before writing logs/history because those writes trigger full rerenders.
+    // Rerendering mid-reveal can detach overlay nodes and skip visible reel cycles.
+    const isNat20 = revealRoll.die === 20 && revealRoll.result === 21;
+    const isBust = (tableData.totals[userId] ?? 0) > 21;
+    const isJackpot = !isBust && (tableData.totals[userId] ?? 0) === 21;
+    await withWarning("Dice reveal error", () => tavernSocket.executeForEveryone("showDiceReveal", userId, revealRoll.die, revealRoll.result, {
+      isNat20,
+      isBust,
+      isJackpot,
+    }));
+    await delay(REVEAL_DURATION);
+
     await addLogToAll({
       title: `${userName} rolled d${revealRoll.die}`,
       message: `Result: <strong>${revealRoll.result}</strong>${rollCostMsg}${specialMsg}`,
@@ -159,16 +171,6 @@ export async function finishTurn(userId) {
       total: tableData.totals[userId],
       message: `${userName} rolled a d${revealRoll.die}${rollCostMsg}...${specialMsg}`,
     });
-
-    const isNat20 = revealRoll.die === 20 && revealRoll.result === 21;
-    const isBust = (tableData.totals[userId] ?? 0) > 21;
-    const isJackpot = !isBust && (tableData.totals[userId] ?? 0) === 21;
-    await withWarning("Dice reveal error", () => tavernSocket.executeForEveryone("showDiceReveal", userId, revealRoll.die, revealRoll.result, {
-      isNat20,
-      isBust,
-      isJackpot,
-    }));
-    await delay(REVEAL_DURATION);
 
     // Only surge when this reveal actually changed visible score.
     if (gameMode !== "goblin" && wasHidden) {
