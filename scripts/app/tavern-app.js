@@ -86,18 +86,6 @@ export class TavernApp extends HandlebarsApplicationMixin(ApplicationV2) {
     main: {
       template: `modules/${MODULE_ID}/templates/tavern-app.hbs`,
     },
-    header: {
-      template: `modules/${MODULE_ID}/templates/parts/header.hbs`,
-    },
-    table: {
-      template: `modules/${MODULE_ID}/templates/parts/table.hbs`,
-    },
-    controls: {
-      template: `modules/${MODULE_ID}/templates/parts/controls.hbs`,
-    },
-    footer: {
-      template: `modules/${MODULE_ID}/templates/parts/footer.hbs`,
-    },
   };
 
   static DICE_ICONS = {

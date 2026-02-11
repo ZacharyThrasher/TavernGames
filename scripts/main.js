@@ -93,12 +93,7 @@ Hooks.once("ready", async () => {
     setTimeout(() => {
       renderScheduled = false;
       if (app.rendered) {
-        try {
-          app.render({ parts: ["header", "table", "controls", "footer"] });
-        } catch (error) {
-          console.warn("Tavern | Partial render failed; falling back to full render.", error);
-          app.render();
-        }
+        app.render();
       }
       if (logs.rendered) logs.render();
     }, 0);

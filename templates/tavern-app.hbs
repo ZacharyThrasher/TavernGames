@@ -1,27 +1,27 @@
 <div class="tavern-container" data-theme="{{tableTheme}}" {{#if riskLevel}}data-risk="{{riskLevel}}"{{/if}} data-pot-tier="{{potTier}}">
   {{!-- Header --}}
-  <header class="tavern-header" data-application-part="header">
+  <header class="tavern-header">
     {{> "modules/tavern-dice-master/templates/parts/header.hbs"}}
   </header>
 
   {{!-- Main game area --}}
   <main class="tavern-main">
     {{!-- Table area with players --}}
-    <section class="tavern-table-area" data-application-part="table">
+    <section class="tavern-table-area">
       {{> "modules/tavern-dice-master/templates/parts/table.hbs"}}
     </section>
 
     {{!-- Right sidebar --}}
     <aside class="tavern-sidebar">
       {{!-- Controls --}}
-      <div class="tavern-controls-panel" data-application-part="controls">
+      <div class="tavern-controls-panel">
         {{> "modules/tavern-dice-master/templates/parts/controls.hbs"}}
       </div>
     </aside>
   </main>
 
   {{!-- Footer --}}
-  <footer class="tavern-footer" data-application-part="footer">
+  <footer class="tavern-footer">
     {{> "modules/tavern-dice-master/templates/parts/footer.hbs"}}
   </footer>
 </div>

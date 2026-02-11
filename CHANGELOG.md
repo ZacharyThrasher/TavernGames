@@ -1,5 +1,16 @@
 # Changelog
 
+## [5.27.2] - 2026-02-11
+### UI Regression Hotfix (Post-PARTS Refactor)
+- **Fix**: Restored stable full-app render path to resolve incomplete UI rendering introduced by partial PARTS updates.
+- **Fix**: Reverted Tavern app PART definitions back to `main` only:
+  - `scripts/app/tavern-app.js`
+- **Fix**: Reverted update-setting refresh behavior to full render (`app.render()`), eliminating partial update desync:
+  - `scripts/main.js`
+- **Fix**: Removed PART markers from structural containers to prevent DOM replacement mismatches:
+  - `templates/tavern-app.hbs`
+- **Impact**: Restores expected visual framing (wood trim/layout), full control panel behavior, and dice/action interaction reliability.
+
 ## [5.27.1] - 2026-02-11
 ### Foundry PARTS Rendering Hotfix
 - **Fix**: Resolved Foundry V13 ApplicationV2 PARTS render crash:
