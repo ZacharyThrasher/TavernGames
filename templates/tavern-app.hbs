@@ -1,80 +1,27 @@
 <div class="tavern-container" data-theme="{{tableTheme}}" {{#if riskLevel}}data-risk="{{riskLevel}}"{{/if}} data-pot-tier="{{potTier}}">
   {{!-- Header --}}
-  <header class="tavern-header">
-    <div class="tavern-title">
-      <div class="tavern-logo">
-        <i class="{{flavorIcon}}"></i>
-      </div>
-      <div class="tavern-title-text">
-        <h1>Twenty-One
-          <i class="fa-solid fa-circle-question help-icon"
-            style="font-size: 0.6em; color: #aaa; cursor: pointer; vertical-align: top;" data-action="help"
-            title="Rules & Help"></i>
-          <i class="fa-solid fa-scroll help-icon"
-            style="font-size: 0.6em; color: #ffd700; cursor: pointer; vertical-align: top; margin-left: 5px; position: relative;"
-            data-action="toggleLogs" title="Open Private Log">
-            {{#if hasUnreadLogs}}
-            <span class="notification-badge"></span>
-            {{/if}}
-          </i>
-        </h1>
-        <span class="tavern-subtitle">{{flavorSubtitle}}</span>
-      </div>
-    </div>
-    <div class="tavern-info">
-      {{#if isPlayingAsNpc}}
-      <div class="npc-wallet-display" title="NPC Table Wallet">
-        <i class="fa-solid fa-sack-dollar" style="color: #ffd700;"></i>
-        <span class="wallet-amount">{{npcWallet}} gp</span>
-      </div>
-      {{/if}}
-      {{#if isPlaying}}
-      <div class="pot-display">
-        <i class="fa-solid fa-coins"></i>
-        <span class="pot-amount {{#if pot}}pot-pulse{{/if}}">{{pot}} gp</span>
-        <span class="pot-label">in the pot</span>
-      </div>
-      {{else}}
-      <div class="ante-display">
-        <span class="ante-label">Ante:</span>
-        <span class="ante-amount">{{ante}} gp</span>
-      </div>
-      {{/if}}
-    </div>
+  <header class="tavern-header" data-application-part="header">
+    {{> "modules/tavern-dice-master/templates/parts/header.hbs"}}
   </header>
 
   {{!-- Main game area --}}
   <main class="tavern-main">
     {{!-- Table area with players --}}
-    <section class="tavern-table-area">
+    <section class="tavern-table-area" data-application-part="table">
       {{> "modules/tavern-dice-master/templates/parts/table.hbs"}}
     </section>
 
     {{!-- Right sidebar --}}
     <aside class="tavern-sidebar">
       {{!-- Controls --}}
-      <div class="tavern-controls-panel">
+      <div class="tavern-controls-panel" data-application-part="controls">
         {{> "modules/tavern-dice-master/templates/parts/controls.hbs"}}
       </div>
     </aside>
   </main>
 
   {{!-- Footer --}}
-  <footer class="tavern-footer">
-    {{#if hasGM}}
-    <span class="gm-status online"><i class="fa-solid fa-circle"></i> GM Online</span>
-    {{else}}
-    <span class="gm-status offline"><i class="fa-solid fa-circle"></i> GM Required</span>
-    {{/if}}
-    {{#if atmosphereLine}}
-    <span class="atmosphere-line" title="{{status}}">{{atmosphereLine}}</span>
-    {{else}}
-    <span class="game-status">{{status}}</span>
-    {{/if}}
-    {{#if isGM}}
-    <button type="button" class="reset-btn" data-action="reset" title="Reset Table">
-      <i class="fa-solid fa-rotate-left"></i>
-    </button>
-    {{/if}}
+  <footer class="tavern-footer" data-application-part="footer">
+    {{> "modules/tavern-dice-master/templates/parts/footer.hbs"}}
   </footer>
 </div>

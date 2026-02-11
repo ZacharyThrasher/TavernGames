@@ -6,11 +6,16 @@
 
   <div class="portrait-grid">
     {{#each targets}}
-    <div class="portrait-option is-holding" data-target-id="{{id}}" tabindex="0">
+    <div class="portrait-option is-holding" data-target-id="{{id}}" tabindex="0" role="button" aria-pressed="false" aria-label="{{name}}">
       <img src="{{img}}" alt="{{name}}" />
       <div class="name">{{name}}</div>
       <div class="status-badge holding">HOLDING</div>
     </div>
     {{/each}}
+  </div>
+
+  <div class="dialog-actions">
+    <button type="submit" class="btn btn-skill">Kick Them Back In</button>
+    <button type="button" class="btn" data-action="cancel">{{localize "Cancel"}}</button>
   </div>
 </form>

@@ -1,6 +1,5 @@
 /**
  * PREMIUM EFFECTS ENGINE — Tavern Twenty-One
- * V5.26: "ADDICTED TO THE TABLE" Interactive Effects
  *
  * JS-driven effects that complement premium-fx.css:
  * 1. Holographic 3D Tilt on Dice Buttons
@@ -15,7 +14,8 @@
  * Designed to be initialized in _onRender and torn down cleanly.
  */
 
-import { isPerformanceMode, createElement } from "./fx.js";
+import { isPerformanceMode, createElement, reportEffectError } from "./fx.js";
+import { FX_CONFIG } from "./fx-config.js";
 
 /* ============================================
    1. HOLOGRAPHIC 3D TILT
@@ -234,8 +234,8 @@ export class GoldDustTrail {
   static _handler = null;
   static _lastSpawn = 0;
   static _moteCount = 0;
-  static MAX_MOTES = 30;
-  static SPAWN_INTERVAL = 60; // ms between spawns
+  static MAX_MOTES = FX_CONFIG.premium.dustMaxMotes;
+  static SPAWN_INTERVAL = FX_CONFIG.premium.dustSpawnIntervalMs;
 
   static attach(container) {
     if (isPerformanceMode()) return;
@@ -309,9 +309,9 @@ export function spawnTableRipple() {
     const ripple = createElement("div", { className: "table-ripple" });
     tableArea.appendChild(ripple);
 
-    setTimeout(() => ripple.remove(), 1300);
-  } catch (e) {
-    console.warn("Tavern | Table ripple error:", e);
+    setTimeout(() => ripple.remove(), FX_CONFIG.premium.tableRippleDuration);
+  } catch (error) {
+    reportEffectError("Table ripple", error);
   }
 }
 
@@ -388,9 +388,9 @@ export function spawnPotCoinFlip(potDisplay) {
     });
     potDisplay.appendChild(coin);
 
-    setTimeout(() => coin.remove(), 900);
-  } catch (e) {
-    console.warn("Tavern | Pot coin flip error:", e);
+    setTimeout(() => coin.remove(), FX_CONFIG.premium.potCoinFlipDuration);
+  } catch (error) {
+    reportEffectError("Pot coin flip", error);
   }
 }
 
@@ -504,6 +504,22 @@ export function initPremiumEffects(appElement) {
     // Gold dust trail on table area
     GoldDustTrail.attach(appElement);
 
+    refreshPremiumEffects(appElement);
+
+    // Odometer on pot display
+    const potEl = appElement.querySelector(".pot-amount");
+    if (potEl) {
+      const value = parseInt(potEl.textContent?.replace(/[^\d]/g, "")) || 0;
+      GoldOdometer.update(potEl, value, false);
+    }
+  } catch (error) {
+    reportEffectError("Premium effects init", error);
+  }
+}
+
+export function refreshPremiumEffects(appElement) {
+  if (!appElement) return;
+  try {
     // Inject table enchantment (sacred geometry)
     injectTableEnchantment(appElement);
 
@@ -515,15 +531,8 @@ export function initPremiumEffects(appElement) {
 
     // Apply streak auras
     StreakTracker.applyToSeats(appElement);
-
-    // Odometer on pot display
-    const potEl = appElement.querySelector(".pot-amount");
-    if (potEl) {
-      const value = parseInt(potEl.textContent?.replace(/[^\d]/g, "")) || 0;
-      GoldOdometer.update(potEl, value, false);
-    }
-  } catch (e) {
-    console.warn("Tavern | Premium Effects init error:", e);
+  } catch (error) {
+    reportEffectError("Premium effects refresh", error);
   }
 }
 
@@ -536,7 +545,8 @@ export function teardownPremiumEffects(appElement) {
   try {
     HolographicTilt.detach(appElement);
     GoldDustTrail.detach(appElement);
-  } catch (e) {
-    console.warn("Tavern | Premium Effects teardown error:", e);
+  } catch (error) {
+    reportEffectError("Premium effects teardown", error);
   }
 }
+

@@ -1,6 +1,6 @@
 /* ============================================
    SWORD COAST TAVERN - Design System
-   Based on Style Guide V2 (Diegetic UI)
+   Based on Style Guide  (Diegetic UI)
    ============================================ */
 
 @layer components, utilities, animations;
@@ -223,8 +223,6 @@
   z-index: 1;
   mix-blend-mode: screen;
 }
-
-/* V4.8.56: UI Lock State */
 .tavern-controls.locked {
   pointer-events: none !important;
   opacity: 0.6;
@@ -310,6 +308,36 @@
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
   letter-spacing: 0.05em;
   line-height: 1;
+}
+
+.help-icon-btn {
+  position: relative;
+  margin-left: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  line-height: 1;
+  vertical-align: top;
+}
+
+.help-icon-btn .help-icon {
+  font-size: 0.6em;
+}
+
+.help-icon-btn[data-action="help"] .help-icon {
+  color: #aaa;
+}
+
+.help-icon-btn[data-action="toggleLogs"] .help-icon {
+  color: #ffd700;
+}
+
+.help-icon-btn:focus-visible {
+  outline: 2px solid var(--tavern-gold);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
 .tavern-subtitle {
@@ -451,8 +479,6 @@
   animation: tavern-motes 8s ease-in-out infinite alternate;
   pointer-events: none;
 }
-
-/* V5.11.3: Side-by-Side Container */
 .tavern-sidebar {
   display: flex;
   flex-direction: column;
@@ -804,8 +830,6 @@
   background: linear-gradient(135deg, #8b3a3a, #6b2a2a);
   color: white;
 }
-
-/* V2.0: Public vs Hole Die styling */
 .die-face.public-die {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
@@ -1308,8 +1332,6 @@
   margin-top: 6px;
   opacity: 0.9;
 }
-
-/* V2.0: Dice Cost Labels */
 .btn-die-premium .die-cost {
   position: absolute;
   top: -6px;
@@ -2594,7 +2616,7 @@
 }
 
 /* ============================================
-   V2.0: Goad System Styles (replaces Intimidation)
+   Goad System Styles (replaces Intimidation)
    ============================================ */
 
 /* Goad section in controls */
@@ -3073,7 +3095,7 @@
 }
 
 /* ============================================
-   V2.0: Duel System Styles (Tie-Breaking)
+   Duel System Styles (Tie-Breaking)
    ============================================ */
 
 /* Duel section in controls */
@@ -3402,7 +3424,7 @@
 }
 
 /* ============================================
-   Juice & Drama Animations (V3.5)
+   Juice & Drama Animations 
    ============================================ */
 
 /* Shake Effect for Busts */
@@ -3537,8 +3559,6 @@
   transform: scale(1.2);
   transition: transform 0.1s;
 }
-
-/* V4.1: Victory Fanfare */
 .tavern-shake {
   animation: tavern-shake 0.5s cubic-bezier(.36, .07, .19, .97) both;
 }
@@ -3622,8 +3642,6 @@
     transform: scale(1);
   }
 }
-
-/* V4.2 Polish */
 .tavern-shake-heavy {
   animation: tavern-shake-heavy 0.4s cubic-bezier(.36, .07, .19, .97) both;
 }
@@ -3710,8 +3728,6 @@
     opacity: 0;
   }
 }
-
-/* V4.6: Bust Banner */
 .tavern-bust-banner {
   position: fixed;
   top: 0;
@@ -3863,8 +3879,6 @@
 }
 
 @layer utilities {
-
-  /* Interaction Safety (V13 Best Practice) */
   .tavern-victory-banner,
   .tavern-bust-banner {
     pointer-events: none;
@@ -3876,10 +3890,8 @@
   }
 }
 
-/* Cinematic Overlay styles moved to styles/cinematic-overlay.css (V5.24) */
-
 /* ============================================
-   V4.8: Sub-Dialog Styling (Extracted from TavernApp)
+   Sub-Dialog Styling (Extracted from TavernApp)
    ============================================ */
 
 .tavern-dialog-window .window-content {
@@ -4058,6 +4070,12 @@
   font-size: 24px;
   color: var(--tavern-parchment-dark);
   filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5));
+}
+
+.die-btn .die-icon-img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
 }
 
 .die-result {
@@ -4386,8 +4404,6 @@
     box-shadow: 0 0 5px rgba(255, 68, 68, 0.2);
   }
 }
-
-/* V5: Semantic Result Colors (High Contrast) */
 .tavern-result-success {
   color: #4ade80;
   /* Bright Green */
@@ -4431,8 +4447,6 @@
 .tavern-cheat-result.tavern-cheat-fail {
   border-left: 4px solid #fbbf24;
 }
-
-/* Result Text Styling (V5.3.1 Polish) */
 .main-result {
   font-family: "Modesto Condensed", "Palatino Linotype", serif;
   font-size: 4em;
@@ -4479,7 +4493,7 @@
 }
 
 /* ============================================
-   V5.8: Private Logs Panel
+   Private Logs Panel
    ============================================ */
 
 .tavern-private-logs {
@@ -4577,6 +4591,7 @@
   font-style: italic;
   color: var(--tavern-text-faded);
   line-height: 1.3;
+  white-space: pre-line;
 }
 
 .no-logs {
@@ -4585,8 +4600,6 @@
   padding: 20px;
   font-style: italic;
 }
-
-/* V5.9: Log Avatar */
 .log-avatar {
   width: 32px;
   height: 32px;
@@ -4746,8 +4759,6 @@
   text-shadow: 0 0 10px #b8860b;
   font-weight: bold;
 }
-
-/* V5.11.5: Logs Window Styling */
 .tavern-logs-window .window-content {
   background-color: var(--color-sc-bg-dark);
   background-image: var(--texture-parchment);
@@ -4762,8 +4773,6 @@
   overflow-y: auto;
   flex: 1;
 }
-
-/* V5.12: Victory Particles */
 .cinematic-particles {
   position: absolute;
   top: 0;
@@ -5148,8 +5157,6 @@
   transform: scale(1.2);
   transition: color 0.2s;
 }
-
-/* V5.13: Notification Badge */
 .notification-badge {
   position: absolute;
   top: -2px;
@@ -5162,6 +5169,103 @@
   box-shadow: 0 0 4px #ff4444;
   animation: pulse-badge 2s infinite;
   pointer-events: none;
+}
+
+.tavern-npc-cashout .cashout-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.tavern-npc-cashout .cashout-net {
+  font-weight: bold;
+}
+
+.tavern-npc-cashout .cashout-net.positive {
+  color: #88ff88;
+}
+
+.tavern-npc-cashout .cashout-net.negative {
+  color: #ff8888;
+}
+
+.tavern-npc-cashout .cashout-hint {
+  font-size: 0.85em;
+  color: #888;
+  margin-top: 8px;
+  font-style: italic;
+}
+
+.gm-join-dialog .selected-npc {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+}
+
+.gm-join-dialog .selected-npc img {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.gm-join-dialog .selected-npc-details .hint {
+  margin-top: 4px;
+  font-size: 0.9em;
+  color: #888;
+}
+
+.gm-join-dialog .npc-wallet-section {
+  margin: 12px 0;
+  padding: 12px;
+  background: rgba(255, 215, 0, 0.1);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 8px;
+}
+
+.gm-join-dialog .npc-wallet-section label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: bold;
+}
+
+.gm-join-dialog .npc-wallet-section input {
+  width: 100%;
+  padding: 8px;
+  text-align: center;
+  font-size: 1.1em;
+}
+
+.gm-join-dialog .npc-wallet-section .hint {
+  margin-top: 4px;
+  font-size: 0.85em;
+  color: #888;
+  text-align: center;
+}
+
+.confirm-dialog .confirm-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 1.05em;
+  font-weight: 700;
+}
+
+.confirm-dialog .confirm-body p {
+  margin: 0 0 8px 0;
+}
+
+.confirm-dialog.warning .confirm-title {
+  color: #ffd27d;
+}
+
+.confirm-dialog.danger .confirm-title {
+  color: #ff9f9f;
 }
 
 @keyframes pulse-badge {
@@ -5182,7 +5286,7 @@
 }
 
 /* ============================================
-   V5.14.0: Goblin Mode Styles
+   Goblin Mode Styles
    ============================================ */
 @layer components {
   .btn-die-premium.btn-die-coin {
@@ -5217,3 +5321,7 @@
     color: white;
   }
 }
+
+
+
+

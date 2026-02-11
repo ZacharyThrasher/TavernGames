@@ -1,10 +1,12 @@
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
-import { MODULE_ID, getState } from "../state.js";
+import { getState } from "../state.js";
+import { MODULE_ID } from "../twenty-one/constants.js";
 import { ParticleFactory } from "./particle-fx.js";
+import { reportEffectError } from "./fx.js";
+import { FX_CONFIG } from "./fx-config.js";
 
 /**
- * Cinematic Overlay for Tavern Games — V5.24 PIZAZZ Overhaul
  * Anime/Fighting-Game Cut-In meets Dark Fantasy.
  * Multi-layer parallax entrance, per-type particles, screen shake,
  * exit sequence, emblem watermarks, chromatic flash.
@@ -131,8 +133,8 @@ export class CinematicOverlay extends HandlebarsApplicationMixin(ApplicationV2) 
             await overlay.render(true);
 
             // Exit animation before close
-            const DISPLAY_DURATION = 4200;
-            const EXIT_DURATION = 450;
+            const DISPLAY_DURATION = FX_CONFIG.cinematic.displayDuration;
+            const EXIT_DURATION = FX_CONFIG.cinematic.exitDuration;
 
             setTimeout(() => {
                 const cutIn = overlay.element?.querySelector(".cinematic-cut-in");
@@ -144,7 +146,7 @@ export class CinematicOverlay extends HandlebarsApplicationMixin(ApplicationV2) 
             }, DISPLAY_DURATION + EXIT_DURATION);
 
         } catch (err) {
-            console.error("Tavern Games | Cinematic Render Error:", err);
+            reportEffectError("Cinematic render", err);
         }
     }
 
@@ -219,21 +221,23 @@ export class CinematicOverlay extends HandlebarsApplicationMixin(ApplicationV2) 
                             body.style.transition = "";
                         }
                     }, 30);
-                } catch { /* shake is optional visual */ }
-            }, 350);
+                } catch (error) {
+                    reportEffectError("Cinematic shake", error);
+                }
+            }, FX_CONFIG.cinematic.shakeDelay);
         }
 
         // ── Victory: Coin shower + gold counter ──
         if (type === "VICTORY") {
             if (container) {
-                setTimeout(() => ParticleFactory.spawnCoinShower(container, 50), 600);
+                setTimeout(() => ParticleFactory.spawnCoinShower(container, FX_CONFIG.cinematic.victoryBonusCoins), 600);
             }
             if (this.cutInData.resultData?.amount) {
                 const amountEl = this.element.querySelector(".cin-victory-overlay .gold-text");
                 if (amountEl) {
                     setTimeout(() => {
-                        this._animateCounter(amountEl, 0, this.cutInData.resultData.amount, 1500);
-                    }, 900);
+                        this._animateCounter(amountEl, 0, this.cutInData.resultData.amount, FX_CONFIG.cinematic.victoryCounterDuration);
+                    }, FX_CONFIG.cinematic.victoryCounterDelay);
                 }
             }
         }

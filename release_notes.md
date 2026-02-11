@@ -1,14 +1,10 @@
-### Premium Effects Engine — "Addicted to the Table" 🎰✨
-- **Feature**: Added a new premium effects engine with holographic 3D-tilt dice, enchanted cursor dust, animated crowns, sacred geometry table enchantments, and layered interaction polish.
-- **Feature**: Introduced an odometer-style tumbling pot counter with slot-reel digit animation and shimmer updates.
-- **Feature**: Added streak-based visual momentum systems (win flame aura tiers, loss reset handling, avatar ring effects).
-- **Feature**: Added cinematic environmental effects tied to gameplay events:
-  - coin flip animation on pot changes
-  - table ripple on dice SLAM
-  - premium spotlight and tension visuals
-- **Integration**:
-  - `scripts/ui/premium-fx.js` (new)
-  - `styles/premium-fx.css` (new)
-  - wiring updates in `scripts/app/tavern-app.js`, `scripts/ui/fx.js`, and `scripts/ui/dice-reveal.js`
-- **Compatibility**: Preserves Goblin Mode used-dice visuals and coexists with existing seat/status systems.
-- **Performance**: All new effects respect performance mode and reduced-motion settings.
+### Debt Reduction Closure + Architecture Stabilization
+- Migrated remaining legacy confirmation dialogs to ApplicationV2 with a shared `ConfirmDialog`.
+- Completed app decomposition and PARTS-driven render flow (`tavern-client-actions`, `tavern-context`, `tavern-render`).
+- Added pure rules modules for Goblin stage progression, duel summary resolution, and betting order logic.
+- Expanded test coverage for rulesets and state/table schema behavior.
+- Hardened log safety: message normalization to plain text at write time + escaped rendering in logs UI.
+- Centralized timing/FX config and improved error surfacing behavior for visual effects.
+- Improved keyboard/ARIA support for portrait/target selection and status announcements.
+- Added localization helpers/keys for dialog text, empty logs state, and relative-time formatting.
+- Removed stale shims/artifacts and documented conventions in `CONTRIBUTING.md`.

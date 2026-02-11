@@ -1,43 +1,91 @@
-import { MODULE_ID } from "../../state.js";
+import { MODULE_ID } from "../../twenty-one/constants.js";
+import { attachPortraitSelection } from "./portrait-selection.js";
 
-export class ProfileDialog {
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
+
+export class ProfileDialog extends HandlebarsApplicationMixin(ApplicationV2) {
+  static DEFAULT_OPTIONS = {
+    id: "tavern-profile-dialog",
+    tag: "div",
+    window: {
+      title: "Profile",
+      icon: "fa-solid fa-user-secret",
+      resizable: false
+    },
+    position: {
+      width: 420,
+      height: "auto"
+    },
+    classes: ["tavern-dialog-window"]
+  };
+
+  static PARTS = {
+    form: {
+      template: `modules/${MODULE_ID}/templates/dialogs/profile-dialog.hbs`
+    }
+  };
+
   static async show(params) {
-    const { targets, actor, invMod } = params;
+    return new Promise((resolve) => {
+      new ProfileDialog({ resolve, ...params }).render(true);
+    });
+  }
 
-    const content = await foundry.applications.handlebars.renderTemplate(`modules/${MODULE_ID}/templates/dialogs/profile-dialog.hbs`, {
-      targets,
+  constructor(options = {}) {
+    super(options);
+    this.params = options;
+    this.resolve = options.resolve;
+    this.selectedTargetId = null;
+    this._resolved = false;
+  }
+
+  async _prepareContext() {
+    const { targets, invMod } = this.params;
+    return {
+      targets: targets ?? [],
       invMod,
       formatMod: (mod) => mod >= 0 ? `+${mod}` : mod
+    };
+  }
+
+  _resolve(value) {
+    if (this._resolved) return;
+    this._resolved = true;
+    this.resolve?.(value);
+  }
+
+  _onRender(context, options) {
+    super._onRender(context, options);
+    const form = this.element.querySelector("form");
+    if (form) {
+      form.addEventListener("submit", this._onSubmit.bind(this));
+    }
+
+    const html = $(this.element);
+    attachPortraitSelection(html, {
+      onSelect: (id) => {
+        this.selectedTargetId = id;
+      }
     });
 
-    let selectedTargetId = null;
+    const cancelBtn = this.element.querySelector("[data-action=\"cancel\"]");
+    if (cancelBtn) {
+      cancelBtn.addEventListener("click", async () => {
+        this._resolve(null);
+        await this.close();
+      });
+    }
+  }
 
-    return Dialog.prompt({
-      title: "Profile",
-      content,
-      label: "Profile",
-      render: (html) => {
-        const portraits = html.find('.portrait-option');
-        portraits.on('click', function () {
-          portraits.removeClass('selected');
-          $(this).addClass('selected');
-          selectedTargetId = $(this).data('target-id');
-        });
+  async _onSubmit(event) {
+    event.preventDefault();
+    if (!this.selectedTargetId) return;
+    this._resolve({ targetId: this.selectedTargetId });
+    await this.close();
+  }
 
-        // Keyboard accessibility
-        portraits.on('keydown', function (e) {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            $(this).click();
-          }
-        });
-      },
-      callback: () => {
-        if (!selectedTargetId) return null;
-        return { targetId: selectedTargetId };
-      },
-      rejectClose: false,
-      options: { classes: ["tavern-dialog-window"] }
-    });
+  async close(options) {
+    if (!this._resolved) this._resolve(null);
+    return super.close(options);
   }
 }

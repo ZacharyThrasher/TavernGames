@@ -1,6 +1,5 @@
 /**
  * Tavern Twenty-One - Hunch Skill
- * V3.0
  * 
  * WIS check to predict high/low before choosing die.
  * - Success: Learn if each die will be high or low
@@ -9,83 +8,46 @@
  * - Nat 1: Locked into d20 Hit
  */
 
-import { MODULE_ID, getState, updateState, addPrivateLog, addLogToAll } from "../../state.js"; // V5.8: Import addPrivateLog
-import { tavernSocket } from "../../socket.js";
+import { getState, updateState, addPrivateLog, addLogToAll, addHistoryEntry } from "../../state.js";
 import { showPublicRoll } from "../../dice.js";
-import { HUNCH_DC, HUNCH_THRESHOLDS, getAllowedDice, emptyTableData } from "../constants.js";
-// import { createChatCard, addHistoryEntry } from "../../ui/chat.js"; // Removed
-import { addHistoryEntry } from "../../state.js"; // History moved to state long ago? CHECK IMPORTS. 
-// state.js DOES export addHistoryEntry.
-// The file was importing it from `ui/chat.js` which was likely a re-export or legacy location?
-// Let's standardise to state.js imports.
-
-import { getActorForUser, getActorName, getSafeActorName } from "../utils/actors.js"; // V5.9
-import { notifyUser } from "../utils/game-logic.js";
-import { finishTurn } from "../phases/turn.js";
+import { HUNCH_DC, HUNCH_THRESHOLDS, TIMING, getAllowedDice, emptyTableData } from "../constants.js";
+import { classifyHunchPrediction } from "../rules/pure-rules.js";
+import { getActorForUser, getActorName, getSafeActorName } from "../utils/actors.js";
+import { notifyUser, validateSkillPrerequisites } from "../utils/game-logic.js";
+import { delay } from "../utils/runtime.js";
+import { announceSkillBannerToUser, announceSkillCutIn } from "../utils/skill-announcements.js";
 
 
 export async function hunch(userId) {
     const state = getState();
-    if (state.status !== "PLAYING") {
-        await notifyUser(userId, "Cannot use Foresight outside of an active round.");
-        return state;
-    }
-    if (state.tableData?.gameMode === "goblin") {
-        await notifyUser(userId, "Foresight is disabled in Goblin Rules.");
-        return state;
-    }
-
-    let tableData = state.tableData ?? emptyTableData();
-
-    // Must be your turn
-    if (tableData.currentPlayer !== userId) {
-        await notifyUser(userId, "You can only use Foresight on your turn.");
-        return state;
-    }
-
-    // Must be in betting phase
-    if (tableData.phase !== "betting") {
-        await notifyUser(userId, "Foresight can only be used during the betting phase.");
-        return state;
-    }
-
-    // Limit: One skill per turn
-    if (tableData.skillUsedThisTurn) {
-        await notifyUser(userId, "You have already used a skill this turn.");
-        return state;
-    }
-
-    // V4.8.40: Once per round/match
-    if (tableData.usedSkills?.[userId]?.hunch) {
-        await notifyUser(userId, "You can only use Foresight once per match.");
-        return state;
-    }
-
-    // Can't use if busted, folded, or holding
-    if (tableData.busts?.[userId] || tableData.folded?.[userId] || tableData.holds?.[userId]) {
-        await notifyUser(userId, "You can't use Foresight right now.");
-        return state;
-    }
-
-    // V3.5: House cannot use skills (but GM-as-NPC can)
-    const user = game.users.get(userId);
-    const playerData = state.players?.[userId];
-    const isHouse = user?.isGM && !playerData?.playingAsNpc;
-    if (isHouse) {
-        await notifyUser(userId, "The house does not guess.");
-        return state;
-    }
-
-    // Mark as acted
-    tableData.hasActed = { ...tableData.hasActed, [userId]: true };
-
-    // V4.7.1: Visual Cut-In
-    tavernSocket.executeForEveryone("showSkillCutIn", "FORESIGHT", userId);
-
-    // V4.7.7: Foresight Pause (Moved down)
-    // await new Promise(resolve => setTimeout(resolve, 3000));
-
-    // V5.9: Use getActorName
+    const tableData = state.tableData ?? emptyTableData();
+    const canUseHunch = await validateSkillPrerequisites({
+        state,
+        tableData,
+        userId,
+        skillName: "Foresight",
+        requireMyTurn: true,
+        requireBettingPhase: true,
+        disallowInGoblin: true,
+        disallowHouse: true,
+        disallowIfSkillUsedThisTurn: true,
+        disallowIfBusted: true,
+        disallowIfFolded: true,
+        disallowIfHeld: true,
+        oncePerMatchSkill: "hunch",
+        messages: {
+            outsideRound: "Cannot use Foresight outside of an active round.",
+            goblinDisabled: "Foresight is disabled in Goblin Rules.",
+            notYourTurn: "You can only use Foresight on your turn.",
+            wrongPhase: "Foresight can only be used during the betting phase.",
+            houseBlocked: "The house does not guess.",
+            alreadyUsedThisTurn: "You have already used a skill this turn.",
+            alreadyUsedMatch: "You can only use Foresight once per match.",
+            selfCannotAct: "You can't use Foresight right now."
+        }
+    });
+    if (!canUseHunch) return state;
+    announceSkillCutIn("FORESIGHT", userId, null, "Could not show foresight cut-in");
     const userName = getActorName(userId);
     const safeUserName = getSafeActorName(userId);
     const actor = getActorForUser(userId); // Definition restored for stat access
@@ -98,31 +60,16 @@ export async function hunch(userId) {
     const d20 = roll.total;
     const isNat20 = d20Raw === 20;
     const isNat1 = d20Raw === 1;
-
-    // V4.7.8: Dice So Nice & Sync Pause
-    // V5.9: Lift variables to outer scope so they can be used in the update block later
     let predictions = {};
     let exactRolls = {};
 
     showPublicRoll(roll, userId);
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    await delay(TIMING.SKILL_DRAMATIC_PAUSE);
 
     const rollTotal = d20 + wisMod;
     const success = !isNat1 && rollTotal >= HUNCH_DC;
     const gameMode = state.tableData?.gameMode ?? "standard";
     const allowedDice = getAllowedDice(gameMode);
-
-    // Log the attempt Publicly?
-    // "X used Foresight to predict the dice..."
-    // Since we are replacing chat cards, we probably want a public log that they USED the skill.
-    // The previous chat card was "Foresight: A perfect read!" etc. which revealed success/fail publicly?
-    // Old Chat Cards:
-    // "Foresight: A perfect read!" (Public)
-    // "Foresight: Something tells them..." (Public)
-    // "Foresight: Terrible intuition! Locked!" (Public)
-    // So Success/Fail WAS public information. The *data* was private.
-
-    // We will replicate this with addLogToAll.
 
     if (isNat20) {
         // Nat 20 = Learn exact value for each die type
@@ -133,9 +80,6 @@ export async function hunch(userId) {
             predictions[die] = preRoll.total;
             exactRolls[die] = preRoll.total;
         }
-        tableData.hunchExact = { ...tableData.hunchExact, [userId]: predictions };
-        tableData.hunchRolls = { ...tableData.hunchRolls, [userId]: exactRolls };
-
         // Private Log for details (replacing socket feedback AND keeping persistent record)
         await addPrivateLog(userId, {
             title: "Foresight (Nat 20)",
@@ -145,14 +89,12 @@ export async function hunch(userId) {
             cssClass: "success"
         });
 
-        try {
-            await tavernSocket.executeAsUser("showSkillBanner", userId, {
-                title: "Foresight - Nat 20",
-                message: `Exact values: ${Object.entries(predictions).map(([d, v]) => `d${d} ${v}`).join(", ")}`,
-                tone: "success",
-                icon: "fa-solid fa-eye"
-            });
-        } catch (e) { }
+        await announceSkillBannerToUser(userId, {
+            title: "Foresight - Nat 20",
+            message: `Exact values: ${Object.entries(predictions).map(([d, v]) => `d${d} ${v}`).join(", ")}`,
+            tone: "success",
+            icon: "fa-solid fa-eye"
+        }, "Could not show foresight nat20 banner");
 
         // Public Log for Effect
         await addLogToAll({
@@ -165,9 +107,6 @@ export async function hunch(userId) {
 
     } else if (isNat1) {
         // Nat 1 = Locked into Hit with d20
-        tableData.hunchLocked = { ...tableData.hunchLocked, [userId]: true };
-        tableData.hunchLockedDie = { ...tableData.hunchLockedDie, [userId]: 20 };
-
         await addPrivateLog(userId, {
             title: "Foresight (Nat 1)",
             message: "Locked into a BLIND d20 roll!",
@@ -176,14 +115,12 @@ export async function hunch(userId) {
             cssClass: "failure"
         });
 
-        try {
-            await tavernSocket.executeAsUser("showSkillBanner", userId, {
-                title: "Foresight Backfire",
-                message: "Locked into a blind d20.",
-                tone: "failure",
-                icon: "fa-solid fa-eye-slash"
-            });
-        } catch (e) { }
+        await announceSkillBannerToUser(userId, {
+            title: "Foresight Backfire",
+            message: "Locked into a blind d20.",
+            tone: "failure",
+            icon: "fa-solid fa-eye-slash"
+        }, "Could not show foresight backfire banner");
 
         await addLogToAll({
             title: "Foresight Backfire",
@@ -199,13 +136,9 @@ export async function hunch(userId) {
         exactRolls = {};
         for (const die of allowedDice) {
             const preRoll = await new Roll(`1d${die}`).evaluate();
-            const threshold = HUNCH_THRESHOLDS[die];
-            predictions[die] = preRoll.total > threshold ? "HIGH" : "LOW";
+            predictions[die] = classifyHunchPrediction(die, preRoll.total, HUNCH_THRESHOLDS);
             exactRolls[die] = preRoll.total;
         }
-        tableData.hunchPrediction = { ...tableData.hunchPrediction, [userId]: predictions };
-        tableData.hunchRolls = { ...tableData.hunchRolls, [userId]: exactRolls };
-
         await addPrivateLog(userId, {
             title: "Foresight Success",
             message: `Predictions: ${Object.entries(predictions).map(([d, v]) => `d${d}: ${v}`).join(", ")}`,
@@ -214,14 +147,12 @@ export async function hunch(userId) {
             cssClass: "success"
         });
 
-        try {
-            await tavernSocket.executeAsUser("showSkillBanner", userId, {
-                title: "Foresight",
-                message: `Predictions: ${Object.entries(predictions).map(([d, v]) => `d${d} ${v}`).join(", ")}`,
-                tone: "success",
-                icon: "fa-solid fa-eye"
-            });
-        } catch (e) { }
+        await announceSkillBannerToUser(userId, {
+            title: "Foresight",
+            message: `Predictions: ${Object.entries(predictions).map(([d, v]) => `d${d} ${v}`).join(", ")}`,
+            tone: "success",
+            icon: "fa-solid fa-eye"
+        }, "Could not show foresight prediction banner");
 
         await addLogToAll({
             title: "Foresight",
@@ -233,12 +164,6 @@ export async function hunch(userId) {
 
     } else {
         // Failure = Blind State
-        const isLocked = isNat1; // Redundant but checked above logic flow separation
-        // Wait, logic above handles Nat1 separately. This block is ONLY !Nat1 && !Success.
-        // So just normal failure.
-
-        tableData.blindNextRoll = { ...tableData.blindNextRoll, [userId]: true };
-
         await addPrivateLog(userId, {
             title: "Foresight Failed",
             message: "Next roll will be BLIND (Hidden).",
@@ -247,14 +172,12 @@ export async function hunch(userId) {
             cssClass: "failure"
         });
 
-        try {
-            await tavernSocket.executeAsUser("showSkillBanner", userId, {
-                title: "Foresight Failed",
-                message: "Next roll is blind.",
-                tone: "failure",
-                icon: "fa-solid fa-eye-slash"
-            });
-        } catch (e) { }
+        await announceSkillBannerToUser(userId, {
+            title: "Foresight Failed",
+            message: "Next roll is blind.",
+            tone: "failure",
+            icon: "fa-solid fa-eye-slash"
+        }, "Could not show foresight failed banner");
 
         await addLogToAll({
             title: "Foresight Failed",
@@ -278,54 +201,36 @@ export async function hunch(userId) {
                 : success ? `${userName} successfully used Foresight.`
                     : `${userName}'s foresight failed - locked into a Hit.`,
     });
+    return updateState((current) => {
+        const latestTable = current.tableData ?? emptyTableData();
+        const updates = {};
 
+        if (isNat20) {
+            updates.hunchExact = { ...latestTable.hunchExact, [userId]: predictions };
+            updates.hunchRolls = { ...latestTable.hunchRolls, [userId]: exactRolls };
+        } else if (isNat1) {
+            updates.hunchLocked = { ...latestTable.hunchLocked, [userId]: true };
+            updates.hunchLockedDie = { ...latestTable.hunchLockedDie, [userId]: 20 };
+        } else if (success) {
+            updates.hunchPrediction = { ...latestTable.hunchPrediction, [userId]: predictions };
+            updates.hunchRolls = { ...latestTable.hunchRolls, [userId]: exactRolls };
+        } else {
+            updates.blindNextRoll = { ...latestTable.blindNextRoll, [userId]: true };
+        }
 
+        const currentUsedSkills = latestTable.usedSkills ?? {};
+        const myUsedSkills = currentUsedSkills[userId] ?? {};
 
-    // V5.8.7 Race Condition Fix:
-    // We must NOT pass the stale 'tableData' object back to updateState.
-    // Instead, we fetch the LATEST state to ensure we don't revert other players' actions.
-    // Even better, we construct a patch with ONLY the fields we changed.
+        updates.skillUsedThisTurn = true;
+        updates.lastSkillUsed = "hunch";
+        updates.usedSkills = {
+            ...currentUsedSkills,
+            [userId]: { ...myUsedSkills, hunch: true }
+        };
+        updates.hasActed = { ...latestTable.hasActed, [userId]: true };
 
-    // 1. Re-fetch latest state to get current `usedSkills` and `tableData` to ensure we merge correctly if needed
-    // Actually, updateState does a shallow merge of tableData.
-    // So if we pass { tableData: { hunchPrediction: ... } }, it merges it into current.
-    // BUT, we need to make sure we don't lose existing data in deep objects like `usedSkills` if we perform a replacement there.
-
-    // Let's re-fetch state to be safe for deep merges that we compute manually.
-    const latestState = getState();
-    const latestTable = latestState.tableData ?? emptyTableData();
-
-    // Prepare updates
-    const updates = {};
-
-    if (isNat20) {
-        updates.hunchExact = { ...latestTable.hunchExact, [userId]: predictions };
-        updates.hunchRolls = { ...latestTable.hunchRolls, [userId]: exactRolls };
-    } else if (isNat1) {
-        updates.hunchLocked = { ...latestTable.hunchLocked, [userId]: true };
-        updates.hunchLockedDie = { ...latestTable.hunchLockedDie, [userId]: 20 };
-    } else if (success) {
-        updates.hunchPrediction = { ...latestTable.hunchPrediction, [userId]: predictions };
-        updates.hunchRolls = { ...latestTable.hunchRolls, [userId]: exactRolls };
-    } else {
-        updates.blindNextRoll = { ...latestTable.blindNextRoll, [userId]: true };
-    }
-
-    updates.skillUsedThisTurn = true;
-    updates.lastSkillUsed = "hunch";
-
-    // Merge usedSkills carefully
-    const currentUsedSkills = latestTable.usedSkills ?? {};
-    const myUsedSkills = currentUsedSkills[userId] ?? {};
-    updates.usedSkills = {
-        ...currentUsedSkills,
-        [userId]: { ...myUsedSkills, hunch: true }
-    };
-
-    // Also mark hasActed (this was done early in the function on local variable, need to persist it)
-    updates.hasActed = { ...latestTable.hasActed, [userId]: true };
-
-    await updateState({ tableData: updates });
-
-    return getState();
+        return { tableData: updates };
+    });
 }
+
+

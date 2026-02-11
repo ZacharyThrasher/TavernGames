@@ -1,6 +1,5 @@
 /**
  * Fortune's Reveal — Cinematic Dice Reveal System
- * V5.23: A multi-phase dramatic dice animation that replaces DSN
  * for table rolls, keeping all drama inside the game window.
  *
  * Phases:
@@ -15,20 +14,21 @@
  * subsequent ones play with compressed timing.
  */
 
-import { MODULE_ID } from "../state.js";
-import { createElement, isPerformanceMode, shake } from "./fx.js";
+import { MODULE_ID } from "../twenty-one/constants.js";
+import { createElement, isPerformanceMode, shake, reportEffectError } from "./fx.js";
 import { ParticleFactory } from "./particle-fx.js";
 import { spawnTableRipple } from "./premium-fx.js";
+import { FX_CONFIG } from "./fx-config.js";
 
 /* ============================================
    CONSTANTS
    ============================================ */
 
 /** Total duration (ms) of a full reveal — used for sleep pauses on the server side. */
-export const REVEAL_DURATION = 2050;
+export const REVEAL_DURATION = FX_CONFIG.reveal.fullDuration;
 
 /** Compressed duration when reveals are queued back-to-back. */
-export const REVEAL_DURATION_COMPRESSED = 1250;
+export const REVEAL_DURATION_COMPRESSED = FX_CONFIG.reveal.compressedDuration;
 
 /** Theme → spark particle color */
 const THEME_SPARK = {
@@ -85,8 +85,8 @@ async function _playNext() {
 
   try {
     await _performReveal(item.userId, item.dieType, item.result, item.context, compressed);
-  } catch (e) {
-    console.warn("Tavern | Dice Reveal Error:", e);
+  } catch (error) {
+    reportEffectError("Dice reveal", error);
   }
 
   item.resolve();
@@ -177,12 +177,12 @@ async function _performReveal(userId, dieType, result, context, compressed) {
 
   // --- Timing ---
   const T = {
-    dim:     compressed ? 80  : 150,
-    slam:    compressed ? 180 : 300,
-    reel:    compressed ? 450 : 800,
-    lock:    compressed ? 100 : 200,
-    flight:  compressed ? 220 : 400,
-    cleanup: 100,
+    dim: compressed ? FX_CONFIG.reveal.timings.dim.compressed : FX_CONFIG.reveal.timings.dim.full,
+    slam: compressed ? FX_CONFIG.reveal.timings.slam.compressed : FX_CONFIG.reveal.timings.slam.full,
+    reel: compressed ? FX_CONFIG.reveal.timings.reel.compressed : FX_CONFIG.reveal.timings.reel.full,
+    lock: compressed ? FX_CONFIG.reveal.timings.lock.compressed : FX_CONFIG.reveal.timings.lock.full,
+    flight: compressed ? FX_CONFIG.reveal.timings.flight.compressed : FX_CONFIG.reveal.timings.flight.full,
+    cleanup: compressed ? FX_CONFIG.reveal.timings.cleanup.compressed : FX_CONFIG.reveal.timings.cleanup.full,
   };
 
   // ======================
@@ -215,15 +215,15 @@ async function _performReveal(userId, dieType, result, context, compressed) {
   // Impact ring
   const ring = createElement("div", { className: "dice-reveal-ring" });
   overlay.appendChild(ring);
-
-  // V5.26: Table ripple on dice slam
   spawnTableRipple();
 
   // Screen shake
   try {
     const appWindow = _getApp();
     if (appWindow) shake(appWindow, "tavern-shake", 400);
-  } catch (e) { /* ignore */ }
+  } catch (error) {
+    reportEffectError("Dice reveal shake", error);
+  }
 
   await _sleep(T.slam);
 
@@ -331,3 +331,5 @@ async function _performReveal(userId, dieType, result, context, compressed) {
   await _sleep(T.cleanup);
   overlay.remove();
 }
+
+

@@ -1,26 +1,66 @@
 /**
  * Tavern Twenty-One - Goad Skill Module
- * V3.0
  * 
  * Goad (CHA): Try to force another player to ROLL.
  * - Only during betting phase, on your turn (bonus action)
  * - Once per round per player
  * - Attacker: Intimidation OR Persuasion vs Defender: Insight
  * - Success: Target must roll
- * - Backfire: Attacker pays 1x ante to pot
- * - Nat 20: Target must roll (Nat 20 effect remains but 'resist' is gone)
- * - Nat 1: Backfire + attacker forced to roll
+ * - Backfire: Attacker is forced to roll
+ * - Nat 20: Target is locked into d20
+ * - Nat 1: Backfire + attacker locked into d20
  * - Sloppy/Folded players cannot be goaded
  */
 
-import { MODULE_ID, getState, updateState, addHistoryEntry, addLogToAll, addPrivateLog } from "../../state.js"; // V5.8
-import { deductFromActor } from "../../wallet.js"; // V5.9: Use wallet.js for proper NPC support
-import { getActorForUser, getActorName, getSafeActorName } from "../utils/actors.js"; // V5.9
-import { notifyUser } from "../utils/game-logic.js";
-// import { createChatCard } from "../../ui/chat.js"; // Removed
-import { emptyTableData } from "../constants.js";
+import { getState, updateState, addHistoryEntry, addLogToAll } from "../../state.js";
+import { getActorForUser, getActorName, getSafeActorName } from "../utils/actors.js";
+import { notifyUser, validateSkillPrerequisites } from "../utils/game-logic.js";
+import { TIMING, emptyTableData } from "../constants.js";
+import { resolveContest } from "../rules/pure-rules.js";
 import { tavernSocket } from "../../socket.js";
 import { showPublicRoll } from "../../dice.js";
+import { delay, withWarning } from "../utils/runtime.js";
+import { announceSkillBannerToUser, announceSkillCutIn, announceSkillResultOverlay } from "../utils/skill-announcements.js";
+
+function buildGoadOutcomeTable({
+  tableData,
+  affectedId,
+  goadedBy,
+  forceD20,
+  updatedGoadedThisRound,
+  updatedUsedSkills,
+  updatedHasActed,
+  clearDaredId = null
+}) {
+  const updatedHolds = { ...tableData.holds };
+  if (updatedHolds[affectedId]) delete updatedHolds[affectedId];
+
+  const updatedGoadBackfire = { ...tableData.goadBackfire };
+  updatedGoadBackfire[affectedId] = {
+    mustRoll: true,
+    goadedBy,
+    forceD20
+  };
+
+  const next = {
+    ...tableData,
+    holds: updatedHolds,
+    goadedThisRound: updatedGoadedThisRound,
+    usedSkills: updatedUsedSkills,
+    goadBackfire: updatedGoadBackfire,
+    hasActed: updatedHasActed,
+    skillUsedThisTurn: true,
+    lastSkillUsed: "goad",
+  };
+
+  if (clearDaredId) {
+    const updatedDared = { ...tableData.dared };
+    if (updatedDared[clearDaredId]) delete updatedDared[clearDaredId];
+    next.dared = updatedDared;
+  }
+
+  return next;
+}
 
 /**
  * Goad another player during the betting phase.
@@ -29,58 +69,41 @@ import { showPublicRoll } from "../../dice.js";
  */
 export async function goad(payload, userId) {
   const state = getState();
-  if (state.status !== "PLAYING") {
-    await notifyUser(userId, "Cannot goad outside of an active round.");
+  const tableData = state.tableData ?? emptyTableData();
+  const canUseGoad = await validateSkillPrerequisites({
+    state,
+    tableData,
+    userId,
+    skillName: "Goad",
+    requireMyTurn: true,
+    requireBettingPhase: true,
+    disallowInGoblin: true,
+    disallowHouse: true,
+    disallowIfSkillUsedThisTurn: true,
+    disallowIfBusted: true,
+    disallowIfFolded: true,
+    oncePerMatchSkill: "goad",
+    messages: {
+      outsideRound: "Cannot goad outside of an active round.",
+      goblinDisabled: "Goad is disabled in Goblin Rules.",
+      notYourTurn: "You can only Goad on your turn.",
+      wrongPhase: "Goading can only be used during the betting phase.",
+      houseBlocked: "The house does not goad.",
+      alreadyUsedThisTurn: "You have already used a skill this turn.",
+      alreadyUsedMatch: "You've already used your goad this round.",
+      selfCannotAct: "You can't goad anyone!"
+    }
+  });
+  if (!canUseGoad) return state;
+
+  // Player can only goad once per round.
+  if (tableData.goadedThisRound?.[userId]) {
+    await notifyUser(userId, "You've already used your goad this round.");
     return state;
   }
-  if (state.tableData?.gameMode === "goblin") {
-    await notifyUser(userId, "Goad is disabled in Goblin Rules.");
-    return state;
-  }
 
-    let tableData = state.tableData ?? emptyTableData();
-    const ante = game.settings.get(MODULE_ID, "fixedAnte");
-
-    // V3: Must be your turn (skill is bonus action)
-    if (tableData.currentPlayer !== userId) {
-        await notifyUser(userId, "You can only Goad on your turn.");
-        return state;
-    }
-
-    // Must be in betting phase
-    if (tableData.phase !== "betting") {
-        await notifyUser(userId, "Goading can only be used during the betting phase.");
-        return state;
-    }
-
-    // V3.5: House cannot goad (but GM-as-NPC can)
-    const user = game.users.get(userId);
-    const playerData = state.players?.[userId];
-    const isHouse = user?.isGM && !playerData?.playingAsNpc;
-    if (isHouse) {
-        await notifyUser(userId, "The house does not goad.");
-        return state;
-    }
-
-    // Limit: One skill per turn
-    if (tableData.skillUsedThisTurn) {
-        await notifyUser(userId, "You have already used a skill this turn.");
-        return state;
-    }
-
-    // Player must not have busted or folded
-    if (tableData.busts?.[userId] || tableData.folded?.[userId]) {
-        await notifyUser(userId, "You can't goad anyone!");
-        return state;
-    }
-
-    // Player can only goad once per round
-    if (tableData.usedSkills?.[userId]?.goad || tableData.goadedThisRound?.[userId]) {
-        await notifyUser(userId, "You've already used your goad this round.");
-        return state;
-    }
-
-    const { targetId, attackerSkill = "itm" } = payload;
+  const targetId = payload?.targetId;
+  const attackerSkill = payload?.attackerSkill ?? "itm";
 
     // Validate attacker skill choice (Intimidation or Persuasion)
     if (!["itm", "per"].includes(attackerSkill)) {
@@ -99,16 +122,12 @@ export async function goad(payload, userId) {
         await notifyUser(userId, "You can't goad yourself!");
         return state;
     }
-
-    // V3.5: Can't goad the house, but GM-as-NPC is a valid target
     const targetUser = game.users.get(targetId);
     const isTargetHouse = targetUser?.isGM && !state.players?.[targetId]?.playingAsNpc;
     if (isTargetHouse) {
         await notifyUser(userId, "You can't goad the house!");
         return state;
     }
-
-    // V3: Can't goad Sloppy or Folded players
     if (tableData.sloppy?.[targetId]) {
         await notifyUser(userId, "That player is Sloppy - too drunk to be goaded!");
         return state;
@@ -123,24 +142,14 @@ export async function goad(payload, userId) {
         await notifyUser(userId, "That player has already busted.");
         return state;
     }
-
-    // V3: Mark as acted (affects Fold refund)
-    tableData.hasActed = { ...tableData.hasActed, [userId]: true };
-
-    // V4.7.1: Visual Cut-In
-    tavernSocket.executeForEveryone("showSkillCutIn", "GOAD", userId, targetId);
-
-    // V4.7.7: Cinematic Pause (Moved below rolls)
-    // await new Promise(resolve => setTimeout(resolve, 3500));
+    const updatedHasActed = { ...tableData.hasActed, [userId]: true };
+    announceSkillCutIn("GOAD", userId, targetId, "Could not show goad cut-in");
 
     // Get actors
-    // V5.9: Use getActorName
     const attackerName = getActorName(userId);
     const defenderName = getActorName(targetId);
     const safeAttackerName = getSafeActorName(userId);
     const safeDefenderName = getSafeActorName(targetId);
-
-    // V5.10.1: Fix ReferenceError - Define actor objects
     const attackerActor = getActorForUser(userId);
     const defenderActor = getActorForUser(targetId);
 
@@ -158,11 +167,7 @@ export async function goad(payload, userId) {
     const attackD20 = attackRoll.total;
     const attackMod = attackerActor?.system?.skills?.[attackerSkill]?.total ?? 0;
     const attackTotal = attackD20 + attackMod;
-
-    // V4.7.8: Dice So Nice
     showPublicRoll(attackRoll, userId);
-
-    // V3: Check for Nat 20/Nat 1
     const isNat20 = attackD20Raw === 20;
     const isNat1 = attackD20Raw === 1;
 
@@ -172,29 +177,15 @@ export async function goad(payload, userId) {
     const defendD20 = defendRoll.total;
     const defendMod = defenderActor?.system?.skills?.ins?.total ?? 0;
     const defendTotal = defendD20 + defendMod;
-
-    // V4.7.8: Dice So Nice
     showPublicRoll(defendRoll, targetId);
-
-    // V4.7.7: Cinematic Pause (Sync with Dice3D)
-    await new Promise(resolve => setTimeout(resolve, 3500));
+    await delay(TIMING.GOAD_DRAMATIC_PAUSE);
 
     // Determine winner: attacker must beat (not tie) defender
-    // V3: Nat 1 always fails regardless of total
-    const attackerWins = !isNat1 && attackTotal > defendTotal;
-
-    // Build outcome message for Nat effects
-    let nat20Effect = "";
-    let nat1Effect = "";
-    if (isNat20 && attackerWins) {
-        nat20Effect = "<br><strong style='color: gold;'>NAT 20! Cannot resist!</strong>";
-    }
-    if (isNat1) {
-        nat1Effect = "<br><strong style='color: #ff4444;'>NAT 1! Backfire + forced roll!</strong>";
-    }
-
-    // V4.7.6: Result Overlay
-    // V4.7.6: Result Overlay
+    const { success: attackerWins } = resolveContest({
+        attackerTotal: attackTotal,
+        defenderTotal: defendTotal,
+        isNat1
+    });
     const resultData = {
         attackerRoll: attackTotal,
         defenderRoll: defendTotal,
@@ -205,16 +196,7 @@ export async function goad(payload, userId) {
             ? `${safeDefenderName} is DARED! Must Hit or Fold!`
             : `${safeDefenderName} shrugged off the goad!`
     };
-    // Include target info manually if needed, but overlay resolves it via targetId
-    tavernSocket.executeForEveryone("showSkillResult", "GOAD", userId, targetId, resultData);
-
-    // V5.8: Log Goad Attempt
-    // We log the result (Success/Fail) inside the Outcome blocks below to be specific, 
-    // BUT we can also log a generic "XY used Goad on Z" here if we want?
-    // Let's stick to logging the RESULT, as the prompt implies "What happened".
-    // Wait, Result Overlay shows it ephemerally. The Log should persist it.
-
-    // We'll log in the if/else blocks for Success/Backfire logic to capture the details.
+    announceSkillResultOverlay("GOAD", userId, targetId, resultData, "Could not show goad result overlay");
 
     // Track that this player has goaded this round
     const updatedGoadedThisRound = { ...tableData.goadedThisRound, [userId]: true };
@@ -222,37 +204,17 @@ export async function goad(payload, userId) {
         ...tableData.usedSkills,
         [userId]: { ...tableData.usedSkills?.[userId], goad: true }
     };
-    const updatedGoadBackfire = { ...tableData.goadBackfire };
-
     if (attackerWins) {
-        // Target must roll
-        const updatedHolds = { ...tableData.holds };
-        if (updatedHolds[targetId]) delete updatedHolds[targetId];
-
-        // V5.7: Nat 20 = Force d20
         const isForceD20 = isNat20;
-
-        updatedGoadBackfire[targetId] = {
-            mustRoll: true,
+        const updatedTableData = buildGoadOutcomeTable({
+            tableData,
+            affectedId: targetId,
             goadedBy: userId,
-            forceD20: isForceD20 // V5.7
-        };
-
-        const updatedTableData = {
-            ...tableData,
-            holds: updatedHolds,
-            goadedThisRound: updatedGoadedThisRound,
-            usedSkills: updatedUsedSkills,
-            goadBackfire: updatedGoadBackfire,
-            skillUsedThisTurn: true,
-            lastSkillUsed: "goad",
-        };
-
-        // V5.7: Update Dared for target if Nat 20 (Forces d20)
-        // Re-using "dared" state but with d20 constraint maybe? 
-        // Actually, let's use the goadBackfire.forceD20 property in submitRoll directly.
-
-        // V5.8: Log Goad Success
+            forceD20: isForceD20,
+            updatedGoadedThisRound,
+            updatedUsedSkills,
+            updatedHasActed
+        });
         await addLogToAll({
             title: "Goad Successful!",
             message: `<strong>${safeAttackerName}</strong> goaded <strong>${safeDefenderName}</strong>!<br>Target is <strong>${isForceD20 ? "LOCKED into d20" : "DARED"}</strong> (Must Hit or Fold).`,
@@ -261,20 +223,18 @@ export async function goad(payload, userId) {
             cssClass: "success"
         });
 
-        try {
-            await tavernSocket.executeAsUser("showSkillBanner", userId, {
-                title: "Goad Success",
-                message: isForceD20 ? `${safeDefenderName} must roll d20.` : `${safeDefenderName} is dared.`,
-                tone: "success",
-                icon: "fa-solid fa-comments"
-            });
-            await tavernSocket.executeAsUser("showSkillBanner", targetId, {
-                title: "You Were Goaded",
-                message: isForceD20 ? "Forced to roll d20." : "Must roll or fold.",
-                tone: "failure",
-                icon: "fa-solid fa-comments"
-            });
-        } catch (e) { }
+        await announceSkillBannerToUser(userId, {
+            title: "Goad Success",
+            message: isForceD20 ? `${safeDefenderName} must roll d20.` : `${safeDefenderName} is dared.`,
+            tone: "success",
+            icon: "fa-solid fa-comments"
+        }, "Could not show goad success banner to attacker");
+        await announceSkillBannerToUser(targetId, {
+            title: "You Were Goaded",
+            message: isForceD20 ? "Forced to roll d20." : "Must roll or fold.",
+            tone: "failure",
+            icon: "fa-solid fa-comments"
+        }, "Could not show goad success banner to target");
 
         await addHistoryEntry({
             type: "goad",
@@ -290,50 +250,22 @@ export async function goad(payload, userId) {
                 : `${attackerName} goaded ${defenderName}! they must roll!`,
         });
 
-        try {
-            await tavernSocket.executeForEveryone("showImpactRing", targetId, "goad");
-        } catch (e) { }
+        await withWarning("Could not show goad impact ring", () => tavernSocket.executeForEveryone("showImpactRing", targetId, "goad"));
 
         return updateState({ tableData: updatedTableData });
 
     } else {
-        // BACKFIRE
-        // V5.7: Symmetrical Backfire - User must Roll or Fold
-        // NO Ante Penalty anymore
-
-        // Remove hold if present
-        const updatedHolds = { ...tableData.holds };
-        if (updatedHolds[userId]) delete updatedHolds[userId];
-
-        // V5.7: Nat 1 = User Forced to roll d20
         const isForceD20 = isNat1;
-
-        // Apply "Goaded" state to self (using goadBackfire structure for consistency)
-        // Or we can keep using "dared", but let's align it.
-        // The request says "make the effect ... the same".
-        // Use goadBackfire on SELF.
-        updatedGoadBackfire[userId] = {
-            mustRoll: true,
-            goadedBy: targetId, // "Goaded by target's resistance"
-            forceD20: isForceD20
-        };
-
-        // Clear legacy Dared if it exists
-        const updatedDared = { ...tableData.dared };
-        if (updatedDared[userId]) delete updatedDared[userId];
-
-        const updatedTableData = {
-            ...tableData,
-            holds: updatedHolds,
-            goadedThisRound: updatedGoadedThisRound,
-            usedSkills: updatedUsedSkills,
-            goadBackfire: updatedGoadBackfire,
-            dared: updatedDared,
-            skillUsedThisTurn: true,
-            lastSkillUsed: "goad",
-        };
-
-        // V5.8: Log Goad Backfire
+        const updatedTableData = buildGoadOutcomeTable({
+            tableData,
+            affectedId: userId,
+            goadedBy: targetId,
+            forceD20: isForceD20,
+            updatedGoadedThisRound,
+            updatedUsedSkills,
+            updatedHasActed,
+            clearDaredId: userId
+        });
         await addLogToAll({
             title: "Goad Backfired!",
             message: `<strong>${safeAttackerName}</strong> tried to goad <strong>${safeDefenderName}</strong> but failed!<br>Attacker is <strong>${isForceD20 ? "LOCKED into d20" : "forced to Roll"}</strong>!`,
@@ -342,20 +274,18 @@ export async function goad(payload, userId) {
             cssClass: "failure"
         });
 
-        try {
-            await tavernSocket.executeAsUser("showSkillBanner", userId, {
-                title: "Goad Backfire",
-                message: isForceD20 ? "You must roll d20." : "You must roll.",
-                tone: "failure",
-                icon: "fa-solid fa-comments"
-            });
-            await tavernSocket.executeAsUser("showSkillBanner", targetId, {
-                title: "Goad Resisted",
-                message: `You resisted ${safeAttackerName}.`,
-                tone: "success",
-                icon: "fa-solid fa-comments"
-            });
-        } catch (e) { }
+        await announceSkillBannerToUser(userId, {
+            title: "Goad Backfire",
+            message: isForceD20 ? "You must roll d20." : "You must roll.",
+            tone: "failure",
+            icon: "fa-solid fa-comments"
+        }, "Could not show goad backfire banner to attacker");
+        await announceSkillBannerToUser(targetId, {
+            title: "Goad Resisted",
+            message: `You resisted ${safeAttackerName}.`,
+            tone: "success",
+            icon: "fa-solid fa-comments"
+        }, "Could not show goad resisted banner to target");
 
         await addHistoryEntry({
             type: "goad",
@@ -371,10 +301,10 @@ export async function goad(payload, userId) {
                 : `${attackerName}'s goad backfired! They are forced to roll!`,
         });
 
-        try {
-            await tavernSocket.executeForEveryone("showImpactRing", userId, "goad");
-        } catch (e) { }
+        await withWarning("Could not show goad backfire impact ring", () => tavernSocket.executeForEveryone("showImpactRing", userId, "goad"));
 
         return updateState({ tableData: updatedTableData }); // No pot change
     }
 }
+
+

@@ -1,6 +1,6 @@
 /* ============================================
    TAVERN THEMES - Visual Skins for TDM
-   V5.21: Five distinct D&D-themed UI skins
+   Five distinct D&D-themed UI skins
    ============================================
    Themes apply via [data-theme="<id>"] on .tavern-dice-master
    The default "sword-coast" theme is the base tavern.css — no overrides needed.
@@ -1149,3 +1149,4 @@
   background: var(--tavern-wood-dark);
   color: var(--tavern-parchment);
 }
+

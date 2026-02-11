@@ -28,6 +28,7 @@
   "TAVERN": {
     "Cancel": "Cancel",
     "Confirm": "Confirm",
+    "Hold": "Hold",
     "Cost": "Cost",
     "Success": "SUCCESS",
     "Backfire": "BACKFIRE",
@@ -105,6 +106,72 @@
     },
     "Status": {
       "Holding": "HOLDING"
+    },
+    "Actions": {
+      "Profile": "Profile",
+      "Cheat": "Cheat",
+      "Goad": "Goad",
+      "Bump": "Bump"
+    },
+    "Notifications": {
+      "GMRequired": "A GM must be connected to play.",
+      "CaughtBumping": "You were caught bumping! Wait for retaliation.",
+      "DaredForced": "You are Dared! You forced to roll a d8 (Free) or Fold.",
+      "HunchLockedD20": "Foresight locked you into rolling a d20!",
+      "CutOffNoTab": "You're cut off and can't put it on the tab.",
+      "NoBootTargets": "No held players to boot.",
+      "NoProfileTargets": "No valid targets to profile.",
+      "NoCheatDice": "You have no dice to cheat with!",
+      "CannotCheatBlind": "You cannot cheat a blind die.",
+      "SelectAccuseTarget": "Select a player to accuse.",
+      "NoAccuseDice": "That player has no dice to accuse.",
+      "NoGoadTargets": "No valid targets to goad.",
+      "NoBumpTargets": "No valid targets to bump.",
+      "InvalidDieSelection": "Invalid die selection.",
+      "NoSideBetTargets": "No valid players to bet on.",
+      "AssignedCharacterRequired": "Assign a character before using {action}.",
+      "AnteSet": "Ante set to {amount}gp",
+      "AnteRange": "Ante must be between 1 and 1000 gp",
+      "GMOnlyModeChange": "Only the GM can change game mode.",
+      "GameModeChanged": "Game Mode changed to {mode}",
+      "GMOnlyHeatChange": "Only the GM can change starting heat.",
+      "HeatRange": "Heat must be between 5 and 30",
+      "GMOnlyThemeChange": "Only the GM can change the table theme.",
+      "ThemeChanged": "Table theme changed to {theme}",
+      "NoPlayersAtTable": "No players at the table.",
+      "CannotAffordAnte": "{name} cannot afford the {ante}gp ante."
+    },
+    "Dialogs": {
+      "InsufficientGoldTitle": "Insufficient Gold",
+      "InsufficientGoldBody": "You don't have enough gold ({cost}gp).",
+      "PutOnTabPrompt": "Put it on the Tab?",
+      "PutOnTabConfirm": "Put It On The Tab",
+      "ResetTableTitle": "Reset Table",
+      "ResetTableBody": "Clear all players and reset the table?",
+      "ResetTableConfirm": "Reset Table"
+    },
+    "GMJoin": {
+      "TitlePrompt": "How would you like to join?",
+      "NpcLabel": "NPC Gambler",
+      "StartingWallet": "Starting Wallet",
+      "WalletHint": "This is tracked by the module (not the actor sheet)",
+      "SelectNpcHint": "Tip: Select an NPC token on the canvas first to play as that character.",
+      "PlayHouse": "Play as House",
+      "PlayNpc": "Play as"
+    },
+    "GoblinHold": {
+      "Leading": "You are currently leading.",
+      "Prompt": "Hold to lock in your score, or continue to keep the Chamber moving.",
+      "Continue": "Continue"
+    },
+    "Logs": {
+      "PrivacyNote": "Private logs are hidden from other players in the UI, but GMs can inspect world state data.",
+      "Empty": "No secrets yet..."
+    },
+    "Time": {
+      "JustNow": "just now",
+      "MinutesAgo": "{minutes}m ago",
+      "HoursAgo": "{hours}h ago"
     },
     "Theme": {
       "Title": "Table Theme",

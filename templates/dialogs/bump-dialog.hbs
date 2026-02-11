@@ -3,7 +3,7 @@
   
   <div class="portrait-grid">
     {{#each targets}}
-    <div class="portrait-option" data-target-id="{{id}}" tabindex="0">
+    <div class="portrait-option" data-target-id="{{id}}" tabindex="0" role="button" aria-pressed="false" aria-label="{{name}}">
       <img src="{{img}}" alt="{{name}}" />
       <div class="name">{{name}}</div>
     </div>
@@ -26,5 +26,10 @@
   
   <div class="dialog-info">
     <p class="hint danger"><strong>{{localize "TAVERN.Warning"}}:</strong> {{localize "TAVERN.Bump.FailureEffect"}}</p>
+  </div>
+
+  <div class="dialog-actions">
+    <button type="submit" class="btn btn-skill">Bump!</button>
+    <button type="button" class="btn" data-action="cancel">{{localize "TAVERN.Cancel"}}</button>
   </div>
 </form>

@@ -1,4 +1,6 @@
-import { MODULE_ID, getState } from "../../state.js";
+import { getState } from "../../state.js";
+import { MODULE_ID } from "../../twenty-one/constants.js";
+import { formatRelativeTime } from "../../twenty-one/utils/time.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -40,13 +42,7 @@ export class LogsWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     }
 
     _formatTimeAgo(timestamp) {
-        if (!timestamp) return "";
-        const seconds = Math.floor((Date.now() - timestamp) / 1000);
-        if (seconds < 60) return "just now";
-        const minutes = Math.floor(seconds / 60);
-        if (minutes < 60) return `${minutes}m ago`;
-        const hours = Math.floor(minutes / 60);
-        return `${hours}h ago`;
+        return formatRelativeTime(timestamp);
     }
     async _onRender(context, options) {
         super._onRender(context, options);

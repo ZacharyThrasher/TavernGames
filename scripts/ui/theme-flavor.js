@@ -1,6 +1,5 @@
 /**
  * THEME FLAVOR ENGINE — Tavern Twenty-One
- * V5.22: Immersion Layer
  *
  * Each theme gets a unique VOICE that permeates every UI element.
  * This module provides thematic text, icons, and atmospheric copy
@@ -317,3 +316,4 @@ export function getRiskWarning(themeId, level) {
   const flavor = getThemeFlavor(themeId);
   return flavor.riskWarnings[level] || null;
 }
+

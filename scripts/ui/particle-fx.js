@@ -2,6 +2,8 @@
  * Simple Particle System for Tavern Games
  * Handles Falling Coins (CSS Animation driven)
  */
+import { FX_CONFIG } from "./fx-config.js";
+
 export class ParticleFactory {
 
     /**
@@ -13,7 +15,9 @@ export class ParticleFactory {
         if (!container) return;
 
         // Limit particle count for performance
-        const count = Math.min(amount, 100);
+        const count = Math.min(amount, FX_CONFIG.particles.coinShowerMax);
+        const spawned = [];
+        let maxLifetime = 0;
 
         for (let i = 0; i < count; i++) {
             const coin = document.createElement("div");
@@ -34,12 +38,13 @@ export class ParticleFactory {
             coin.innerHTML = '<i class="fa-solid fa-coins"></i>';
 
             container.appendChild(coin);
-
-            // Cleanup after animation
-            setTimeout(() => {
-                coin.remove();
-            }, (duration + delay) * 1000);
+            spawned.push(coin);
+            maxLifetime = Math.max(maxLifetime, duration + delay);
         }
+
+        setTimeout(() => {
+            for (const coin of spawned) coin.remove();
+        }, Math.ceil(maxLifetime * 1000) + 50);
     }
 
     /**
@@ -50,7 +55,9 @@ export class ParticleFactory {
     static spawnArcaneBurst(container, amount = 30) {
         if (!container) return;
 
-        const count = Math.min(amount, 60);
+        const count = Math.min(amount, FX_CONFIG.particles.arcaneBurstMax);
+        const spawned = [];
+        let maxLifetime = 0;
         for (let i = 0; i < count; i++) {
             const mote = document.createElement("div");
             mote.classList.add("tavern-arcane");
@@ -72,11 +79,13 @@ export class ParticleFactory {
             mote.style.transform = `scale(${scale})`;
 
             container.appendChild(mote);
-
-            setTimeout(() => {
-                mote.remove();
-            }, (duration + delay) * 1000);
+            spawned.push(mote);
+            maxLifetime = Math.max(maxLifetime, duration + delay);
         }
+
+        setTimeout(() => {
+            for (const mote of spawned) mote.remove();
+        }, Math.ceil(maxLifetime * 1000) + 50);
     }
 
     /**
@@ -87,7 +96,9 @@ export class ParticleFactory {
     static spawnAleSplash(container, amount = 24) {
         if (!container) return;
 
-        const count = Math.min(amount, 60);
+        const count = Math.min(amount, FX_CONFIG.particles.aleSplashMax);
+        const spawned = [];
+        let maxLifetime = 0;
         for (let i = 0; i < count; i++) {
             const drop = document.createElement("div");
             drop.classList.add("tavern-ale");
@@ -109,11 +120,13 @@ export class ParticleFactory {
             drop.style.transform = `scale(${scale})`;
 
             container.appendChild(drop);
-
-            setTimeout(() => {
-                drop.remove();
-            }, (duration + delay) * 1000);
+            spawned.push(drop);
+            maxLifetime = Math.max(maxLifetime, duration + delay);
         }
+
+        setTimeout(() => {
+            for (const drop of spawned) drop.remove();
+        }, Math.ceil(maxLifetime * 1000) + 50);
     }
 
     /**
@@ -125,7 +138,9 @@ export class ParticleFactory {
     static spawnSparkBurst(container, amount = 14, theme = "gold") {
         if (!container) return;
 
-        const count = Math.min(amount, 30);
+        const count = Math.min(amount, FX_CONFIG.particles.sparkBurstMax);
+        const spawned = [];
+        let maxLifetime = 0;
         for (let i = 0; i < count; i++) {
             const spark = document.createElement("div");
             spark.classList.add("tavern-spark", theme);
@@ -147,10 +162,12 @@ export class ParticleFactory {
             spark.style.animationDuration = `${duration}s`;
 
             container.appendChild(spark);
-
-            setTimeout(() => {
-                spark.remove();
-            }, (duration + delay) * 1000);
+            spawned.push(spark);
+            maxLifetime = Math.max(maxLifetime, duration + delay);
         }
+
+        setTimeout(() => {
+            for (const spark of spawned) spark.remove();
+        }, Math.ceil(maxLifetime * 1000) + 50);
     }
 }

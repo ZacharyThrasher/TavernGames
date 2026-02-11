@@ -1,4 +1,4 @@
-import { MODULE_ID } from "./state.js";
+import { MODULE_ID } from "./twenty-one/constants.js";
 import { handleJoinTable, handleLeaveTable, handleStartRound, handlePlayerAction, handleResetTable, handleMarkLogsAsSeen } from "./tavern-actions.js";
 import { showRollToUser, showPublicRollFromData } from "./dice.js";
 import { showVictoryFanfare, showBustFanfare, showCoinFlip, playBumpEffect, showFloatingText, showSkillCutIn, showSkillResult, showPrivateFeedback, showImpactRing, showFullSetBurst, showCheatResult, showSkillBanner, showDrinkResult, showCutOffBanner, showScoreSurge, showPotPulse, showJackpotInlay, showVignetteFlash } from "./ui/fx.js";
@@ -42,11 +42,8 @@ export function setupSockets() {
   tavernSocket.register("showVignetteFlash", showVignetteFlash);
   tavernSocket.register("showFloatingText", showFloatingText);
   tavernSocket.register("showSkillCutIn", showSkillCutIn);
-  // V4.7.6: Result Overlay
   tavernSocket.register("showSkillResult", showSkillResult);
-  // V4.9: Secret Private Feedback
   tavernSocket.register("showPrivateFeedback", showPrivateFeedback);
-
-  // V5.23: Fortune's Reveal — Cinematic Dice System
   tavernSocket.register("showDiceReveal", queueDiceReveal);
 }
+

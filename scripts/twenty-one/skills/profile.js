@@ -1,6 +1,5 @@
 /**
  * Tavern Twenty-One - Profile Skill
- * V3.0
  * 
  * INT vs passive Deception to learn opponent's hole die.
  * - Success: Learn their hole die value
@@ -9,60 +8,43 @@
  * - Nat 1: They learn your hole die + whether YOU cheated
  */
 
-import { MODULE_ID } from "../constants.js";
-import { getState, updateState, emptyTableData, addPrivateLog, addLogToAll, addHistoryEntry } from "../../state.js"; // V5.8
-import { getActorForUser, getActorName, getSafeActorName } from "../utils/actors.js"; // V5.9
-import { notifyUser } from "../utils/game-logic.js";
-// import { createChatCard, addHistoryEntry } from "../../ui/chat.js"; // Removed
-import { tavernSocket } from "../../socket.js";
+import { getState, updateState, addPrivateLog, addLogToAll, addHistoryEntry } from "../../state.js";
+import { emptyTableData, TIMING } from "../constants.js";
+import { getActorForUser, getActorName, getSafeActorName } from "../utils/actors.js";
+import { notifyUser, validateSkillPrerequisites } from "../utils/game-logic.js";
 import { showPublicRoll } from "../../dice.js";
+import { delay } from "../utils/runtime.js";
+import { announceSkillBannerToUser, announceSkillCutIn, announceSkillResultOverlay } from "../utils/skill-announcements.js";
 
 export async function profile(payload, userId) {
     const state = getState();
-    if (state.status !== "PLAYING") {
-        await notifyUser(userId, "Cannot Profile outside of an active round.");
-        return state;
-    }
-    if (state.tableData?.gameMode === "goblin") {
-        await notifyUser(userId, "Profile is disabled in Goblin Rules.");
-        return state;
-    }
-
-    let tableData = state.tableData ?? emptyTableData();
-    const { targetId } = payload;
-
-    // Must be your turn
-    if (tableData.currentPlayer !== userId) {
-        await notifyUser(userId, "You can only Profile on your turn.");
-        return state;
-    }
-
-    // Must be in betting phase
-    if (tableData.phase !== "betting") {
-        await notifyUser(userId, "Profile can only be used during the betting phase.");
-        return state;
-    }
-
-    // V3.5: House cannot use skills (but GM-as-NPC can)
-    const user = game.users.get(userId);
-    const playerData = state.players?.[userId];
-    const isHouse = user?.isGM && !playerData?.playingAsNpc;
-    if (isHouse) {
-        await notifyUser(userId, "The house knows all.");
-        return state;
-    }
-
-    // Limit: One skill per turn
-    if (tableData.skillUsedThisTurn) {
-        await notifyUser(userId, "You have already used a skill this turn.");
-        return state;
-    }
-
-    // V4.8.40: Once per round/match
-    if (tableData.usedSkills?.[userId]?.profile) {
-        await notifyUser(userId, "You can only use Profile once per match.");
-        return state;
-    }
+    const tableData = state.tableData ?? emptyTableData();
+    const targetId = payload?.targetId;
+    const canUseProfile = await validateSkillPrerequisites({
+        state,
+        tableData,
+        userId,
+        skillName: "Profile",
+        requireMyTurn: true,
+        requireBettingPhase: true,
+        disallowInGoblin: true,
+        disallowHouse: true,
+        disallowIfSkillUsedThisTurn: true,
+        disallowIfBusted: true,
+        disallowIfFolded: true,
+        oncePerMatchSkill: "profile",
+        messages: {
+            outsideRound: "Cannot Profile outside of an active round.",
+            goblinDisabled: "Profile is disabled in Goblin Rules.",
+            notYourTurn: "You can only Profile on your turn.",
+            wrongPhase: "Profile can only be used during the betting phase.",
+            houseBlocked: "The house knows all.",
+            alreadyUsedThisTurn: "You have already used a skill this turn.",
+            alreadyUsedMatch: "You can only use Profile once per match.",
+            selfCannotAct: "You can't Profile right now."
+        }
+    });
+    if (!canUseProfile) return state;
 
     // Can't profile yourself
     if (targetId === userId) {
@@ -75,7 +57,6 @@ export async function profile(payload, userId) {
         await notifyUser(userId, "Invalid Profile target.");
         return state;
     }
-    // V3.5: Can't profile the house, but GM-as-NPC is a valid target
     const targetUser = game.users.get(targetId);
     const isTargetHouse = targetUser?.isGM && !state.players?.[targetId]?.playingAsNpc;
     if (isTargetHouse) {
@@ -92,25 +73,10 @@ export async function profile(payload, userId) {
         await notifyUser(userId, "That player has folded - they're untargetable!");
         return state;
     }
-
-    // Can't use if busted or folded yourself
-    if (tableData.busts?.[userId] || tableData.folded?.[userId]) {
-        await notifyUser(userId, "You can't Profile right now.");
-        return state;
-    }
-
-    // Mark as acted
-    tableData.hasActed = { ...tableData.hasActed, [userId]: true };
-
-    // V4.7.1: Visual Cut-In
-    tavernSocket.executeForEveryone("showSkillCutIn", "PROFILE", userId, targetId);
-
-    // V4.7.7: Analysis Pause (Moved down)
-    // await new Promise(resolve => setTimeout(resolve, 3000));
+    announceSkillCutIn("PROFILE", userId, targetId, "Could not show profile cut-in");
 
     const actor = getActorForUser(userId);
     const targetActor = getActorForUser(targetId);
-    // V5.9: Use getActorName
     const userName = getActorName(userId);
     const targetName = getActorName(targetId);
     const safeUserName = getSafeActorName(userId);
@@ -123,10 +89,8 @@ export async function profile(payload, userId) {
     const d20 = roll.total;
     const isNat20 = d20Raw === 20;
     const isNat1 = d20Raw === 1;
-
-    // V4.7.8: Dice So Nice & Sync Pause
     showPublicRoll(roll, userId);
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    await delay(TIMING.SKILL_DRAMATIC_PAUSE);
 
     const invMod = actor?.system?.skills?.inv?.total ?? 0;
     const attackTotal = d20 + invMod;
@@ -146,16 +110,13 @@ export async function profile(payload, userId) {
     const myRolls = tableData.rolls[userId] ?? [];
     const myHoleDie = myRolls.find(r => !r.public);
     const myHoleValue = myHoleDie?.result ?? "?";
-
-
-    // V4.7.6: Result Overlay Logic
     let outcomeText = "FAILED";
     let outcomeClass = "failure";
     if (isNat20) { outcomeText = "CRITICAL!"; outcomeClass = "success"; }
     else if (isNat1) { outcomeText = "BACKFIRE!"; outcomeClass = "failure"; }
     else if (success) { outcomeText = "SUCCESS"; outcomeClass = "success"; }
 
-    tavernSocket.executeForEveryone("showSkillResult", "PROFILE", userId, targetId, {
+    announceSkillResultOverlay("PROFILE", userId, targetId, {
         attackerRoll: attackTotal,
         defenderRoll: defenseTotal,
         outcome: outcomeText,
@@ -163,10 +124,9 @@ export async function profile(payload, userId) {
         detail: success
             ? `${userName} is reading ${targetName}'s poker face...`
             : `${targetName}'s poker face is unreadable!`
-    });
+    }, "Could not show profile result overlay");
 
     if (isNat20) {
-        // V5.8: Log to Profiler (Success)
         await addPrivateLog(userId, {
             title: "Profile: Perfect (Nat 20)",
             message: targetCheated
@@ -177,16 +137,14 @@ export async function profile(payload, userId) {
             cssClass: "success"
         });
 
-        try {
-            await tavernSocket.executeAsUser("showSkillBanner", userId, {
-                title: "Profile - Nat 20",
-                message: targetCheated
-                    ? `Cheater: YES (die ${targetCheatDice.join(", ")})`
-                    : "Cheater: NO",
-                tone: "success",
-                icon: "fa-solid fa-user-secret"
-            });
-        } catch (e) { }
+        await announceSkillBannerToUser(userId, {
+            title: "Profile - Nat 20",
+            message: targetCheated
+                ? `Cheater: YES (die ${targetCheatDice.join(", ")})`
+                : "Cheater: NO",
+            tone: "success",
+            icon: "fa-solid fa-user-secret"
+        }, "Could not show profile nat20 banner");
 
         // Public Log
         await addLogToAll({
@@ -199,7 +157,6 @@ export async function profile(payload, userId) {
 
     } else if (isNat1) {
         // Nat 1 Backfire - Target learns info
-        // V5.8: Log to Target (Target learns Profiler's secrets)
         await addPrivateLog(targetId, {
             title: `Counter-Read on ${userName}`,
             message: `Hole Die: ${myHoleValue} | Cheated: ${myCheated ? "YES" : "NO"}`,
@@ -208,14 +165,12 @@ export async function profile(payload, userId) {
             cssClass: "success" // Good for target
         });
 
-        try {
-            await tavernSocket.executeAsUser("showSkillBanner", targetId, {
-                title: "Counter-Profile",
-                message: `Hole: ${myHoleValue} | Cheated: ${myCheated ? "YES" : "NO"}`,
-                tone: "success",
-                icon: "fa-solid fa-eye"
-            });
-        } catch (e) { }
+        await announceSkillBannerToUser(targetId, {
+            title: "Counter-Profile",
+            message: `Hole: ${myHoleValue} | Cheated: ${myCheated ? "YES" : "NO"}`,
+            tone: "success",
+            icon: "fa-solid fa-eye"
+        }, "Could not show counter-profile banner");
 
         // Log failure to self
         await addPrivateLog(userId, {
@@ -226,14 +181,12 @@ export async function profile(payload, userId) {
             cssClass: "failure"
         });
 
-        try {
-        await tavernSocket.executeAsUser("showSkillBanner", userId, {
+        await announceSkillBannerToUser(userId, {
             title: "Profile Backfire",
             message: `${safeTargetName} read you.`,
             tone: "failure",
             icon: "fa-solid fa-user-injured"
-        });
-        } catch (e) { }
+        }, "Could not show profile backfire banner");
 
         // Public Log
         await addLogToAll({
@@ -246,7 +199,6 @@ export async function profile(payload, userId) {
 
     } else if (success) {
         // Standard Success
-        // V5.8: Log to Profiler
         await addPrivateLog(userId, {
             title: `Profile: ${targetName}`,
             message: `Cheated: ${targetCheated ? "YES" : "NO"}`,
@@ -255,14 +207,12 @@ export async function profile(payload, userId) {
             cssClass: "success"
         });
 
-        try {
-            await tavernSocket.executeAsUser("showSkillBanner", userId, {
-                title: "Profile",
-                message: `Cheater: ${targetCheated ? "YES" : "NO"}`,
-                tone: "success",
-                icon: "fa-solid fa-user-secret"
-            });
-        } catch (e) { }
+        await announceSkillBannerToUser(userId, {
+            title: "Profile",
+            message: `Cheater: ${targetCheated ? "YES" : "NO"}`,
+            tone: "success",
+            icon: "fa-solid fa-user-secret"
+        }, "Could not show profile success banner");
 
         // Public Log
         await addLogToAll({
@@ -275,7 +225,6 @@ export async function profile(payload, userId) {
 
     } else {
         // Failure: No info
-        // V5.8: Log Failure
         await addPrivateLog(userId, {
             title: "Profile Failed",
             message: `No read on ${safeTargetName}.`,
@@ -284,14 +233,12 @@ export async function profile(payload, userId) {
             cssClass: "failure"
         });
 
-        try {
-        await tavernSocket.executeAsUser("showSkillBanner", userId, {
+        await announceSkillBannerToUser(userId, {
             title: "Profile Failed",
             message: `No read on ${safeTargetName}.`,
             tone: "failure",
             icon: "fa-solid fa-question"
-        });
-        } catch (e) { }
+        }, "Could not show profile failed banner");
 
         // Public Log
         await addLogToAll({
@@ -302,12 +249,6 @@ export async function profile(payload, userId) {
             cssClass: "failure"
         }, [], userId);
     }
-
-    // Track profile
-    const profiledBy = { ...tableData.profiledBy };
-    if (!profiledBy[targetId]) profiledBy[targetId] = [];
-    profiledBy[targetId].push(userId);
-    tableData.profiledBy = profiledBy;
 
     await addHistoryEntry({
         type: "profile",
@@ -324,14 +265,29 @@ export async function profile(payload, userId) {
                     : `${userName} failed to profile ${targetName} - got counter-read!`,
     });
 
-    tableData.skillUsedThisTurn = true;
-    tableData.lastSkillUsed = "profile";
+    return updateState((current) => {
+        const latestTable = current.tableData ?? emptyTableData();
+        const profiledBy = { ...latestTable.profiledBy };
+        const existingProfilers = Array.isArray(profiledBy[targetId]) ? [...profiledBy[targetId]] : [];
+        if (!existingProfilers.includes(userId)) existingProfilers.push(userId);
+        profiledBy[targetId] = existingProfilers;
 
-    // V4.8.40: Mark usage
-    const usedSkills = { ...tableData.usedSkills };
-    if (!usedSkills[userId]) usedSkills[userId] = {};
-    usedSkills[userId] = { ...usedSkills[userId], profile: true };
-    tableData.usedSkills = usedSkills;
+        const currentUsedSkills = latestTable.usedSkills ?? {};
+        const myUsedSkills = currentUsedSkills[userId] ?? {};
 
-    return updateState({ tableData });
+        return {
+            tableData: {
+                profiledBy,
+                skillUsedThisTurn: true,
+                lastSkillUsed: "profile",
+                hasActed: { ...latestTable.hasActed, [userId]: true },
+                usedSkills: {
+                    ...currentUsedSkills,
+                    [userId]: { ...myUsedSkills, profile: true }
+                }
+            }
+        };
+    });
 }
+
+

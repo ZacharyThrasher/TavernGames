@@ -1,4 +1,5 @@
 <div class="logs-content">
+    <p class="hint centered">{{localize "TAVERN.Logs.PrivacyNote"}}</p>
     {{#if privateLogs}}
     {{#each privateLogs}}
     <div class="log-entry {{this.type}}">
@@ -8,13 +9,13 @@
         </div>
         <div class="log-details">
             <div class="log-title">{{this.title}}</div>
-            <div class="log-message">{{{this.message}}}</div>
+            <div class="log-message">{{this.message}}</div>
         </div>
     </div>
     {{/each}}
     {{else}}
     <div class="no-logs">
-        <em>No secrets yet...</em>
+        <em>{{localize "TAVERN.Logs.Empty"}}</em>
     </div>
     {{/if}}
 </div>

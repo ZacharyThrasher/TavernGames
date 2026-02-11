@@ -1,4 +1,4 @@
-import { MODULE_ID } from "../../state.js";
+import { MODULE_ID } from "../../twenty-one/constants.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -24,11 +24,6 @@ export class CheatDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     },
   };
 
-  /**
-   * Static helper to show the dialog and wait for result
-   * @param {object} params - Context parameters
-   * @returns {Promise<object|null>} - The form data or null
-   */
   static async show(params) {
     return new Promise((resolve) => {
       new CheatDialog({
@@ -46,11 +41,7 @@ export class CheatDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 
   async _prepareContext(options) {
     const { myRolls, actor, heatDC } = this.params;
-
-    // Skill modifier (Sleight of Hand only)
     const sltMod = actor?.system?.skills?.slt?.total ?? 0;
-
-    // Default to last die for preview
     const lastRoll = myRolls[myRolls.length - 1];
     const initialCurrent = lastRoll?.result ?? 1;
     const initialMax = lastRoll?.die ?? 20;
@@ -61,7 +52,7 @@ export class CheatDialog extends HandlebarsApplicationMixin(ApplicationV2) {
       heatDC,
       initialCurrent,
       initialPreview,
-      maxVal: initialMax, // Store for JS access
+      maxVal: initialMax,
       adjustments: [
         { value: -3, label: "-3", colorClass: "loss" },
         { value: -2, label: "-2", colorClass: "loss" },
@@ -70,7 +61,6 @@ export class CheatDialog extends HandlebarsApplicationMixin(ApplicationV2) {
         { value: 2, label: "+2", colorClass: "gain" },
         { value: 3, label: "+3", colorClass: "gain" }
       ],
-      // No formatMod in context - registered globally now
     };
   }
 
@@ -79,16 +69,11 @@ export class CheatDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     const html = $(this.element);
     const form = this.element.querySelector("form");
 
-    // Bind Form Submission manually
     if (form) form.addEventListener("submit", this._onSubmit.bind(this));
 
-    // Preview Updater
     const updatePreview = () => {
-      // Get current from HTML or context? HTML is safer if we had select, but here it's static
       const current = context.initialCurrent;
       const max = context.maxVal;
-
-      // Vanilla JS selector for robustness
       const checkedRadio = this.element.querySelector('input[name="adjustment"]:checked');
       const adj = parseInt(checkedRadio?.value ?? 0);
 
@@ -107,13 +92,11 @@ export class CheatDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 
     html.find('[name="adjustment"]').on('change', updatePreview);
 
-    // Style radio buttons
     html.find('.cheat-adj-btn').on('click', function () {
       html.find('.cheat-adj-btn').removeClass('selected');
       $(this).addClass('selected');
     });
 
-    // Close button
     html.find('[data-action="close"]').on('click', () => this.close());
   }
 
@@ -122,8 +105,6 @@ export class CheatDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 
     try {
       const formData = new FormData(event.target);
-
-      // Manual parsing to avoid dependency on FormDataExtended
       const adjustment = parseInt(formData.get("adjustment"));
 
       const result = {
@@ -137,7 +118,6 @@ export class CheatDialog extends HandlebarsApplicationMixin(ApplicationV2) {
       this.close();
     } catch (err) {
       console.error("Tavern | Cheat Dialog Submit Error:", err);
-      // Ensure we don't hang
       if (this.resolve) {
         this.resolve(null);
         this.resolve = null;

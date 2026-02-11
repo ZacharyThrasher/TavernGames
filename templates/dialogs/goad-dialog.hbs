@@ -3,7 +3,7 @@
   
   <div class="portrait-grid">
     {{#each targets}}
-    <div class="portrait-option {{#if isHolding}}is-holding{{/if}}" data-target-id="{{id}}" tabindex="0">
+    <div class="portrait-option {{#if isHolding}}is-holding{{/if}}" data-target-id="{{id}}" tabindex="0" role="button" aria-pressed="false" aria-label="{{name}}">
       <img src="{{img}}" alt="{{name}}" />
       <div class="name">{{name}}</div>
       {{#if isHolding}}<div class="status-badge holding">{{localize "TAVERN.Status.Holding"}}</div>{{/if}}
@@ -28,5 +28,10 @@
   <div class="dialog-info">
     <p class="hint success"><strong>{{localize "TAVERN.Success"}}:</strong> {{localize "TAVERN.Goad.SuccessEffect"}}</p>
     <p class="hint danger"><strong>{{localize "TAVERN.Backfire"}}:</strong> {{localize "TAVERN.Goad.BackfireEffect"}}</p>
+  </div>
+
+  <div class="dialog-actions">
+    <button type="submit" class="btn btn-skill">Goad!</button>
+    <button type="button" class="btn" data-action="cancel">{{localize "Cancel"}}</button>
   </div>
 </form>

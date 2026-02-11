@@ -3,7 +3,7 @@
   
   <div class="dice-grid">
     {{#each dice}}
-    <div class="die-option" data-die-index="{{index}}" tabindex="0">
+    <div class="die-option" data-die-index="{{index}}" tabindex="0" role="button" aria-pressed="false" aria-label="d{{die}} {{result}}">
       <i class="fas fa-dice-{{icon}}"></i>
       <span class="die-result">{{displayResult}}</span>
       <span class="die-label">{{label}}</span>
@@ -18,5 +18,10 @@
     <p class="hint success"><strong>{{localize "TAVERN.Accuse.Success"}}:</strong> {{localize "TAVERN.Accuse.SuccessEffect" bounty=bounty}}</p>
     <p class="hint danger"><strong>{{localize "TAVERN.Accuse.Failure"}}:</strong> {{localize "TAVERN.Accuse.FailureEffect" cost=cost}}</p>
     <p class="hint italic">{{localize "TAVERN.Accuse.Note"}}</p>
+  </div>
+
+  <div class="dialog-actions">
+    <button type="submit" class="btn btn-danger">Accuse!</button>
+    <button type="button" class="btn" data-action="cancel">{{localize "Cancel"}}</button>
   </div>
 </form>

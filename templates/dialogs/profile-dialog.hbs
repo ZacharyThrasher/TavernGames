@@ -3,7 +3,7 @@
   
   <div class="portrait-grid">
     {{#each targets}}
-    <div class="portrait-option" data-target-id="{{id}}" tabindex="0">
+    <div class="portrait-option" data-target-id="{{id}}" tabindex="0" role="button" aria-pressed="false" aria-label="{{name}}">
       <img src="{{img}}" alt="{{name}}" />
       <div class="name">{{name}}</div>
     </div>
@@ -18,5 +18,10 @@
       <strong>{{localize "DND5E.SkillInv"}}</strong> {{formatMod invMod}} vs {{localize "TAVERN.PassiveDeception"}}
     </p>
     <p class="hint">{{localize "TAVERN.Profile.Effect"}}</p>
+  </div>
+
+  <div class="dialog-actions">
+    <button type="submit" class="btn btn-skill">Profile</button>
+    <button type="button" class="btn" data-action="cancel">{{localize "Cancel"}}</button>
   </div>
 </form>

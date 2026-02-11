@@ -1,13 +1,17 @@
-import { MODULE_ID, getState, updateState, addHistoryEntry, addLogToAll, addPrivateLog } from "../../state.js"; // V5.8
+import { getState, updateState, addHistoryEntry, addLogToAll } from "../../state.js";
+import { MODULE_ID } from "../constants.js";
 import { canAffordAnte, deductAnteFromActors, deductFromActor, payOutWinners } from "../../wallet.js";
-// import { createChatCard } from "../../ui/chat.js"; // Removed
 import { showPublicRoll } from "../../dice.js";
 
 import { tavernSocket } from "../../socket.js";
-import { getActorForUser, getActorName, getSafeActorName } from "../utils/actors.js"; // V5.9
-import { calculateBettingOrder } from "../utils/game-logic.js";
-import { emptyTableData, GOBLIN_STAGE_DICE } from "../constants.js";
+import { getActorName, getSafeActorName } from "../utils/actors.js";
+import { calculateBettingOrder, getAccusationCost } from "../utils/game-logic.js";
+import { TIMING, emptyTableData, GOBLIN_STAGE_DICE } from "../constants.js";
 import { processSideBetPayouts } from "./side-bets.js";
+import { delay, fireAndForget, withWarning } from "../utils/runtime.js";
+import { localizeOrFallback } from "../utils/i18n.js";
+
+const t = (key, fallback, data = {}) => localizeOrFallback(key, fallback, data);
 
 export async function startRound(startingHeat = 10) {
   const state = getState();
@@ -15,13 +19,18 @@ export async function startRound(startingHeat = 10) {
   const configuredMode = game.settings.get(MODULE_ID, "gameMode");
 
   if (!state.turnOrder.length) {
-    ui.notifications.warn("No players at the table.");
+    ui.notifications.warn(t("TAVERN.Notifications.NoPlayersAtTable", "No players at the table."));
     return state;
   }
 
   const affordability = canAffordAnte(state, ante);
   if (!affordability.ok) {
-    ui.notifications.warn(`${affordability.name} cannot afford the ${ante}gp ante.`);
+    ui.notifications.warn(
+      t("TAVERN.Notifications.CannotAffordAnte", "{name} cannot afford the {ante}gp ante.", {
+        name: affordability.name,
+        ante
+      })
+    );
     return state;
   }
 
@@ -32,14 +41,11 @@ export async function startRound(startingHeat = 10) {
   const gameMode = state.tableData?.gameMode ?? configuredMode ?? "standard";
   tableData.gameMode = gameMode;
   tableData.usedDice = {};
-
-  // V5: Initialize Per-Player Heat
   for (const pid of state.turnOrder) {
     tableData.playerHeat[pid] = startingHeat;
   }
 
   // Calculate pot: each player antes
-  // V3.5: If GM is playing as NPC, no house match (everyone antes equally)
   // If GM is house, house matches non-GM players
   const gmId = state.turnOrder.find(id => game.users.get(id)?.isGM);
   const gmPlayerData = gmId ? state.players?.[gmId] : null;
@@ -99,8 +105,6 @@ export async function startRound(startingHeat = 10) {
 
     return next;
   }
-
-  // V3: Auto-roll 2d10 for everyone (1 visible, 1 hole)
   let lowestVisible = Infinity;
   let cutPlayerId = null;
 
@@ -110,16 +114,11 @@ export async function startRound(startingHeat = 10) {
     const roll2 = await new Roll("1d10").evaluate();
 
     // Show dice to player immediately (visible die public, hole die private)
-    try {
-      // Don't await the socket call to prevent blocking other processing
-      tavernSocket.executeAsUser("showRoll", userId, {
-        formula: "1d10",
-        die: 10,
-        result: roll1.total
-      });
-    } catch (e) {
-      console.warn("Tavern Twenty-One | Could not show dice to player:", e);
-    }
+    fireAndForget("Could not show opening die", tavernSocket.executeAsUser("showRoll", userId, {
+      formula: "1d10",
+      die: 10,
+      result: roll1.total
+    }));
 
     return { userId, roll1, roll2 };
   });
@@ -141,15 +140,9 @@ export async function startRound(startingHeat = 10) {
       cutPlayerId = userId;
     }
   }
-
-  // V3: Calculate betting order (sorted by visible total, lowest first)
   tableData.bettingOrder = calculateBettingOrder(state, tableData);
-
-  // V3: Set up The Cut - lowest visible die can re-roll hole
   tableData.theCutPlayer = cutPlayerId;
   tableData.theCutUsed = false;
-
-  // V3: Transition to cut phase if someone gets The Cut, otherwise straight to betting
   if (cutPlayerId && state.turnOrder.length > 1) {
     tableData.phase = "cut";
     tableData.currentPlayer = cutPlayerId;
@@ -167,31 +160,27 @@ export async function startRound(startingHeat = 10) {
     turnIndex: 0,
   });
 
-  const playerNames = state.turnOrder.map(id => getActorName(id)).join(", "); // V5.9
+  const playerNames = state.turnOrder.map(id => getActorName(id)).join(", ");
   await addHistoryEntry({
     type: "round_start",
     message: `New round started. Ante: ${ante}gp each. Pot: ${pot}gp.`,
     players: playerNames,
   });
-
-  // V3: Updated message for auto-roll opening
-  const cutPlayerName = cutPlayerId ? getActorName(cutPlayerId) : null;
   const safeCutPlayerName = cutPlayerId ? getSafeActorName(cutPlayerId) : null;
-  let chatMessage = `Each player antes ${ante}gp. The house matches. Pot: <strong>${pot}gp</strong><br>` +
-    `<em>All hands dealt (2d10 each: 1 visible, 1 hole)</em>`;
+  const openingLine = gmIsPlayingAsNpc
+    ? `Each player antes ${ante}gp. Pot: <strong>${pot}gp</strong><br>`
+    : `Each player antes ${ante}gp. The house matches. Pot: <strong>${pot}gp</strong><br>`;
+  let chatMessage = `${openingLine}<em>All hands dealt (2d10 each: 1 visible, 1 hole)</em>`;
 
   if (cutPlayerId && state.turnOrder.length > 1) {
     chatMessage += `<br><strong>${safeCutPlayerName}</strong> has The Cut (lowest visible: ${lowestVisible})`;
   }
-
-  // V5.8: Log to All
   await addLogToAll({
     title: "New Round!",
     message: chatMessage,
     icon: "fa-solid fa-coins",
     type: "phase"
-  }, [], cutPlayerId); // Pass cut player ID for image if relevant, or null. Maybe GM image or icon default?
-  // Let's rely on default icon/image if cutPlayerId is null.
+  }, [], cutPlayerId);
 
   return next;
 }
@@ -211,8 +200,8 @@ export async function revealDice() {
 
   // Show all rolls publicly - launch all dice animations in parallel for speed
   const rollPromises = [];
-  for (const oduserId of state.turnOrder) {
-    const playerRolls = tableData.rolls[oduserId] ?? [];
+  for (const userId of state.turnOrder) {
+    const playerRolls = tableData.rolls[userId] ?? [];
     for (const rollData of playerRolls) {
       rollPromises.push((async () => {
         const roll = await new Roll(`1d${rollData.die}`).evaluate();
@@ -221,20 +210,19 @@ export async function revealDice() {
           roll.terms[0].results[0].result = rollData.result;
           roll._total = rollData.result;
         }
-        await showPublicRoll(roll, oduserId);
+        await showPublicRoll(roll, userId);
       })());
     }
   }
 
   await Promise.all(rollPromises);
-  await new Promise(r => setTimeout(r, 500));
-
-  // V4.8.47: Staredown Cinematic
-  tavernSocket.executeForEveryone("showSkillCutIn", "STAREDOWN", null, null);
-  await new Promise(r => setTimeout(r, 2500));
+  await delay(TIMING.POST_REVEAL_DELAY);
+  fireAndForget("Could not show staredown cut-in", tavernSocket.executeForEveryone("showSkillCutIn", "STAREDOWN", null, null));
+  await delay(TIMING.STAREDOWN_DELAY);
 
   // Now transition to The Staredown
-  const accusationCost = Math.floor(state.pot / 2);
+  const ante = game.settings.get(MODULE_ID, "fixedAnte");
+  const accusationCost = getAccusationCost(ante);
 
   await addLogToAll({
     title: "The Staredown",
@@ -253,8 +241,6 @@ export async function finishRound() {
   const tableData = state.tableData ?? emptyTableData();
 
   await updateState({ status: "REVEALING" });
-
-  // V2.0: Check for fumbled cheaters (physical cheat < 10 = auto-caught)
   const caught = { ...tableData.caught };
   const fumbledCheaterNames = [];
   const fumbledCheaterNamesSafe = [];
@@ -264,7 +250,7 @@ export async function finishRound() {
     for (const cheatRecord of cheats) {
       if (cheatRecord.fumbled) {
         caught[cheaterId] = true;
-        const cheaterName = getActorName(cheaterId); // V5.9
+        const cheaterName = getActorName(cheaterId);
         const safeCheaterName = getSafeActorName(cheaterId);
         fumbledCheaterNames.push(cheaterName);
         fumbledCheaterNamesSafe.push(safeCheaterName);
@@ -281,75 +267,6 @@ export async function finishRound() {
       type: "cheat",
       cssClass: "failure"
     });
-  }
-
-  // V2.0: If an accusation was made, reveal the outcome and handle bounty
-  if (tableData.accusation) {
-    const { accuserId, targetId, success, cost, bounty } = tableData.accusation;
-    const accuserName = getActorName(accuserId);
-    const targetName = getActorName(targetId);
-    const safeAccuserName = getSafeActorName(accuserId);
-    const safeTargetName = getSafeActorName(targetId);
-
-    await new Promise(r => setTimeout(r, 1000));
-
-    if (success) {
-
-
-      const refund = cost ?? 0;
-      const bountyAmount = bounty ?? 0;
-
-      let actualBounty = 0;
-      if (bountyAmount > 0) {
-        const collected = await deductFromActor(targetId, bountyAmount);
-        actualBounty = collected ? bountyAmount : 0;
-      }
-
-      const totalReward = refund + actualBounty;
-      if (totalReward > 0) {
-        await payOutWinners({ [accuserId]: totalReward });
-      }
-
-      const bountyMsg = actualBounty > 0 ? `${actualBounty}gp bounty` : "no bounty";
-
-      await addLogToAll({
-        title: "Cheater Caught!",
-        message: `<strong>${safeAccuserName}</strong> exposed <strong>${safeTargetName}</strong>!<br>
-          <em>${safeAccuserName} earns ${totalReward}gp (${refund} refund + ${bountyMsg})</em>`,
-        icon: "fa-solid fa-gavel",
-        type: "cheat",
-        cssClass: "success"
-      }, [], accuserId);
-
-      await addHistoryEntry({
-        type: "cheat_caught",
-        accuser: accuserName,
-        caught: targetName,
-        reward: totalReward,
-        message: `${accuserName} caught ${targetName} cheating and earned ${totalReward}gp!`,
-      });
-    } else {
-
-
-      await addLogToAll({
-        title: "False Accusation!",
-        message: `<strong>${safeAccuserName}</strong> accused <strong>${safeTargetName}</strong> but was WRONG!<br>
-          <em>${safeAccuserName} loses their ${cost ?? 0}gp fee.</em>`,
-        icon: "fa-solid fa-face-frown",
-        type: "cheat",
-        cssClass: "failure"
-      }, [], accuserId);
-
-      await addHistoryEntry({
-        type: "accusation_failed",
-        accuser: accuserName,
-        target: targetName,
-        cost: cost ?? 0,
-        message: `${accuserName} falsely accused ${targetName} and loses ${cost ?? 0}gp.`,
-      });
-    }
-
-    await new Promise(r => setTimeout(r, 500));
   }
 
   const totals = tableData.totals ?? {};
@@ -370,7 +287,7 @@ export async function finishRound() {
 
   const winners = state.turnOrder.filter((id) => {
     if (caught[id]) return false;
-    if (tableData.folded?.[id]) return false; // V3: Folded players cannot win
+    if (tableData.folded?.[id]) return false;
     if (tableData.busts?.[id]) return false;
     if (isGoblinMode) {
       return best !== -Infinity && (totals[id] ?? 0) === best;
@@ -394,7 +311,10 @@ export async function finishRound() {
         type: "phase"
       });
 
-      tavernSocket.executeForEveryone("showSkillCutIn", "SUDDEN_DEATH", participants[0], participants[1]);
+      fireAndForget(
+        "Could not show sudden death cut-in",
+        tavernSocket.executeForEveryone("showSkillCutIn", "SUDDEN_DEATH", participants[0], participants[1])
+      );
 
       return updateState({
         status: "PLAYING",
@@ -411,7 +331,7 @@ export async function finishRound() {
       });
     }
 
-    const duelParticipantNames = winners.map(id => getActorName(id)).join(" vs "); // V5.9
+    const duelParticipantNames = winners.map(id => getActorName(id)).join(" vs ");
     const duelParticipantNamesSafe = winners.map(id => getSafeActorName(id)).join(" vs ");
 
     await addLogToAll({
@@ -422,11 +342,9 @@ export async function finishRound() {
       icon: "fa-solid fa-swords",
       type: "phase"
     });
-
-    // V4.8.50: Duel Cinematic (Fixed)
     const [p1, p2] = winners; // Guaranteed to have at least 2
-    tavernSocket.executeForEveryone("showSkillCutIn", "DUEL", p1, p2);
-    await new Promise(r => setTimeout(r, 3000));
+    fireAndForget("Could not show duel cut-in", tavernSocket.executeForEveryone("showSkillCutIn", "DUEL", p1, p2));
+    await delay(TIMING.SKILL_DRAMATIC_PAUSE);
 
     const duel = {
       active: true,
@@ -448,16 +366,14 @@ export async function finishRound() {
       tableData: { ...tableData, caught, duel },
     });
   }
-
-  // V3.5: Collect cleaning fees BEFORE payout - they go into the pot
   const cleaningFees = tableData.cleaningFees ?? {};
   const cleaningFeeMessages = [];
   let totalCleaningFees = 0;
-  for (const [odId, fee] of Object.entries(cleaningFees)) {
+  for (const [userId, fee] of Object.entries(cleaningFees)) {
     if (fee > 0) {
-      await deductFromActor(odId, fee);
+      await deductFromActor(userId, fee);
       totalCleaningFees += fee;
-      const safeUserName = getSafeActorName(odId); // V5.9
+      const safeUserName = getSafeActorName(userId);
       cleaningFeeMessages.push(`${safeUserName}: ${fee}gp`);
     }
   }
@@ -491,16 +407,8 @@ export async function finishRound() {
 
     const payouts = { [winners[0]]: payout };
     if (payout > 0) await payOutWinners(payouts);
-
-    // V4.1: Victory Fanfare
-    try {
-      const victoryPot = isGoblinMode ? payout : finalPot;
-      await tavernSocket.executeForEveryone("showVictoryFanfare", winners[0], victoryPot);
-    } catch (e) {
-      console.warn("Could not show victory fanfare:", e);
-    }
-
-    // V4: Process side bet payouts
+    const victoryPot = isGoblinMode ? payout : finalPot;
+    await withWarning("Could not show victory fanfare", () => tavernSocket.executeForEveryone("showVictoryFanfare", winners[0], victoryPot));
     const sideBetWinnerIds = await processSideBetPayouts(winners[0]);
     const sideBetWinners = {};
     for (const id of sideBetWinnerIds) sideBetWinners[id] = true;
@@ -514,8 +422,6 @@ export async function finishRound() {
         type: "system"
       });
     }
-
-    // V4: No winner - side bets lost
     tableData.sideBetWinners = {};
     await processSideBetPayouts(null);
   }
@@ -537,3 +443,4 @@ export async function returnToLobby() {
     tableData: { ...emptyTableData(), gameMode },
   });
 }
+

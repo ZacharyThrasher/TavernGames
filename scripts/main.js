@@ -1,7 +1,8 @@
 import { TavernApp } from "./app/tavern-app.js";
-import { LogsWindow } from "./app/dialogs/logs-window.js"; // V5.11.5
+import { LogsWindow } from "./app/dialogs/logs-window.js";
 import { CinematicOverlay } from "./ui/cinematic-overlay.js";
-import { MODULE_ID, STATE_MACRO_NAME, preloadTemplates, registerSettings, ensureStateMacro } from "./state.js";
+import { preloadTemplates, registerSettings, initializeState } from "./state.js";
+import { MODULE_ID } from "./twenty-one/constants.js";
 import { setupSockets } from "./socket.js";
 import { runDiagnostics } from "./diagnostics.js";
 import {
@@ -43,8 +44,6 @@ Hooks.on("getSceneControlButtons", (controls) => {
     visible: true,
     onClick: openTavern,
   };
-
-  // V13: controls is an object keyed by control name
   const tokenControls = controls.tokens;
   if (tokenControls) {
     tokenControls.tools["tavern-twenty-one"] = tool;
@@ -81,15 +80,33 @@ Hooks.once("ready", async () => {
   console.log("Tavern Twenty-One | Module ready");
 
   if (game.user.isGM) {
-    await ensureStateMacro();
+    await initializeState();
   }
 
   const app = new TavernApp();
-  const logs = new LogsWindow(); // V5.11.5
+  const logs = new LogsWindow();
+  let renderScheduled = false;
+
+  const scheduleUiRefresh = () => {
+    if (renderScheduled) return;
+    renderScheduled = true;
+    setTimeout(() => {
+      renderScheduled = false;
+      if (app.rendered) {
+        try {
+          app.render({ parts: ["header", "table", "controls", "footer"] });
+        } catch (error) {
+          console.warn("Tavern | Partial render failed; falling back to full render.", error);
+          app.render();
+        }
+      }
+      if (logs.rendered) logs.render();
+    }, 0);
+  };
 
   game.tavernDiceMaster = {
     app,
-    logsWindow: logs, // V5.13: Renamed for clarity and consistency
+    logsWindow: logs,
     open: () => app.render(true),
     close: () => app.close(),
     toggleLogs: () => { // Helper for button
@@ -98,8 +115,6 @@ Hooks.once("ready", async () => {
     },
     runDiagnostics
   };
-
-  // V13 Premium Pattern: Expose module API for interoperability
   const module = game.modules.get(MODULE_ID);
   if (module) {
     module.api = {
@@ -116,27 +131,10 @@ Hooks.once("ready", async () => {
       runDiagnostics,
     };
   }
-
-  // V4: Watch for state changes via World Settings (replaces Macro hook)
   Hooks.on("updateSetting", (setting) => {
     if (setting.key === `${MODULE_ID}.gameState`) {
-      if (app.rendered) {
-        // console.log("Tavern Twenty-One | State changed, re-rendering App");
-        app.render();
-      }
-      if (logs.rendered) {
-        logs.render(); // Re-render logs if open
-      }
+      scheduleUiRefresh();
     }
   });
-
-  // V4: Legacy Macro hook for backwards compatibility during migration
-  const macro = game.macros.getName(STATE_MACRO_NAME);
-  if (macro) {
-    Hooks.on("updateMacro", (updated) => {
-      if (updated.id === macro.id && app.rendered) {
-        app.render();
-      }
-    });
-  }
 });
+

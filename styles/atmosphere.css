@@ -1,6 +1,6 @@
 /* ============================================
    ATMOSPHERE ENGINE — Tavern Twenty-One
-   V5.22: Dynamic visual effects that respond
+   Dynamic visual effects that respond
    to game state for maximum immersion.
 
    Features:
@@ -430,7 +430,7 @@
 
 /* ============================================
    9. ENHANCED SEAT AURAS
-   V5.23: Radial gradient auras on player seats
+   Radial gradient auras on player seats
    driven by data-risk and data-leading attrs.
    These provide at-a-glance visual state.
    ============================================ */
@@ -593,3 +593,4 @@
 [data-theme="feywild"] .player-seat[data-leading] {
   border-color: #80e0c0 !important;
 }
+

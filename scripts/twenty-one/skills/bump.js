@@ -1,25 +1,25 @@
 /**
  * Tavern Twenty-One - Bump Skill Module
- * V3.0
  * 
  * Bump the Table: Try to force another player to re-roll one of their dice.
  * - Only during betting phase, on your turn (bonus action)
  * - Once per round per player
- * - V3: STR vs STR (was Athletics vs DEX save)
  * - If attacker wins: target's chosen die is re-rolled
  * - If attacker loses: target chooses one of attacker's dice to re-roll
  * - Nat 20: Bonus reroll
  * - Nat 1: Backfire + pay 1× ante
  */
 
-import { MODULE_ID, getState, updateState, addHistoryEntry, addLogToAll, addPrivateLog } from "../../state.js"; // V5.8
-import { deductFromActor } from "../../wallet.js"; // V5.9: Use wallet.js for proper NPC support
-import { getActorForUser, getActorName, getSafeActorName } from "../utils/actors.js"; // V5.9
-import { notifyUser } from "../utils/game-logic.js";
-// import { createChatCard } from "../../ui/chat.js"; // Removed
-import { emptyTableData } from "../constants.js";
+import { getState, updateState, addHistoryEntry, addLogToAll, addPrivateLog } from "../../state.js";
+import { deductFromActor } from "../../wallet.js";
+import { getActorForUser, getActorName, getSafeActorName } from "../utils/actors.js";
+import { notifyUser, validateSkillPrerequisites } from "../utils/game-logic.js";
+import { MODULE_ID, TIMING, emptyTableData } from "../constants.js";
+import { applyStandardRerollToTable, resolveContest } from "../rules/pure-rules.js";
 import { tavernSocket } from "../../socket.js";
 import { showPublicRoll } from "../../dice.js";
+import { delay, withWarning } from "../utils/runtime.js";
+import { announceSkillBannerToUser, announceSkillCutIn, announceSkillResultOverlay } from "../utils/skill-announcements.js";
 
 /**
  * Bump the table to force a die reroll.
@@ -28,56 +28,41 @@ import { showPublicRoll } from "../../dice.js";
  */
 export async function bumpTable(payload, userId) {
     const state = getState();
-    if (state.status !== "PLAYING") {
-        await notifyUser(userId, "Cannot bump the table outside of an active round.");
-        return state;
-    }
-    if (state.tableData?.gameMode === "goblin") {
-        await notifyUser(userId, "Bump is disabled in Goblin Rules.");
-        return state;
-    }
-
     const tableData = state.tableData ?? emptyTableData();
+    const canUseBump = await validateSkillPrerequisites({
+        state,
+        tableData,
+        userId,
+        skillName: "Bump",
+        requireMyTurn: true,
+        requireBettingPhase: true,
+        disallowInGoblin: true,
+        disallowHouse: true,
+        disallowIfSkillUsedThisTurn: true,
+        disallowIfBusted: true,
+        disallowIfFolded: true,
+        disallowIfHeld: true,
+        oncePerMatchSkill: "bump",
+        messages: {
+            outsideRound: "Cannot bump the table outside of an active round.",
+            goblinDisabled: "Bump is disabled in Goblin Rules.",
+            notYourTurn: "You can only Bump on your turn.",
+            wrongPhase: "You can only bump the table during the betting phase.",
+            houseBlocked: "The house does not bump the table.",
+            alreadyUsedThisTurn: "You have already used a skill this turn.",
+            alreadyUsedMatch: "You've already bumped the table this round.",
+            selfCannotAct: "You can't bump the table right now."
+        }
+    });
+    if (!canUseBump) return state;
 
-    // Must be in betting phase
-    if (tableData.phase !== "betting") {
-        await notifyUser(userId, "You can only bump the table during the betting phase.");
-        return state;
-    }
-
-    // V3.5: House cannot bump (but GM-as-NPC can)
-    const user = game.users.get(userId);
-    const playerData = state.players?.[userId];
-    const isHouse = user?.isGM && !playerData?.playingAsNpc;
-    if (isHouse) {
-        await notifyUser(userId, "The house does not bump the table.");
-        return state;
-    }
-
-    // Player must not have busted or held
-    if (tableData.busts?.[userId]) {
-        await notifyUser(userId, "You busted - you can't bump the table!");
-        return state;
-    }
-    if (tableData.holds?.[userId]) {
-        await notifyUser(userId, "You've already held - you can't bump the table!");
-        return state;
-    }
-
-    // Player can only bump once per round
-    if (tableData.usedSkills?.[userId]?.bump || tableData.bumpedThisRound?.[userId]) {
+    if (tableData.bumpedThisRound?.[userId]) {
         await notifyUser(userId, "You've already bumped the table this round.");
         return state;
     }
 
-    // Limit: One skill per turn
-    if (tableData.skillUsedThisTurn) {
-        await notifyUser(userId, "You have already used a skill this turn.");
-        return state;
-    }
-
-    const { targetId } = payload;
-    const dieIndex = Number(payload.dieIndex);
+    const targetId = payload?.targetId;
+    const dieIndex = Number(payload?.dieIndex);
 
     // Validate target
     if (!targetId || targetId === userId) {
@@ -86,7 +71,6 @@ export async function bumpTable(payload, userId) {
     }
 
     const targetUser = game.users.get(targetId);
-    // V3.5: Allow targeting GM-as-NPC, only block house
     const isTargetHouse = targetUser?.isGM && !state.players?.[targetId]?.playingAsNpc;
     if (isTargetHouse) {
         await notifyUser(userId, "You can't bump the house's dice!");
@@ -109,33 +93,16 @@ export async function bumpTable(payload, userId) {
         await notifyUser(userId, "Invalid die selection.");
         return state;
     }
-
-    // V3: Must be your turn (skill is bonus action)
-    if (tableData.currentPlayer !== userId) {
-        await notifyUser(userId, "You can only Bump on your turn.");
-        return state;
-    }
-
-    // V3: Can't bump Folded players
     if (tableData.folded?.[targetId]) {
         await notifyUser(userId, "That player has folded - they're untargetable!");
         return state;
     }
-
-    // V4: Can't bump Held players (locked in their position)
     if (tableData.holds?.[targetId]) {
         await notifyUser(userId, "That player has held - they're locked in!");
         return state;
     }
-
-    // V3: Mark as acted (affects Fold refund)
-    tableData.hasActed = { ...tableData.hasActed, [userId]: true };
-
-    // V4.7.4: Bump Showdown Cut-In
-    tavernSocket.executeForEveryone("showSkillCutIn", "BUMP", userId, targetId);
-
-    // V4.7.7: Impact Pause (Moved below rolls for Dice3D sync)
-    // await new Promise(resolve => setTimeout(resolve, 3000));
+    const updatedHasActed = { ...tableData.hasActed, [userId]: true };
+    announceSkillCutIn("BUMP", userId, targetId, "Could not show bump cut-in");
 
     const ante = game.settings.get(MODULE_ID, "fixedAnte");
 
@@ -146,8 +113,6 @@ export async function bumpTable(payload, userId) {
     const targetName = targetActor?.name ?? game.users.get(targetId)?.name ?? "Unknown";
     const safeAttackerName = getSafeActorName(userId);
     const safeTargetName = getSafeActorName(targetId);
-
-    // V3: Roll STR vs STR (not Athletics vs DEX save)
     const isAttackerSloppy = tableData.sloppy?.[userId] ?? false;
     const isDefenderSloppy = tableData.sloppy?.[targetId] ?? false;
 
@@ -161,31 +126,17 @@ export async function bumpTable(payload, userId) {
     const defenderD20 = defenderRoll.total;
     const defenderStrMod = targetActor?.system?.abilities?.str?.mod ?? 0;
     const defenderTotal = defenderD20 + defenderStrMod;
-
-    // V4.7.8: Dice So Nice & Sync Pause
     showPublicRoll(attackerRoll, userId);
     showPublicRoll(defenderRoll, targetId);
-    await new Promise(resolve => setTimeout(resolve, 3000));
-
-    // V3: Check for Nat 20/Nat 1
-    const isNat20 = attackerD20Raw === 20;
+    await delay(TIMING.SKILL_DRAMATIC_PAUSE);
     const isNat1 = attackerD20Raw === 1;
 
     // Determine winner (Nat 1 always fails)
-    const success = !isNat1 && attackerTotal > defenderTotal;
-
-    // Build nat effect messages
-    let nat20Effect = "";
-    let nat1Effect = "";
-    if (isNat20 && success) {
-        nat20Effect = "<br><strong style='color: gold;'>NAT 20! Bonus reroll!</strong>";
-    }
-    if (isNat1) {
-        nat1Effect = "<br><strong style='color: #ff4444;'>NAT 1! Backfire + pay 1× ante!</strong>";
-    }
-
-    // V4.7.6: Result Overlay
-    // V4.7.6: Result Overlay
+    const { success } = resolveContest({
+        attackerTotal,
+        defenderTotal,
+        isNat1
+    });
     const resultData = {
         attackerRoll: attackerTotal,
         defenderRoll: defenderTotal,
@@ -195,19 +146,7 @@ export async function bumpTable(payload, userId) {
             ? `Bumping ${safeTargetName}'s die...`
             : `${safeTargetName} caught you! RETALIATION incoming!`
     };
-    tavernSocket.executeForEveryone("showSkillResult", "BUMP", userId, targetId, resultData);
-
-    // Post the bump card
-    // V4.7.6: Suppressed in favor of Result Overlay
-    /*
-    await ChatMessage.create({
-        content: `<div class="tavern-bump-card">
-         ... (omitted for brevity) ...
-    </div>`,
-        speaker: { alias: "Tavern Twenty-One" },
-        // rolls: [attackerRoll, defenderRoll], // V4.7.9: Removed to prevent DSN dupe
-    });
-    */
+    announceSkillResultOverlay("BUMP", userId, targetId, resultData, "Could not show bump result overlay");
 
     // Mark that attacker has bumped this round
     const updatedBumpedThisRound = { ...tableData.bumpedThisRound, [userId]: true };
@@ -228,28 +167,13 @@ export async function bumpTable(payload, userId) {
         const reroll = await new Roll(`1d${dieSides}`).evaluate();
         const newValue = reroll.total;
 
-        // Keep the same visibility status - bumped hole die stays hidden!
-        const newTargetRolls = [...targetRolls];
-        newTargetRolls[dieIndex] = { ...targetDie, result: newValue, public: wasPublic };
+        const rerollResult = applyStandardRerollToTable(tableData, targetId, dieIndex, newValue);
+        const newTotal = rerollResult.totals[targetId] ?? 0;
+        const targetBusted = rerollResult.busted;
 
-        // Calculate new total
-        const newTotal = newTargetRolls.reduce((sum, r) => sum + r.result, 0);
-        const oldTotal = tableData.totals?.[targetId] ?? 0;
-        const targetBusted = newTotal > 21;
-
-        // Update visible total if the bumped die was public
-        const updatedVisibleTotals = { ...tableData.visibleTotals };
-        if (wasPublic) {
-            updatedVisibleTotals[targetId] = (updatedVisibleTotals[targetId] ?? 0) - oldValue + newValue;
-        }
-
-        // Update state
-        const updatedRolls = { ...tableData.rolls, [targetId]: newTargetRolls };
-        const updatedTotals = { ...tableData.totals, [targetId]: newTotal };
         const updatedBusts = { ...tableData.busts };
         if (targetBusted) {
             updatedBusts[targetId] = true;
-            // V4.1: Explicitly log the bust
             await addHistoryEntry({
                 type: "bust",
                 player: targetName,
@@ -260,19 +184,15 @@ export async function bumpTable(payload, userId) {
 
         const updatedTableData = {
             ...tableData,
-            rolls: updatedRolls,
-            totals: updatedTotals,
-            visibleTotals: updatedVisibleTotals,
-            busts: updatedBusts,
+            rolls: rerollResult.rolls,
+            totals: rerollResult.totals,
+            visibleTotals: rerollResult.visibleTotals,
             busts: updatedBusts,
             bumpedThisRound: updatedBumpedThisRound,
             usedSkills: updatedUsedSkills,
+            hasActed: updatedHasActed,
         };
-
-        // V4.2: Bump Impact
-        try {
-            await tavernSocket.executeForEveryone("playBumpEffect", targetId);
-        } catch (e) { console.warn(e); }
+        await withWarning("Could not play bump effect", () => tavernSocket.executeForEveryone("playBumpEffect", targetId));
 
         await addHistoryEntry({
             type: "bump",
@@ -285,10 +205,8 @@ export async function bumpTable(payload, userId) {
             isHoleDie: !wasPublic,
             message: wasPublic
                 ? `${attackerName} bumped ${targetName}'s d${dieSides}: ${oldValue} → ${newValue}`
-                : `${attackerName} bumped ${targetName}'s hole die (d${dieSides})! (Value hidden)`, // V4.8.47: Value Masked
+                : `${attackerName} bumped ${targetName}'s hole die (d${dieSides})! (Value hidden)`,
         });
-
-        // V5.8: Log Bump Result
         if (wasPublic) {
             // Public Die Bumped -> Log to Everyone
             await addLogToAll({
@@ -299,9 +217,6 @@ export async function bumpTable(payload, userId) {
                 cssClass: "success"
             });
         } else {
-            // Hole Die Bumped -> Secret Log to Target + Secret Log to Attacker + Vague Log to Others?
-            // Actually, "X bumped Y's hole die!" is public info. The VALUE is private.
-
             // Public Log
             await addLogToAll({
                 title: "Table Bump!",
@@ -311,20 +226,18 @@ export async function bumpTable(payload, userId) {
                 cssClass: "warning"
             });
 
-            try {
-                await tavernSocket.executeAsUser("showSkillBanner", userId, {
-                    title: "Bump Landed",
-                    message: `You bumped ${safeTargetName}'s die.`,
-                    tone: "success",
-                    icon: "fa-solid fa-hand-fist"
-                });
-                await tavernSocket.executeAsUser("showSkillBanner", targetId, {
-                    title: "You Were Bumped",
-                    message: `Your die was changed.`,
-                    tone: "failure",
-                    icon: "fa-solid fa-hand-fist"
-                });
-            } catch (e) { }
+            await announceSkillBannerToUser(userId, {
+                title: "Bump Landed",
+                message: `You bumped ${safeTargetName}'s die.`,
+                tone: "success",
+                icon: "fa-solid fa-hand-fist"
+            }, "Could not show bump success banner to attacker");
+            await announceSkillBannerToUser(targetId, {
+                title: "You Were Bumped",
+                message: `Your die was changed.`,
+                tone: "failure",
+                icon: "fa-solid fa-hand-fist"
+            }, "Could not show bump success banner to target");
 
             // Target Private Log
             await addPrivateLog(targetId, {
@@ -334,26 +247,12 @@ export async function bumpTable(payload, userId) {
                 type: "bump",
                 cssClass: "failure"
             });
-
-            // Attacker Private Log (They don't see the result either usually... wait, in V3 attacker rolls it, so they see it?)
-            // The code says: const reroll = await new Roll...
-            // If attacker rolled it, they see it.
-            // But is it hidden from attacker? "Attacker wins: target's chosen die is re-rolled".
-            // Logic: "Keep the same visibility status - bumped hole die stays hidden!"
-            // If it's hidden, only the target knows the new value? 
-            // Or does the bumper know? "Attacker wins: TARGET'S chosen die is re-rolled". 
-            // Wait, "target's chosen die" -> target chooses? No, "target's specified die" (payload). Attacker chose.
-            // Attacker chose index.
-            // Let's assume attacker does NOT see the new value of a hidden die to preserve mystery, unless the code explicitly reveals it.
-            // The roll evaluation happens on server (or GM proxy).
-            // Let's safe side: Log value to target only.
         }
 
         return updateState({ tableData: { ...updatedTableData, skillUsedThisTurn: true, lastSkillUsed: "bump" } });
 
     } else {
         // FAILURE: Set pending retaliation state - target chooses attacker's die
-        // V3: Nat 1 also pays 1× ante
         if (isNat1) {
             await deductFromActor(userId, ante);
             newPot = state.pot + ante;
@@ -367,6 +266,7 @@ export async function bumpTable(payload, userId) {
                 attackerId: userId,
                 targetId: targetId,
             },
+            hasActed: updatedHasActed,
         };
 
         await addHistoryEntry({
@@ -379,8 +279,6 @@ export async function bumpTable(payload, userId) {
                 ? `${attackerName} tried to bump ${targetName}'s dice but was caught! Pays ${ante}gp!`
                 : `${attackerName} tried to bump ${targetName}'s dice but was caught!`,
         });
-
-        // V5.8: Log Bump Failure
         await addLogToAll({
             title: "Bump Caught!",
             message: `<strong>${safeAttackerName}</strong> tried to bump <strong>${safeTargetName}</strong> but was caught!`,
@@ -389,20 +287,18 @@ export async function bumpTable(payload, userId) {
             cssClass: "failure"
         });
 
-        try {
-            await tavernSocket.executeAsUser("showSkillBanner", userId, {
-                title: "Bump Caught",
-                message: "Your bump was caught.",
-                tone: "failure",
-                icon: "fa-solid fa-hand-fist"
-            });
-            await tavernSocket.executeAsUser("showSkillBanner", targetId, {
-                title: "Retaliation Ready",
-                message: `Choose a die to reroll.`,
-                tone: "info",
-                icon: "fa-solid fa-hand-back-fist"
-            });
-        } catch (e) { }
+        await announceSkillBannerToUser(userId, {
+            title: "Bump Caught",
+            message: "Your bump was caught.",
+            tone: "failure",
+            icon: "fa-solid fa-hand-fist"
+        }, "Could not show bump-failure banner to attacker");
+        await announceSkillBannerToUser(targetId, {
+            title: "Retaliation Ready",
+            message: `Choose a die to reroll.`,
+            tone: "info",
+            icon: "fa-solid fa-hand-back-fist"
+        }, "Could not show retaliation banner to target");
 
         // Log Retaliation Pending to Target
         await addPrivateLog(targetId, {
@@ -478,24 +374,10 @@ export async function bumpRetaliation(payload, userId) {
     const reroll = await new Roll(`1d${dieSides}`).evaluate();
     const newValue = reroll.total;
 
-    // Update attacker's rolls - preserve visibility
-    const newAttackerRolls = [...attackerRolls];
-    newAttackerRolls[dieIndex] = { ...attackerDie, result: newValue, public: wasPublic };
+    const rerollResult = applyStandardRerollToTable(tableData, attackerId, dieIndex, newValue);
+    const newTotal = rerollResult.totals[attackerId] ?? 0;
+    const attackerBusted = rerollResult.busted;
 
-    // Calculate new total
-    const newTotal = newAttackerRolls.reduce((sum, r) => sum + r.result, 0);
-    const oldTotal = tableData.totals?.[attackerId] ?? 0;
-    const attackerBusted = newTotal > 21;
-
-    // Update visible total if the die was public
-    const updatedVisibleTotals = { ...tableData.visibleTotals };
-    if (wasPublic) {
-        updatedVisibleTotals[attackerId] = (updatedVisibleTotals[attackerId] ?? 0) - oldValue + newValue;
-    }
-
-    // Update state
-    const updatedRolls = { ...tableData.rolls, [attackerId]: newAttackerRolls };
-    const updatedTotals = { ...tableData.totals, [attackerId]: newTotal };
     const updatedBusts = { ...tableData.busts };
     if (attackerBusted) {
         updatedBusts[attackerId] = true;
@@ -503,11 +385,11 @@ export async function bumpRetaliation(payload, userId) {
 
     const updatedTableData = {
         ...tableData,
-        rolls: updatedRolls,
-        totals: updatedTotals,
-        visibleTotals: updatedVisibleTotals,
+        rolls: rerollResult.rolls,
+        totals: rerollResult.totals,
+        visibleTotals: rerollResult.visibleTotals,
         busts: updatedBusts,
-        pendingBumpRetaliation: undefined, // Clear the pending state (undefined removes key)
+        pendingBumpRetaliation: null,
     };
 
     await addHistoryEntry({
@@ -519,8 +401,6 @@ export async function bumpRetaliation(payload, userId) {
         die: dieSides,
         message: `${targetName} chose ${attackerName}'s d${dieSides}: ${oldValue} → ${newValue}`,
     });
-
-    // V5.8: Log Retaliation
     if (wasPublic) {
         await addLogToAll({
             title: "Retaliation!",
@@ -553,3 +433,6 @@ export async function bumpRetaliation(payload, userId) {
 
     return updateState({ tableData: updatedTableData });
 }
+
+
+

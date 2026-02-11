@@ -1,23 +1,20 @@
 /**
  * Tavern Twenty-One - Cheat Skill Module
- * V3.0
  * 
  * Cheat: Modify one of your dice secretly.
  * - Physical: Sleight of Hand OR Deception → sets Tell DC
  * - Magical: INT/WIS/CHA (spellcasting ability) → sets Residue DC
- * - V3: Adjustment is ±1, ±2, or ±3
- * - V3: Heat DC starts at 10, increases by +2 per cheat (unless Nat 20)
  * - Nat 20: Invisible cheat (DC 0, no Heat increase)
  * - Nat 1: Auto-caught + pay 1× ante
  */
 
-import { MODULE_ID, getState, updateState, addHistoryEntry, addLogToAll, addPrivateLog } from "../../state.js"; // V5.8
-import { deductFromActor } from "../../wallet.js"; // V5.9: Use wallet.js for proper NPC support
-import { getActorForUser, getActorName, getSafeActorName } from "../utils/actors.js"; // V5.9
-import { notifyUser } from "../utils/game-logic.js";
+import { getState, updateState, addHistoryEntry, addLogToAll, addPrivateLog } from "../../state.js";
+import { deductFromActor } from "../../wallet.js";
+import { getActorForUser, getActorName, getSafeActorName } from "../utils/actors.js";
+import { notifyUser, validateSkillPrerequisites } from "../utils/game-logic.js";
 import { tavernSocket } from "../../socket.js";
-// import { createChatCard } from "../../ui/chat.js"; // Removed
-import { emptyTableData } from "../constants.js";
+import { MODULE_ID, emptyTableData } from "../constants.js";
+import { withWarning } from "../utils/runtime.js";
 
 /**
  * Cheat to modify one of your dice.
@@ -26,26 +23,32 @@ import { emptyTableData } from "../constants.js";
  */
 export async function cheat(payload, userId) {
     const state = getState();
-    if (state.status !== "PLAYING") {
-        await notifyUser(userId, "Cannot cheat outside of an active round.");
-        return state;
-    }
-    if (state.tableData?.gameMode === "goblin") {
-        await notifyUser(userId, "Cheating is disabled in Goblin Rules.");
-        return state;
-    }
-
-    // V3.5: House cannot cheat (but GM-as-NPC can)
-    const user = game.users.get(userId);
-    const playerData = state.players?.[userId];
-    const isHouse = user?.isGM && !playerData?.playingAsNpc;
-    if (isHouse) {
-        await notifyUser(userId, "The house doesn't cheat... or do they?");
-        return state;
-    }
+    const tableData = state.tableData ?? emptyTableData();
+    const canUseCheat = await validateSkillPrerequisites({
+        state,
+        tableData,
+        userId,
+        skillName: "Cheat",
+        requireMyTurn: true,
+        requireBettingPhase: true,
+        disallowInGoblin: true,
+        disallowHouse: true,
+        disallowIfSkillUsedThisTurn: false,
+        disallowIfBusted: true,
+        disallowIfFolded: true,
+        disallowIfHeld: true,
+        messages: {
+            outsideRound: "Cannot cheat outside of an active round.",
+            goblinDisabled: "Cheating is disabled in Goblin Rules.",
+            houseBlocked: "The house doesn't cheat... or do they?",
+            wrongPhase: "Cheat can only be used during the betting phase.",
+            notYourTurn: "You can only Cheat on your turn.",
+            selfCannotAct: "You can't cheat right now."
+        }
+    });
+    if (!canUseCheat) return state;
 
     // Prevent cheating in 1v1 with House (no one to detect you)
-    // V3.5.2: GM-as-NPC counts as a player, only exclude GM acting as house
     const nonHousePlayers = state.turnOrder.filter(id => {
         const u = game.users.get(id);
         if (!u?.isGM) return true; // Regular player
@@ -57,11 +60,8 @@ export async function cheat(payload, userId) {
         return state;
     }
 
-    let tableData = state.tableData ?? emptyTableData();
     const ante = game.settings.get(MODULE_ID, "fixedAnte");
-
-    // V3: dieIndex + adjustment (1-3, positive or negative)
-    let { dieIndex, adjustment = 1 } = payload;
+    let { dieIndex, adjustment = 1 } = payload ?? {};
 
     // Strict Mode: ALWAYS Physical / Sleight of Hand
     const cheatType = "physical";
@@ -72,15 +72,11 @@ export async function cheat(payload, userId) {
     if (dieIndex === undefined || dieIndex === null) {
         dieIndex = rolls.length - 1;
     }
-
-    // V3: Validate adjustment is ±1 to ±3
     const absAdj = Math.abs(adjustment);
     if (absAdj < 1 || absAdj > 3) {
         await notifyUser(userId, "Cheat adjustment must be ±1, ±2, or ±3.");
         return state;
     }
-
-    // V3: Determine cheat type and skill
     const isPhysical = cheatType === "physical";
     const skillNames = {
         // Physical skills
@@ -106,8 +102,6 @@ export async function cheat(payload, userId) {
     }
     const maxValue = targetDie.die;
     const isHoleDie = !(targetDie.public ?? true);
-
-    // V3: Calculate new value from adjustment
     const oldValue = targetDie.result;
     let newValue = oldValue + adjustment;
 
@@ -120,11 +114,7 @@ export async function cheat(payload, userId) {
         await notifyUser(userId, "That wouldn't change the value!");
         return state;
     }
-
-    // V3: Mark as acted (affects Fold refund)
-    tableData.hasActed = { ...tableData.hasActed, [userId]: true };
-
-    // V5: Get Personal Heat DC (Defaults to 10 if missing)
+    const updatedHasActed = { ...tableData.hasActed, [userId]: true };
     const heatDC = tableData.playerHeat?.[userId] ?? 10;
 
     // Roll the check (Iron Liver: Sloppy = disadvantage)
@@ -134,8 +124,6 @@ export async function cheat(payload, userId) {
     const roll = await new Roll(isSloppy ? "2d20kl1" : "1d20").evaluate();
     const d20Raw = roll.dice[0]?.results?.[0]?.result ?? roll.total;
     const d20Result = roll.total;
-
-    // V3: Check for Nat 20/Nat 1
     const isNat20 = d20Raw === 20;
     const isNat1 = d20Raw === 1;
 
@@ -148,11 +136,7 @@ export async function cheat(payload, userId) {
         }
     }
     const rollTotal = d20Result + modifier;
-
-    // V3: Determine success (Nat 1 always fails, Nat 20 always succeeds, otherwise beat Heat DC)
     const success = isNat20 || (!isNat1 && rollTotal >= heatDC);
-
-    // V3: Determine if caught
     // Nat 1 = auto-caught
     // Failure = not caught yet, but adds to Heat
     const fumbled = isNat1;
@@ -172,8 +156,6 @@ export async function cheat(payload, userId) {
     } else {
         flavorText += ` <span class="tavern-result-success">Success (${dcType}: ${rollTotal})</span>`;
     }
-
-    // V5.8: Logs (Replacing Private Feedback & Chat Cards)
     if (fumbled) {
         // Public Caught Log
         await addLogToAll({
@@ -182,7 +164,7 @@ export async function cheat(payload, userId) {
             icon: "fa-solid fa-hand-fist",
             type: "cheat",
             cssClass: "failure"
-        }, [], userId); // V5.9: Pass UserID for image logic
+        }, [], userId);
     } else {
         // Private Log for Cheater
         await addPrivateLog(userId, {
@@ -195,9 +177,7 @@ export async function cheat(payload, userId) {
     }
 
     // Private toast-like banner for cheat result (outside logs)
-    try {
-        await tavernSocket.executeAsUser("showCheatResult", userId, success);
-    } catch (e) { }
+    await withWarning("Could not show cheat result banner", () => tavernSocket.executeAsUser("showCheatResult", userId, success));
 
 
     const userName = getActorName(userId);
@@ -314,8 +294,12 @@ export async function cheat(payload, userId) {
         caught,
         busts,
         playerHeat,
-        pendingBust
+        pendingBust,
+        hasActed: updatedHasActed
     };
 
     return updateState({ tableData: updatedTable, pot: newPot });
 }
+
+
+

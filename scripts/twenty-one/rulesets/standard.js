@@ -1,28 +1,31 @@
 import { updateState, addHistoryEntry, addLogToAll } from "../../state.js";
 import { tavernSocket } from "../../socket.js";
 import { getActorName, getSafeActorName } from "../utils/actors.js";
-import { getNextOpeningPlayer, allPlayersCompletedOpening, calculateBettingOrder, notifyUser } from "../utils/game-logic.js";
+import {
+  getNextOpeningPlayer,
+  allPlayersCompletedOpening,
+  calculateBettingOrder,
+  notifyUser,
+  drinkForPayment
+} from "../utils/game-logic.js";
 import { OPENING_ROLLS_REQUIRED, getDieCost } from "../constants.js";
 import { deductFromActor } from "../../wallet.js";
-import { drinkForPayment } from "../utils/game-logic.js";
 import { REVEAL_DURATION } from "../../ui/dice-reveal.js";
+import { delay, withWarning, fireAndForget } from "../utils/runtime.js";
 
 export async function submitStandardRoll({ state, tableData, userId, die, isOpeningPhase, ante, payload }) {
-  // V2.0: Variable dice costs in betting phase
   let newPot = state.pot;
   let rollCost = 0;
-  let drinksNeeded = 0;
   if (!isOpeningPhase) {
-    // V4.9: Dared rolls are FREE
     if (tableData.dared?.[userId]) {
       rollCost = 0;
     } else {
       rollCost = getDieCost(die, ante);
     }
 
-    const wantsDrink = !!payload.payWithDrink && !(tableData.sloppy?.[userId]);
+    const wantsDrink = rollCost > 0 && Boolean(payload?.payWithDrink) && !tableData.sloppy?.[userId];
     if (wantsDrink) {
-      drinksNeeded = Math.max(1, Math.ceil(rollCost / ante));
+      const drinksNeeded = Math.max(1, Math.ceil(rollCost / ante));
       const drinkResult = await drinkForPayment(userId, drinksNeeded, tableData);
       tableData = drinkResult.tableData;
 
@@ -38,8 +41,6 @@ export async function submitStandardRoll({ state, tableData, userId, die, isOpen
         newPot = state.pot + rollCost;
     }
   }
-
-  // V3: Hunch Accuracy - Use pre-rolled value if available
   let forcedResult = null;
   if (tableData.hunchRolls?.[userId] && tableData.hunchRolls[userId][die] !== undefined) {
     forcedResult = tableData.hunchRolls[userId][die];
@@ -64,8 +65,6 @@ export async function submitStandardRoll({ state, tableData, userId, die, isOpen
     const currentTotal = tableData.totals[userId] ?? 0;
     result = 21 - currentTotal;
   }
-
-  // V5.7: Check for Blind State (from Foresight failure)
   let isBlind = false;
   if (tableData.blindNextRoll?.[userId]) {
     isBlind = true;
@@ -85,17 +84,12 @@ export async function submitStandardRoll({ state, tableData, userId, die, isOpen
 
   // In betting phase, delay visuals until after cheat resolution to avoid double rolls.
   if (isOpeningPhase) {
-    // V5.23: Fortune's Reveal — private to rolling player only (preserves hole die secrecy)
-    try {
-      tavernSocket.executeAsUser("showDiceReveal", userId, userId, die, result, {
-        isBlind: isBlind,
-        isNat20: die === 20 && result === (21 - (tableData.totals[userId] ?? 0)),
-        isBust: (tableData.totals[userId] ?? 0) + result > 21,
-      });
-      await new Promise(r => setTimeout(r, isBlind ? 1200 : REVEAL_DURATION));
-    } catch (e) {
-      console.warn("Tavern Twenty-One | Could not show dice reveal to player:", e);
-    }
+    fireAndForget("Could not show dice reveal to player", tavernSocket.executeAsUser("showDiceReveal", userId, userId, die, result, {
+      isBlind,
+      isNat20: die === 20 && result === (21 - (tableData.totals[userId] ?? 0)),
+      isBust: (tableData.totals[userId] ?? 0) + result > 21,
+    }));
+    await delay(isBlind ? 1200 : REVEAL_DURATION);
   }
 
   const rolls = { ...tableData.rolls };
@@ -125,14 +119,14 @@ export async function submitStandardRoll({ state, tableData, userId, die, isOpen
     pendingBust = true;
   } else if (isBust) {
     busts[userId] = true;
-    tavernSocket.executeForEveryone("showBustFanfare", userId);
+    fireAndForget("Could not show bust fanfare", tavernSocket.executeForEveryone("showBustFanfare", userId));
   }
 
   const userName = getActorName(userId);
 
   let rollCostMsg = "";
   if (!isOpeningPhase) {
-    if (payload.payWithDrink && !(tableData.sloppy?.[userId])) {
+    if (rollCost > 0 && payload?.payWithDrink && !(tableData.sloppy?.[userId])) {
       rollCostMsg = " (TAB)";
     } else if (rollCost === 0) {
       rollCostMsg = " (FREE)";
@@ -223,35 +217,24 @@ export async function submitStandardRoll({ state, tableData, userId, die, isOpen
   if (!isOpeningPhase) {
     const totalDelta = totals[userId] - previousTotal;
     if (!isBust && totalDelta > 0 && isPublic) {
-      try {
-        await tavernSocket.executeForEveryone("showScoreSurge", userId, {
-          from: previousTotal,
-          to: totals[userId],
-          delta: totalDelta,
-          multiplied: false
-        });
-      } catch (e) { }
+      await withWarning("Could not show score surge", () => tavernSocket.executeForEveryone("showScoreSurge", userId, {
+        from: previousTotal,
+        to: totals[userId],
+        delta: totalDelta,
+        multiplied: false
+      }));
     }
 
     if (!isBust && totals[userId] === 21 && isPublic) {
-      try {
-        await tavernSocket.executeForEveryone("showJackpotInlay");
-      } catch (e) { }
+      await withWarning("Could not show jackpot inlay", () => tavernSocket.executeForEveryone("showJackpotInlay"));
     }
 
-    try {
-      await tavernSocket.executeForEveryone("showPotPulse");
-    } catch (e) { }
+    await withWarning("Could not show pot pulse", () => tavernSocket.executeForEveryone("showPotPulse"));
   }
 
   if (!isOpeningPhase) {
     updatedTable.hasActed = { ...updatedTable.hasActed, [userId]: true };
   }
-
-  await updateState({
-    tableData: updatedTable,
-    pot: newPot,
-  });
 
   if (isOpeningPhase) {
     const myRolls = rolls[userId] ?? [];
@@ -282,18 +265,25 @@ export async function submitStandardRoll({ state, tableData, userId, die, isOpen
         updatedTable.currentPlayer = getNextOpeningPlayer(state, updatedTable);
       }
     }
-    const rolling = { ...updatedTable.rolling };
+    const rolling = { ...(updatedTable.rolling ?? {}) };
     delete rolling[userId];
     updatedTable.rolling = rolling;
 
-    return updateState({ tableData: updatedTable });
-  } else {
-    updatedTable.pendingAction = "cheat_decision";
-
-    const rolling = { ...updatedTable.rolling };
-    delete rolling[userId];
-    updatedTable.rolling = rolling;
-
-    return updateState({ tableData: updatedTable });
+    return updateState({
+      tableData: updatedTable,
+      pot: newPot,
+    });
   }
+
+  updatedTable.pendingAction = "cheat_decision";
+
+  const rolling = { ...(updatedTable.rolling ?? {}) };
+  delete rolling[userId];
+  updatedTable.rolling = rolling;
+
+  return updateState({
+    tableData: updatedTable,
+    pot: newPot,
+  });
 }
+

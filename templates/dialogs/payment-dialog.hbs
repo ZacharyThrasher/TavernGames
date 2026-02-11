@@ -3,7 +3,7 @@
   <p class="payment-purpose">{{purpose}}</p>
   <hr>
   <div class="payment-options">
-    <button type="button" class="btn-payment gold {{#unless canAffordGold}}disabled{{/unless}}" data-method="gold" {{#unless canAffordGold}}disabled{{/unless}}>
+    <button type="button" class="btn-payment gold {{#unless canAffordGold}}disabled{{/unless}}" data-action="payment-method" data-method="gold" {{#unless canAffordGold}}disabled{{/unless}}>
       <div class="payment-icon"><i class="fa-solid fa-coins"></i></div>
       <div class="payment-details">
         <span class="payment-label">{{localize "TAVERN.Payment.PayGold"}}</span>
@@ -12,7 +12,7 @@
       </div>
     </button>
     
-    <button type="button" class="btn-payment drink" data-method="drink">
+    <button type="button" class="btn-payment drink" data-action="payment-method" data-method="drink">
       <div class="payment-icon"><i class="fa-solid fa-beer-mug-empty"></i></div>
       <div class="payment-details">
         <span class="payment-label">{{localize "TAVERN.Payment.Tab"}}</span>
@@ -20,6 +20,9 @@
         <span class="payment-desc">{{localize "TAVERN.Payment.SaveDC"}}</span>
       </div>
     </button>
+  </div>
+  <div class="dialog-actions">
+    <button type="button" class="btn" data-action="cancel">{{localize "TAVERN.Cancel"}}</button>
   </div>
   <p class="hint centered">
     <i class="fa-solid fa-info-circle"></i> {{localize "TAVERN.Payment.ShiftHint"}}

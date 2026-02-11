@@ -3,7 +3,7 @@
   
   <div class="portrait-grid">
     {{#each champions}}
-    <div class="portrait-option" data-champion-id="{{id}}" tabindex="0">
+    <div class="portrait-option" data-champion-id="{{id}}" tabindex="0" role="button" aria-pressed="false" aria-label="{{name}}">
       <img src="{{img}}" alt="{{name}}" />
       <div class="name">{{name}}</div>
       <div class="sub-label">{{localize "TAVERN.Visible"}}: {{visibleTotal}}</div>
@@ -22,5 +22,10 @@
     <p class="hint success"><strong>{{localize "TAVERN.SideBet.Win"}}:</strong> {{localize "TAVERN.SideBet.WinEffect"}}</p>
     <p class="hint danger"><strong>{{localize "TAVERN.SideBet.Lose"}}:</strong> {{localize "TAVERN.SideBet.LoseEffect"}}</p>
     <p class="hint">Bets lock after two full betting rounds.</p>
+  </div>
+
+  <div class="dialog-actions">
+    <button type="submit" class="btn btn-skill">Place Bet!</button>
+    <button type="button" class="btn" data-action="cancel">{{localize "Cancel"}}</button>
   </div>
 </form>

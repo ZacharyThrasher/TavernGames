@@ -1,0 +1,17 @@
+<div class="tavern-npc-cashout">
+  <h3><i class="fa-solid fa-cash-register"></i> NPC Cash Out</h3>
+  <p><strong>{{name}}</strong> is leaving the table.</p>
+  <hr>
+  <div class="cashout-row">
+    <span>Initial Stake:</span> <span>{{initial}} gp</span>
+  </div>
+  <div class="cashout-row">
+    <span>Final Wallet:</span> <span>{{current}} gp</span>
+  </div>
+  <div class="cashout-row cashout-net {{netClass}}">
+    <span>Net Change:</span> <span>{{netChangeDisplay}} gp</span>
+  </div>
+  <p class="cashout-hint">
+    GM: Manually update the actor sheet if desired.
+  </p>
+</div>

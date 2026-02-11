@@ -1,33 +1,84 @@
-import { MODULE_ID } from "../../state.js";
+import { MODULE_ID } from "../../twenty-one/constants.js";
 
-export class PaymentDialog {
-  static async show(params) {
-    const { cost, purpose, gp, canAffordGold, drinksNeeded } = params;
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
-    const content = await foundry.applications.handlebars.renderTemplate(`modules/${MODULE_ID}/templates/dialogs/payment-dialog.hbs`, {
-      cost,
-      purpose,
-      gp,
-      canAffordGold,
-      drinksNeeded
-    });
+export class PaymentDialog extends HandlebarsApplicationMixin(ApplicationV2) {
+  static DEFAULT_OPTIONS = {
+    id: "tavern-payment-dialog",
+    tag: "div",
+    window: {
+      title: "Payment Method",
+      icon: "fa-solid fa-coins",
+      resizable: false
+    },
+    position: {
+      width: 420,
+      height: "auto"
+    },
+    classes: ["tavern-dialog-window", "payment-window"]
+  };
 
+  static PARTS = {
+    form: {
+      template: `modules/${MODULE_ID}/templates/dialogs/payment-dialog.hbs`
+    }
+  };
+
+  static async show(params = {}) {
     return new Promise((resolve) => {
-      const d = new Dialog({
-        title: "Payment Method",
-        content,
-        buttons: {},
-        render: (html) => {
-          html.find('.btn-payment').on('click', function () {
-            const method = $(this).data('method');
-            d.close();
-            resolve(method);
-          });
-        },
-        close: () => resolve(null),
-        options: { classes: ["tavern-dialog-window", "payment-window"] }
-      });
-      d.render(true);
+      new PaymentDialog({ resolve, ...params }).render(true);
     });
+  }
+
+  constructor(options = {}) {
+    super(options);
+    this.resolve = options.resolve;
+    this.params = options;
+    this._resolved = false;
+  }
+
+  async _prepareContext() {
+    const {
+      cost = 0,
+      purpose = "",
+      gp = 0,
+      canAffordGold = false,
+      drinksNeeded = 0
+    } = this.params;
+
+    return { cost, purpose, gp, canAffordGold, drinksNeeded };
+  }
+
+  _resolve(value) {
+    if (this._resolved) return;
+    this._resolved = true;
+    this.resolve?.(value);
+  }
+
+  _onRender(context, options) {
+    super._onRender(context, options);
+
+    const methodButtons = this.element.querySelectorAll("[data-action=\"payment-method\"]");
+    methodButtons.forEach((button) => {
+      button.addEventListener("click", async () => {
+        const method = button.dataset.method;
+        if (!method) return;
+        this._resolve(method);
+        await this.close();
+      });
+    });
+
+    const cancelButton = this.element.querySelector("[data-action=\"cancel\"]");
+    if (cancelButton) {
+      cancelButton.addEventListener("click", async () => {
+        this._resolve(null);
+        await this.close();
+      });
+    }
+  }
+
+  async close(options) {
+    if (!this._resolved) this._resolve(null);
+    return super.close(options);
   }
 }

@@ -1,9 +1,6 @@
 import { getState } from "./state.js";
 import { getAllowedDice, VALID_DICE, GOBLIN_DICE } from "./twenty-one/constants.js";
-
-function isPlainObject(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
+import { isPlainObject } from "./twenty-one/utils/object.js";
 
 function warn(list, message, detail) {
   list.push(detail ? `${message}: ${detail}` : message);
@@ -100,6 +97,63 @@ export function runDiagnostics({ verbose = false } = {}) {
     const round = Number(tableData.sideBetRound);
     if (Number.isNaN(round) || round < 1 || round > 2) {
       warn(warnings, "sideBetRound out of range", `${tableData.sideBetRound}`);
+    }
+  }
+
+  if (phase === "cut") {
+    if (!tableData.theCutPlayer || !state.turnOrder.includes(tableData.theCutPlayer)) {
+      warn(warnings, "cut phase missing valid theCutPlayer");
+    }
+  }
+
+  const retaliation = tableData.pendingBumpRetaliation;
+  if (retaliation !== null && retaliation !== undefined) {
+    if (!isPlainObject(retaliation)) {
+      warn(warnings, "pendingBumpRetaliation is not an object");
+    } else {
+      if (!retaliation.attackerId || !state.turnOrder.includes(retaliation.attackerId)) {
+        warn(warnings, "pendingBumpRetaliation attacker invalid", retaliation.attackerId);
+      }
+      if (!retaliation.targetId || !state.turnOrder.includes(retaliation.targetId)) {
+        warn(warnings, "pendingBumpRetaliation target invalid", retaliation.targetId);
+      }
+    }
+  }
+
+  if (tableData.duel !== null && tableData.duel !== undefined) {
+    const duel = tableData.duel;
+    if (!isPlainObject(duel)) {
+      warn(warnings, "duel is not an object");
+    } else {
+      const participants = Array.isArray(duel.participants) ? duel.participants : [];
+      if (participants.length < 2) {
+        warn(warnings, "duel participants too small", `${participants.length}`);
+      }
+      for (const duelUserId of participants) {
+        if (!state.turnOrder.includes(duelUserId)) {
+          warn(warnings, "duel participant not in turn order", duelUserId);
+        }
+      }
+    }
+  }
+
+  if (gameMode === "goblin") {
+    if (tableData.goblinSuddenDeathActive) {
+      const participants = tableData.goblinSuddenDeathParticipants;
+      if (!Array.isArray(participants) || participants.length === 0) {
+        warn(warnings, "goblinSuddenDeathActive without participants");
+      }
+    }
+
+    if (tableData.goblinFinalActive) {
+      const finalTarget = tableData.goblinFinalTargetId;
+      if (!finalTarget || !state.turnOrder.includes(finalTarget)) {
+        warn(warnings, "goblinFinalActive without valid target");
+      }
+      const remaining = tableData.goblinFinalRemaining;
+      if (!Array.isArray(remaining)) {
+        warn(warnings, "goblinFinalRemaining is not an array");
+      }
     }
   }
 

@@ -1,14 +1,15 @@
-import { MODULE_ID } from "../state.js";
+import { MODULE_ID } from "../twenty-one/constants.js";
 import { CinematicOverlay } from "./cinematic-overlay.js";
 import { ParticleFactory } from "./particle-fx.js";
 import { StreakTracker, spawnPotCoinFlip } from "./premium-fx.js";
+import { PrivateFeedbackDialog } from "../app/dialogs/private-feedback-dialog.js";
+import { FX_CONFIG } from "./fx-config.js";
 
 /* ============================================
-   V13 Best Practices: Utility Functions
+   Utility Functions
    ============================================ */
 
 /**
- * V13: Debounce utility to prevent rapid-fire effect calls
  * Prevents performance issues when multiple effects trigger simultaneously
  */
 export function debounce(fn, delay) {
@@ -19,9 +20,6 @@ export function debounce(fn, delay) {
   };
 }
 
-/**
- * V13: Check if performance mode is enabled (skip heavy effects)
- */
 export function isPerformanceMode() {
   try {
     if (window?.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) return true;
@@ -31,8 +29,12 @@ export function isPerformanceMode() {
   }
 }
 
+export function reportEffectError(name, error) {
+  console.error(`Tavern Twenty-One | ${name} error:`, error);
+  if (CONFIG?.debug?.tavern) throw error;
+}
+
 /**
- * V13: Create element helper - replaces jQuery element creation
  * @param {string} tag - HTML tag name
  * @param {Object} options - { className, innerHTML, attributes }
  * @returns {HTMLElement}
@@ -50,7 +52,6 @@ export function createElement(tag, options = {}) {
 }
 
 /**
- * V13: Fade out and remove element - native replacement for jQuery fadeOut
  * @param {HTMLElement} element - Element to fade out
  * @param {number} duration - Fade duration in ms
  */
@@ -70,7 +71,7 @@ export function applyJuicePress(element) {
   element.classList.remove("juice-press");
   void element.offsetWidth;
   element.classList.add("juice-press");
-  setTimeout(() => element.classList.remove("juice-press"), 180);
+  setTimeout(() => element.classList.remove("juice-press"), FX_CONFIG.clicks.pressDuration);
 }
 
 /**
@@ -87,14 +88,14 @@ export function showClickBurst(element, tone = "gold") {
     element.appendChild(burst);
 
     ParticleFactory.spawnSparkBurst(burst, 14, tone);
-    setTimeout(() => burst.remove(), 700);
+    setTimeout(() => burst.remove(), FX_CONFIG.clicks.burstDuration);
   } catch (error) {
-    console.error("Tavern Twenty-One | Click burst error:", error);
+    reportEffectError("Click burst", error);
   }
 }
 
 /* ============================================
-   Visual Effects - V13 Best Practices
+   Visual Effects
    All effects use native DOM, error handling,
    and respect performance mode.
    ============================================ */
@@ -111,19 +112,16 @@ export const shake = (element, className, duration) => {
 };
 
 /**
- * V4.1: Visual Victory Fanfare
  * Shows celebratory banner with winner name and screen shake
  * @param {string} winnerId - User ID of the winner
  */
 /**
- * V4.1: Visual Victory Fanfare
  * Shows celebratory banner with winner name and screen shake
  * @param {string} winnerId - User ID of the winner
  * @param {number} [amount] - Gold amount won
  */
 export function showVictoryFanfare(winnerId, amount) {
   try {
-    // V13: Skip heavy effects in performance mode
     if (isPerformanceMode()) return;
 
     const winnerName = game.users.get(winnerId)?.name ?? "Winner";
@@ -131,8 +129,6 @@ export function showVictoryFanfare(winnerId, amount) {
     // 1. Screen shake - using debounced version
     const appWindow = game.tavernDiceMaster?.app?.element;
     if (appWindow) shake(appWindow, "tavern-shake-victory", 600);
-
-    // 2. Cinematic Cut-In (V13 Frameless Overlay)
     // Pass gold amount as detail
     const detail = amount ? `Wins ${amount}gp!` : null;
 
@@ -147,18 +143,14 @@ export function showVictoryFanfare(winnerId, amount) {
         amount: amount // Pass raw amount for template
       } : undefined
     });
-
-    // V5.26: Track win streak for flame aura
     StreakTracker.recordWin(winnerId);
 
   } catch (error) {
-    // V13: Graceful error handling - log but don't crash game logic
-    console.error("Tavern Twenty-One | Victory fanfare error:", error);
+    reportEffectError("Victory fanfare", error);
   }
 }
 
 /**
- * V4.6: Visual Bust Fanfare
  * Shows bust notification with screen shake
  * @param {string} userId - User ID of the player who busted
  */
@@ -181,12 +173,10 @@ export function showBustFanfare(userId) {
 
     // Vignette flash for impact
     showVignetteFlash();
-
-    // V5.26: Reset win streak on bust
     StreakTracker.recordLoss(userId);
 
   } catch (error) {
-    console.error("Tavern Twenty-One | Bust fanfare error:", error);
+    reportEffectError("Bust fanfare", error);
   }
 }
 
@@ -210,23 +200,23 @@ export function showCoinFlip(userId, result, bonus = 2) {
 
     appWindow.appendChild(banner);
     requestAnimationFrame(() => banner.classList.add("show"));
-    setTimeout(() => fadeOutAndRemove(banner, 500), 1200);
+    setTimeout(() => fadeOutAndRemove(banner, FX_CONFIG.banners.fadeDuration), FX_CONFIG.banners.coinFlipDisplay);
 
     const particleLayer = createElement("div", { className: "cinematic-particles" });
     appWindow.appendChild(particleLayer);
     ParticleFactory.spawnCoinShower(particleLayer, isHeads ? 40 : 20);
-    setTimeout(() => particleLayer.remove(), 2500);
+    setTimeout(() => particleLayer.remove(), FX_CONFIG.banners.coinFlipParticlesCleanup);
 
     // Add a little tension: light shake on tails, celebratory shake on heads
     if (isHeads) {
-      shake(appWindow, "tavern-shake-victory", 450);
+      shake(appWindow, "tavern-shake-victory", FX_CONFIG.impacts.heavyShakeDuration - 50);
       showImpactFrame();
     } else {
       shake(appWindow, "tavern-shake", 350);
     }
 
   } catch (error) {
-    console.error("Tavern Twenty-One | Coin flip effect error:", error);
+    reportEffectError("Coin flip effect", error);
   }
 }
 
@@ -249,9 +239,9 @@ export function showCheatResult(success) {
 
     appWindow.appendChild(banner);
     requestAnimationFrame(() => banner.classList.add("show"));
-    setTimeout(() => fadeOutAndRemove(banner, 500), 1400);
+    setTimeout(() => fadeOutAndRemove(banner, FX_CONFIG.banners.fadeDuration), FX_CONFIG.banners.cheatDisplay);
   } catch (error) {
-    console.error("Tavern Twenty-One | Cheat banner error:", error);
+    reportEffectError("Cheat banner", error);
   }
 }
 
@@ -290,9 +280,9 @@ export function showSkillBanner(payload = {}) {
       setTimeout(() => particleLayer.remove(), 1800);
     }
 
-    setTimeout(() => fadeOutAndRemove(banner, 500), 3200);
+    setTimeout(() => fadeOutAndRemove(banner, FX_CONFIG.banners.fadeDuration), FX_CONFIG.banners.skillDisplay);
   } catch (error) {
-    console.error("Tavern Twenty-One | Skill banner error:", error);
+    reportEffectError("Skill banner", error);
   }
 }
 
@@ -335,9 +325,9 @@ export function showDrinkResult(payload = {}) {
       setTimeout(() => particleLayer.remove(), 1200);
     }
 
-    setTimeout(() => fadeOutAndRemove(banner, 500), 2800);
+    setTimeout(() => fadeOutAndRemove(banner, FX_CONFIG.banners.fadeDuration), FX_CONFIG.banners.drinkDisplay);
   } catch (error) {
-    console.error("Tavern Twenty-One | Drink banner error:", error);
+    reportEffectError("Drink banner", error);
   }
 }
 
@@ -369,11 +359,11 @@ export function showCutOffBanner(payload = {}) {
     const glare = createElement("div", { className: "tavern-cutoff-glare" });
     appWindow.appendChild(glare);
     requestAnimationFrame(() => glare.classList.add("show"));
-    setTimeout(() => glare.remove(), 700);
+    setTimeout(() => glare.remove(), FX_CONFIG.impacts.ringDuration);
 
-    setTimeout(() => fadeOutAndRemove(banner, 500), 2600);
+    setTimeout(() => fadeOutAndRemove(banner, FX_CONFIG.banners.fadeDuration), FX_CONFIG.banners.cutoffDisplay);
   } catch (error) {
-    console.error("Tavern Twenty-One | Cut off banner error:", error);
+    reportEffectError("Cut off banner", error);
   }
 }
 
@@ -395,14 +385,13 @@ export function showImpactRing(userId, type = "goad") {
 
     const ring = createElement("div", { className: `impact-ring ${type}` });
     seat.appendChild(ring);
-    setTimeout(() => ring.remove(), 700);
+    setTimeout(() => ring.remove(), FX_CONFIG.impacts.ringDuration);
   } catch (error) {
-    console.error("Tavern Twenty-One | Impact ring error:", error);
+    reportEffectError("Impact ring", error);
   }
 }
 
 /**
- * V4.2: Bump Impact Effect
  * Shows impact flash on target player's seat with shake
  * @param {string} targetId - User ID of bump target
  */
@@ -418,16 +407,14 @@ export function playBumpEffect(targetId) {
     if (seat) {
       seat.classList.add("tavern-shake-heavy");
       showImpactRing(targetId, "bump");
-
-      // V13: Native DOM for impact flash
       const flash = createElement("div", { className: "bump-impact" });
       seat.appendChild(flash);
 
-      setTimeout(() => flash.remove(), 500);
-      setTimeout(() => seat.classList.remove("tavern-shake-heavy"), 500);
+      setTimeout(() => flash.remove(), FX_CONFIG.impacts.heavyShakeDuration);
+      setTimeout(() => seat.classList.remove("tavern-shake-heavy"), FX_CONFIG.impacts.heavyShakeDuration);
     }
   } catch (error) {
-    console.error("Tavern Twenty-One | Bump effect error:", error);
+    reportEffectError("Bump effect", error);
   }
 }
 
@@ -449,7 +436,7 @@ export function showFullSetBurst(userId) {
     ParticleFactory.spawnArcaneBurst(particleLayer, 30);
     setTimeout(() => particleLayer.remove(), 1200);
   } catch (error) {
-    console.error("Tavern Twenty-One | Full-set burst error:", error);
+    reportEffectError("Full-set burst", error);
   }
 }
 
@@ -533,7 +520,7 @@ export function showScoreSurge(userId, payload = {}) {
       }
     }, 60);
   } catch (error) {
-    console.error("Tavern Twenty-One | Score surge error:", error);
+    reportEffectError("Score surge", error);
   }
 }
 
@@ -553,13 +540,11 @@ export function showPotPulse() {
       void potEl.offsetWidth;
       potEl.classList.add("pot-breathe");
       setTimeout(() => potEl.classList.remove("pot-breathe"), 700);
-
-      // V5.26: Coin flip animation on pot change
       const potDisplay = appWindow.querySelector(".pot-display");
       spawnPotCoinFlip(potDisplay);
     }, 60);
   } catch (error) {
-    console.error("Tavern Twenty-One | Pot pulse error:", error);
+    reportEffectError("Pot pulse", error);
   }
 }
 
@@ -582,7 +567,7 @@ export function showJackpotInlay() {
       setTimeout(() => potDisplay.classList.remove("pot-jackpot"), 1200);
     }, 60);
   } catch (error) {
-    console.error("Tavern Twenty-One | Jackpot inlay error:", error);
+    reportEffectError("Jackpot inlay", error);
   }
 }
 
@@ -597,9 +582,9 @@ export function showImpactFrame() {
     const frame = createElement("div", { className: "tavern-impact-frame" });
     appWindow.appendChild(frame);
     requestAnimationFrame(() => frame.classList.add("show"));
-    setTimeout(() => frame.remove(), 260);
+    setTimeout(() => frame.remove(), FX_CONFIG.impacts.frameDuration);
   } catch (error) {
-    console.error("Tavern Twenty-One | Impact frame error:", error);
+    reportEffectError("Impact frame", error);
   }
 }
 
@@ -616,15 +601,14 @@ export function showVignetteFlash() {
       const flash = createElement("div", { className: "tavern-vignette-flash" });
       appWindow.appendChild(flash);
       requestAnimationFrame(() => flash.classList.add("show"));
-      setTimeout(() => flash.remove(), 350);
-    }, 60);
+      setTimeout(() => flash.remove(), FX_CONFIG.impacts.vignetteDuration);
+    }, FX_CONFIG.impacts.vignetteDelay);
   } catch (error) {
-    console.error("Tavern Twenty-One | Vignette flash error:", error);
+    reportEffectError("Vignette flash", error);
   }
 }
 
 /**
- * V4.2: Floating Gold Text
  * Shows animated gold gain/loss text above player avatar
  * @param {string} userId - User ID
  * @param {number} amount - Gold amount (positive = gain, negative = loss)
@@ -647,8 +631,6 @@ export function showFloatingText(userId, amount) {
     const isPositive = amount > 0;
     const text = isPositive ? `+${amount}gp` : `${amount}gp`;
     const colorClass = isPositive ? "gain" : "loss";
-
-    // V13: Native DOM creation
     const floatEl = createElement("div", {
       className: `floating-text ${colorClass}`,
       innerHTML: text
@@ -658,15 +640,14 @@ export function showFloatingText(userId, amount) {
 
     // Trigger animation then remove
     requestAnimationFrame(() => floatEl.classList.add("animate"));
-    setTimeout(() => fadeOutAndRemove(floatEl, 500), 1500);
+    setTimeout(() => fadeOutAndRemove(floatEl, FX_CONFIG.floatingText.fadeDuration), FX_CONFIG.floatingText.displayDuration);
 
   } catch (error) {
-    console.error("Tavern Twenty-One | Floating text error:", error);
+    reportEffectError("Floating text", error);
   }
 }
 
 /**
- * V4.7.1: Cinematic Skill Cut-In
  * Triggers a skill-specific cinematic overlay (now supports Versus mode)
  * @param {string} type - FORESIGHT, GOAD, PROFILE, BUMP
  * @param {string} userId - User ID performing the skill
@@ -682,9 +663,9 @@ export function showSkillCutIn(type, userId, targetId) {
     else if (type === "GOAD") text = "GOADED!";
     else if (type === "PROFILE") text = "ANALYSIS!";
     else if (type === "BUMP") text = "TABLE BUMP!";
-    else if (type === "ACCUSE") text = "ACCUSATION!"; // V4.8.47
-    else if (type === "STAREDOWN") text = "THE STAREDOWN"; // V4.8.47
-    else if (type === "DUEL") text = "DUEL!"; // V4.8.47
+    else if (type === "ACCUSE") text = "ACCUSATION!";
+    else if (type === "STAREDOWN") text = "THE STAREDOWN";
+    else if (type === "DUEL") text = "DUEL!";
     else if (type === "SUDDEN_DEATH") text = "SUDDEN DEATH!";
     else if (type === "COIN_STAGE") text = "THE COIN";
     else if (type === "BOOT_EARNED") text = "BOOT EARNED!";
@@ -697,12 +678,11 @@ export function showSkillCutIn(type, userId, targetId) {
       text
     });
   } catch (error) {
-    console.error("Tavern Twenty-One | Skill CutIn error:", error);
+    reportEffectError("Skill CutIn", error);
   }
 }
 
 /**
- * V4.7.6: Skill Result Overlay
      * Shows the result of a skill showdown
      * @param {string} type - GOAD, BUMP, PROFILE
      * @param {string} userId - Attacker ID
@@ -721,12 +701,11 @@ export function showSkillResult(type, userId, targetId, resultData) {
       resultData
     });
   } catch (error) {
-    console.error("Tavern | Skill Result Error:", error);
+    reportEffectError("Skill result", error);
   }
 }
 
 /**
- * V5.22: Turn Stinger
  * Brief dramatic text that appears over the table when your turn begins.
  * Respects performance mode and auto-removes after animation.
  * @param {string} text - The stinger text to display
@@ -754,15 +733,15 @@ export function showTurnStinger(text) {
     tableArea.appendChild(stinger);
 
     // Auto-remove after animation completes (matches CSS animation duration)
-    setTimeout(() => stinger.remove(), 3000);
+    setTimeout(() => stinger.remove(), FX_CONFIG.turnStinger.duration);
   } catch (error) {
-    console.error("Tavern Twenty-One | Turn stinger error:", error);
+    reportEffectError("Turn stinger", error);
   }
 }
 
 /**
- * V4.9: Secret Private Feedback (Client-Side Dialog)
- * Shows private result only to the player (hiding it from GM chat logs)
+ * Shows private result only to the current player's UI.
+ * Note: GM users may still inspect world-state data directly.
  * @param {string} userId - User ID to show this to
  * @param {string} title - Title of the dialog
  * @param {string} content - HTML content of the result card
@@ -772,16 +751,9 @@ export function showPrivateFeedback(userId, title, content) {
   // Also, GMs *can* receive this if they are playing as NPC and sent it to themselves
   if (game.user.id !== userId) return;
 
-  new Dialog({
-    title: title,
-    content: content,
-    buttons: {
-      ok: {
-        icon: '<i class="fa-solid fa-check"></i>',
-        label: "OK",
-      }
-    },
-    default: "ok",
-    close: () => { }
-  }, { classes: ["tavern-cheat-feedback"] }).render(true);
+  PrivateFeedbackDialog.show({ title, content });
 }
+
+
+
+

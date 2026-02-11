@@ -1,5 +1,21 @@
 # Changelog
 
+## [5.27.0] - 2026-02-11
+### Debt Reduction Closure + Architecture Stabilization
+- **Architecture**: Completed ApplicationV2 dialog migration with new `GMJoinDialog`, `GoblinHoldDialog`, `PrivateFeedbackDialog`, and shared `ConfirmDialog`; removed remaining legacy `Dialog.confirm` usage from client actions.
+- **Refactor**: Finished decomposition around the app shell by routing behavior through `tavern-client-actions`, `tavern-context`, and `tavern-render` modules; retained PARTS-based rendering paths for targeted updates.
+- **State**: Added cached `getState()` stability and queue flush support, centralized object coercion helpers, and tightened normalization paths for grouped table sections.
+- **Rules Extraction**: Added pure rules modules for goblin stage progression, duel result summarization, and betting order calculation:
+  - `scripts/twenty-one/rules/goblin-rules.js`
+  - `scripts/twenty-one/rules/duel-rules.js`
+  - `scripts/twenty-one/rules/turn-order.js`
+- **Testing**: Expanded automated coverage with new `rulesets` spec cases for goblin stage transitions, duel tie/winner resolution, and betting order behavior.
+- **Safety**: Hardened private/public log pipeline by normalizing messages to plain text at write time and rendering escaped content in UI; preserves multiline readability while removing HTML rendering coupling in the logs window.
+- **FX Reliability**: Kept effect error isolation with debug surfacing support and centralized FX constants/configuration for timing/particle tunables.
+- **Accessibility**: Standardized keyboard/ARIA behavior across portrait/target selectors and dynamic controls; added live-region status support in app layout.
+- **Localization**: Added and reused fallback localization helpers for notifications, dialog labels, log empty state, and relative-time text.
+- **Cleanup**: Removed stale legacy shims/artifacts (`scripts/constants.js`, root debug script moved under `dev/`) and added `CONTRIBUTING.md` conventions for layer naming and release quality gates.
+
 ## [5.26.0] - 2026-02-08
 ### Premium Effects Engine — "Addicted to the Table" 🎰✨
 - **Feature**: Holographic 3D-Tilt Dice Buttons — Pokémon-card style prismatic rainbow refraction that follows the cursor across each die button, with `mix-blend-mode: overlay`, per-button perspective transforms (±16° rotateX/Y), and specular highlight tracking. Scoped to `:not(.is-used)` to coexist with the Goblin "USED" stamp.

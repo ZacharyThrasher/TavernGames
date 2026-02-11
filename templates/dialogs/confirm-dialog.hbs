@@ -1,0 +1,19 @@
+<div class="tavern-dialog confirm-dialog {{tone}}">
+  <div class="confirm-title">
+    <i class="{{icon}}" aria-hidden="true"></i>
+    <span>{{titleText}}</span>
+  </div>
+
+  {{#if lines}}
+  <div class="confirm-body">
+    {{#each lines}}
+    <p>{{this}}</p>
+    {{/each}}
+  </div>
+  {{/if}}
+
+  <div class="dialog-actions">
+    <button type="button" class="btn btn-primary" data-action="confirm">{{confirmLabel}}</button>
+    <button type="button" class="btn" data-action="cancel">{{cancelLabel}}</button>
+  </div>
+</div>

@@ -1,9 +1,24 @@
 /**
  * Tavern Twenty-One - Game Constants
- * V3.0
  */
 
 export const MODULE_ID = "tavern-dice-master";
+export const ACCUSATION_COST_MULTIPLIER = 2;
+export const ACCUSATION_BOUNTY_MULTIPLIER = 5;
+
+export const LIMITS = {
+    HISTORY_ENTRIES: 50,
+    PRIVATE_LOGS_PER_USER: 20,
+};
+
+export const TIMING = {
+    SKILL_DRAMATIC_PAUSE: 3000,
+    GOAD_DRAMATIC_PAUSE: 3500,
+    STAREDOWN_DELAY: 2500,
+    POST_REVEAL_DELAY: 500,
+    CHEAT_WINDOW_DELAY: 1500,
+    DOM_SETTLE: 60,
+};
 
 // Valid dice types in the game
 export const VALID_DICE = [4, 6, 8, 10, 20];
@@ -46,56 +61,102 @@ export function getDieCost(die, ante) {
     return Math.floor(ante * multiplier);
 }
 
-// Duel challenge types with flavor
-export const DUEL_CHALLENGES = {
-    str: {
-        name: "Arm Wrestling",
-        desc: "Lock arms and test your might!",
-        icon: "fa-solid fa-hand-fist",
-    },
-    dex: {
-        name: "Quick Draw",
-        desc: "Fastest hands at the table!",
-        icon: "fa-solid fa-hand",
-    },
-    con: {
-        name: "Drinking Contest",
-        desc: "Last one standing wins!",
-        icon: "fa-solid fa-beer-mug-empty",
-    },
-    int: {
-        name: "Riddle Challenge",
-        desc: "Outwit your opponent!",
-        icon: "fa-solid fa-brain",
-    },
-    wis: {
-        name: "Staring Contest",
-        desc: "First to blink loses!",
-        icon: "fa-solid fa-eye",
-    },
-    cha: {
-        name: "Crowd Appeal",
-        desc: "Let the crowd decide!",
-        icon: "fa-solid fa-users",
-    },
-};
+export function buildTableDataSections(tableData = {}) {
+    return {
+        coreState: {
+            totals: tableData.totals ?? {},
+            visibleTotals: tableData.visibleTotals ?? {},
+            bettingOrder: tableData.bettingOrder ?? null,
+            holds: tableData.holds ?? {},
+            busts: tableData.busts ?? {},
+            rolls: tableData.rolls ?? {},
+            rolling: tableData.rolling ?? {},
+            currentPlayer: tableData.currentPlayer ?? null,
+            phase: tableData.phase ?? "opening",
+            duel: tableData.duel ?? null,
+            gameMode: tableData.gameMode ?? "standard",
+            houseRules: tableData.houseRules ?? { startingHeat: 10 },
+            heatDC: tableData.heatDC ?? 10,
+            pendingAction: tableData.pendingAction ?? null,
+            pendingBust: tableData.pendingBust ?? null,
+        },
+        skillState: {
+            cheaters: tableData.cheaters ?? {},
+            caught: tableData.caught ?? {},
+            disqualified: tableData.disqualified ?? {},
+            goadedThisRound: tableData.goadedThisRound ?? {},
+            goadBackfire: tableData.goadBackfire ?? {},
+            bumpedThisRound: tableData.bumpedThisRound ?? {},
+            pendingBumpRetaliation: tableData.pendingBumpRetaliation ?? null,
+            cleaningFees: tableData.cleaningFees ?? {},
+            profiledBy: tableData.profiledBy ?? {},
+            drinkCount: tableData.drinkCount ?? {},
+            sloppy: tableData.sloppy ?? {},
+            playerHeat: tableData.playerHeat ?? {},
+            cheatsThisRound: tableData.cheatsThisRound ?? 0,
+            folded: tableData.folded ?? {},
+            foldedEarly: tableData.foldedEarly ?? {},
+            hasActed: tableData.hasActed ?? {},
+            hunchPrediction: tableData.hunchPrediction ?? {},
+            hunchRolls: tableData.hunchRolls ?? {},
+            hunchLocked: tableData.hunchLocked ?? {},
+            hunchLockedDie: tableData.hunchLockedDie ?? {},
+            hunchExact: tableData.hunchExact ?? {},
+            blindNextRoll: tableData.blindNextRoll ?? {},
+            dared: tableData.dared ?? {},
+            blindDice: tableData.blindDice ?? {},
+            accusedThisRound: tableData.accusedThisRound ?? {},
+            usedSkills: tableData.usedSkills ?? {},
+            skillUsedThisTurn: tableData.skillUsedThisTurn ?? false,
+            lastSkillUsed: tableData.lastSkillUsed ?? null,
+        },
+        sideBetState: {
+            sideBets: tableData.sideBets ?? {},
+            sideBetPool: tableData.sideBetPool ?? 0,
+            sideBetRound: tableData.sideBetRound ?? 1,
+            sideBetRoundStart: tableData.sideBetRoundStart ?? null,
+            sideBetWinners: tableData.sideBetWinners ?? {},
+        },
+        goblinState: {
+            usedDice: tableData.usedDice ?? {},
+            goblinSetProgress: tableData.goblinSetProgress ?? {},
+            goblinFinalActive: tableData.goblinFinalActive ?? false,
+            goblinFinalTargetId: tableData.goblinFinalTargetId ?? null,
+            goblinFinalTargetScore: tableData.goblinFinalTargetScore ?? null,
+            goblinFinalRemaining: tableData.goblinFinalRemaining ?? [],
+            goblinSuddenDeathActive: tableData.goblinSuddenDeathActive ?? false,
+            goblinSuddenDeathParticipants: tableData.goblinSuddenDeathParticipants ?? [],
+            goblinSuddenDeathRemaining: tableData.goblinSuddenDeathRemaining ?? [],
+            goblinStageIndex: tableData.goblinStageIndex ?? 0,
+            goblinStageDie: tableData.goblinStageDie ?? 20,
+            goblinStageRemaining: tableData.goblinStageRemaining ?? [],
+            goblinBoots: tableData.goblinBoots ?? {},
+            goblinHoldStage: tableData.goblinHoldStage ?? {},
+        },
+        cutState: {
+            hitCount: tableData.hitCount ?? {},
+            theCutPlayer: tableData.theCutPlayer ?? null,
+            theCutUsed: tableData.theCutUsed ?? false,
+        },
+    };
+}
 
 /**
  * Create empty table data for a new round
  */
 export function emptyTableData() {
-    return {
+    const flat = {
         totals: {},
         visibleTotals: {},
         bettingOrder: null,
         holds: {},
         busts: {},
         rolls: {},
+        rolling: {},
         currentPlayer: null,
         phase: "opening",
         cheaters: {},
         caught: {},
-        accusation: null,
         disqualified: {},
         goadedThisRound: {},
         goadBackfire: {},
@@ -106,40 +167,31 @@ export function emptyTableData() {
         duel: null,
         drinkCount: {},
         sloppy: {},
-        // V5: Per-Player Heat (User Request)
         playerHeat: {}, // { [userId]: number }
         cheatsThisRound: 0,
-        // V3: Fold tracking
         folded: {},
         foldedEarly: {},
         hasActed: {},
-        // V3: Hunch tracking
         hunchPrediction: {},
+        hunchRolls: {},
         hunchLocked: {},
         hunchLockedDie: {},
         hunchExact: {},
         blindNextRoll: {},
-        // V3: Side bets
         sideBets: {},
         sideBetPool: 0,
         sideBetRound: 1,
         sideBetRoundStart: null,
         sideBetWinners: {}, // { [userId]: true }
-        // V3: Hit tracking for Duel
         hitCount: {},
-        // V3: The Cut
         theCutPlayer: null,
         theCutUsed: false,
-        // V4: Dared condition (from Goad backfire)
         dared: {},
-        // V4: Blind dice (from Hunch failure)
         blindDice: {},
-        // V4.7.1: Track who has accused this round (one accusation per round)
         accusedThisRound: {},
-        // V4.8.40: Unified skill usage tracking (Once per Round/Match limit)
         usedSkills: {}, // { [userId]: { bump: true, goad: true, hunch: true, profile: true } }
+        skillUsedThisTurn: false,
         lastSkillUsed: null,
-        // V5.14: Goblin Mode
         usedDice: {}, // { [userId]: [4, 6, 8] } - tracks used dice types
         goblinSetProgress: {}, // { [userId]: [4, 6, 8, 10, 20] } - full-set tracking
         goblinFinalActive: false,
@@ -155,11 +207,12 @@ export function emptyTableData() {
         goblinBoots: {}, // { [userId]: number }
         goblinHoldStage: {}, // { [userId]: die }
         gameMode: "standard",
-        // V5.14: House Rules
         houseRules: { startingHeat: 10 },
-        // V5: Default Heat DC (legacy)
         heatDC: 10,
-        // V5.8: Pending action (cheat decision)
         pendingAction: null,
+        pendingBust: null,
     };
+    return { ...flat, ...buildTableDataSections(flat) };
 }
+
+

@@ -1,6 +1,6 @@
 /* ============================================
    FORTUNE'S REVEAL — Cinematic Dice System
-   V5.23: Multi-phase dramatic dice animation.
+   Multi-phase dramatic dice animation.
 
    Structure:
    1. Overlay (dim + vignette)
@@ -568,3 +568,4 @@
     display: none !important;
   }
 }
+

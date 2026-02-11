@@ -1,0 +1,35 @@
+<div class="tavern-dialog gm-join-dialog">
+  <p>{{localize "TAVERN.GMJoin.TitlePrompt"}}</p>
+
+  {{#if hasNpc}}
+  <div class="selected-npc">
+    <img src="{{selectedActor.img}}" alt="{{selectedActor.name}}" />
+    <div class="selected-npc-details">
+      <strong>{{selectedActor.name}}</strong>
+      <div class="hint">{{localize "TAVERN.GMJoin.NpcLabel"}}</div>
+    </div>
+  </div>
+
+  <div class="npc-wallet-section">
+    <label for="tavern-npc-wallet">
+      <i class="fa-solid fa-coins"></i> {{localize "TAVERN.GMJoin.StartingWallet"}}
+    </label>
+    <input id="tavern-npc-wallet" type="number" name="npcWallet" value="{{defaultWallet}}" min="1" step="{{ante}}" />
+    <div class="hint">{{localize "TAVERN.GMJoin.WalletHint"}}</div>
+  </div>
+  {{else}}
+  <p class="hint"><em>{{localize "TAVERN.GMJoin.SelectNpcHint"}}</em></p>
+  {{/if}}
+
+  <div class="dialog-actions">
+    <button type="button" class="btn btn-secondary" data-action="house">
+      <i class="fa-solid fa-building-columns"></i> {{localize "TAVERN.GMJoin.PlayHouse"}}
+    </button>
+    {{#if hasNpc}}
+    <button type="button" class="btn btn-skill" data-action="npc">
+      <i class="fa-solid fa-user-secret"></i> {{localize "TAVERN.GMJoin.PlayNpc"}} {{selectedActor.name}}
+    </button>
+    {{/if}}
+    <button type="button" class="btn" data-action="cancel">{{localize "TAVERN.Cancel"}}</button>
+  </div>
+</div>

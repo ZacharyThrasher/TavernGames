@@ -1,12 +1,11 @@
-import { MODULE_ID, getState, updateState, addHistoryEntry, addLogToAll, addPrivateLog } from "../../state.js"; // V5.8
+import { getState, updateState, addHistoryEntry, addLogToAll, addPrivateLog } from "../../state.js";
 import { deductFromActor, getPlayerGold, payOutWinners } from "../../wallet.js";
-// import { createChatCard } from "../../ui/chat.js"; // Removed
+import { MODULE_ID } from "../constants.js";
 
-import { getActorName, getSafeActorName } from "../utils/actors.js"; // V5.9
+import { getActorName, getSafeActorName } from "../utils/actors.js";
 import { notifyUser } from "../utils/game-logic.js";
 
 /**
- * V4: Place a side bet on a player to win the round
  * @param {Object} payload - { championId, amount }
  * @param {string} userId - The betting user (spectator, folded, busted, or active player)
  */
@@ -20,7 +19,8 @@ export async function placeSideBet(payload, userId) {
     }
 
     const tableData = state.tableData ?? {};
-    const { championId, amount } = payload;
+    const championId = payload?.championId;
+    const amount = Number(payload?.amount);
     const ante = game.settings.get(MODULE_ID, "fixedAnte");
 
     // Lock window: allow first two full betting rounds
@@ -31,8 +31,12 @@ export async function placeSideBet(payload, userId) {
     }
 
     // Validate amount (minimum 1 ante)
-    if (!amount || amount < ante) {
+    if (!Number.isFinite(amount) || amount < ante) {
         await notifyUser(userId, `Minimum side bet is ${ante}gp (1x ante).`);
+        return state;
+    }
+    if (!Number.isInteger(amount)) {
+        await notifyUser(userId, "Side bets must use whole gp amounts.");
         return state;
     }
 
@@ -41,14 +45,12 @@ export async function placeSideBet(payload, userId) {
         await notifyUser(userId, "Invalid champion selection.");
         return state;
     }
-
-    // V4.1: Double Down allowed (can bet on self)
     // if (championId === userId && state.players?.[userId]) { ... } removed
 
 
-    // Can't bet on busted or caught players
-    if (tableData.busts?.[championId] || tableData.caught?.[championId]) {
-        await notifyUser(userId, "That player has already busted or been caught.");
+    // Can't bet on busted, folded, or caught players
+    if (tableData.busts?.[championId] || tableData.folded?.[championId] || tableData.caught?.[championId]) {
+        await notifyUser(userId, "That player is no longer a valid side-bet target.");
         return state;
     }
 
@@ -75,8 +77,6 @@ export async function placeSideBet(payload, userId) {
     }
     sideBets[userId].push({ championId, amount });
     const sideBetPool = (tableData.sideBetPool ?? 0) + amount;
-
-    // V5.9: Use getActorName
     const betterName = getActorName(userId);
     const championName = getActorName(championId);
     const safeBetterName = getSafeActorName(userId);
@@ -101,7 +101,6 @@ export async function placeSideBet(payload, userId) {
 }
 
 /**
- * V4: Process side bet payouts (called from finishRound)
  * Winners get 2:1 payout on their bets
  */
 export async function processSideBetPayouts(winnerId) {
@@ -183,3 +182,5 @@ export async function processSideBetPayouts(winnerId) {
 
     return payouts.map(p => p.userId);
 }
+
+

@@ -1,11 +1,11 @@
-import { addLogToAll } from "../../state.js"; // V5.8
-import { getActorForUser, getActorName, getSafeActorName } from "./actors.js"; // V5.9
-// import { createChatCard } from "../../ui/chat.js"; // Removed
+import { addLogToAll } from "../../state.js";
+import { getActorForUser, getSafeActorName } from "./actors.js";
 import { tavernSocket } from "../../socket.js";
-import { getDieCost, OPENING_ROLLS_REQUIRED } from "../constants.js";
+import { ACCUSATION_COST_MULTIPLIER, OPENING_ROLLS_REQUIRED } from "../constants.js";
+import { withWarning } from "./runtime.js";
+import { calculateBettingOrderByVisibleTotals } from "../rules/turn-order.js";
 
 /**
- * V3.5: Check if a user is acting as "the house" (GM not playing as NPC)
  * Returns true if the user is the GM AND they are NOT playing as an NPC.
  * Use this instead of raw `isGM` checks to support GM-as-NPC mode.
  */
@@ -36,30 +36,87 @@ export function isPlayerNpc(userId, state) {
 }
 
 /**
- * V3.0 Economy: Get the cost for rolling a specific die
- * d20 = ½ ante, d10 = ½ ante, d6/d8 = 1x ante, d4 = 2x ante
- * @deprecated Use constants.js getDieCost instead
- */
-export function getDieCostLegacy(die, ante) {
-    return getDieCost(die, ante);
-}
-
-/**
  * Calculate the cost of an accusation
  * @param {number} ante 
  * @returns {number}
  */
 export function getAccusationCost(ante) {
-    return ante * 2;
+    return ante * ACCUSATION_COST_MULTIPLIER;
 }
 
 /**
- * Calculate the cost of an inspection
- * @param {number} pot 
- * @returns {number}
+ * Shared guard for skill actions.
+ * Returns true if the action can continue; sends user-facing notification on first failure.
  */
-export function getInspectionCost(pot) {
-    return Math.floor(pot / 2);
+export async function validateSkillPrerequisites({
+    state,
+    tableData,
+    userId,
+    skillName,
+    requireMyTurn = true,
+    requireBettingPhase = true,
+    disallowInGoblin = true,
+    disallowHouse = true,
+    disallowIfSkillUsedThisTurn = true,
+    disallowIfBusted = true,
+    disallowIfFolded = false,
+    disallowIfHeld = false,
+    oncePerMatchSkill = null,
+    messages = {},
+}) {
+    const label = skillName ?? "this skill";
+
+    if (state.status !== "PLAYING") {
+        await notifyUser(userId, messages.outsideRound ?? `Cannot use ${label} outside of an active round.`);
+        return false;
+    }
+
+    if (disallowInGoblin && tableData?.gameMode === "goblin") {
+        await notifyUser(userId, messages.goblinDisabled ?? `${label} is disabled in Goblin Rules.`);
+        return false;
+    }
+
+    if (requireMyTurn && tableData?.currentPlayer !== userId) {
+        await notifyUser(userId, messages.notYourTurn ?? `You can only use ${label} on your turn.`);
+        return false;
+    }
+
+    if (requireBettingPhase && tableData?.phase !== "betting") {
+        await notifyUser(userId, messages.wrongPhase ?? `${label} can only be used during the betting phase.`);
+        return false;
+    }
+
+    if (disallowHouse && isActingAsHouse(userId, state)) {
+        await notifyUser(userId, messages.houseBlocked ?? "The house cannot use that skill.");
+        return false;
+    }
+
+    if (disallowIfSkillUsedThisTurn && tableData?.skillUsedThisTurn) {
+        await notifyUser(userId, messages.alreadyUsedThisTurn ?? "You have already used a skill this turn.");
+        return false;
+    }
+
+    if (oncePerMatchSkill && tableData?.usedSkills?.[userId]?.[oncePerMatchSkill]) {
+        await notifyUser(userId, messages.alreadyUsedMatch ?? `You can only use ${label} once per match.`);
+        return false;
+    }
+
+    if (disallowIfBusted && tableData?.busts?.[userId]) {
+        await notifyUser(userId, messages.selfCannotAct ?? `You can't use ${label} right now.`);
+        return false;
+    }
+
+    if (disallowIfFolded && tableData?.folded?.[userId]) {
+        await notifyUser(userId, messages.selfCannotAct ?? `You can't use ${label} right now.`);
+        return false;
+    }
+
+    if (disallowIfHeld && tableData?.holds?.[userId]) {
+        await notifyUser(userId, messages.selfCannotAct ?? `You can't use ${label} right now.`);
+        return false;
+    }
+
+    return true;
 }
 
 /* ============================================
@@ -92,7 +149,7 @@ export function getValidGoadTargets(state, userId) {
 
     return players
         .filter(p => p.id !== userId && !tableData.busts?.[p.id] && !isActingAsHouse(p.id, state))
-        .filter(p => !tableData.sloppy?.[p.id] && !tableData.folded?.[p.id]) // V3: Can't goad Sloppy or Folded
+        .filter(p => !tableData.sloppy?.[p.id] && !tableData.folded?.[p.id])
         .map(p => {
             const user = game.users.get(p.id);
             const actor = user?.character;
@@ -194,8 +251,6 @@ export async function notifyUser(userId, message, type = "warn") {
  * Iron Liver: Liquid Currency - Attempt to pay a cost by drinking instead of paying gold.
  */
 export async function drinkForPayment(userId, drinksNeeded, tableData) {
-    // V5.9: Use getActorName
-    const playerName = getActorName(userId);
     const safePlayerName = getSafeActorName(userId);
 
     // Calculate DC: 10 + (2 per drink this round)
@@ -235,20 +290,16 @@ export async function drinkForPayment(userId, drinksNeeded, tableData) {
             cssClass: "failure"
         }, [], userId);
 
-        try {
-            await tavernSocket.executeAsUser("showDrinkResult", userId, {
-                title: "Put It On The Tab",
-                tone: "failure",
-                message: `Con Save: ${d20} + ${conMod} = ${total} vs DC ${dc}<br><strong>Passed out.</strong>`
-            });
-        } catch (e) { }
+        await withWarning("Could not show drink result banner", () => tavernSocket.executeAsUser("showDrinkResult", userId, {
+            title: "Put It On The Tab",
+            tone: "failure",
+            message: `Con Save: ${d20} + ${conMod} = ${total} vs DC ${dc}<br><strong>Passed out.</strong>`
+        }));
 
     } else if (!success) {
         // Failed save - gain Sloppy condition
         sloppy = true;
         updatedSloppy[userId] = true;
-
-        // V5.7: Sloppy reveals Hole Die!
         const playerRolls = tableData.rolls?.[userId] ?? [];
         const holeDieIndex = playerRolls.findIndex(r => !r.public && !r.blind);
         let holeDieRevealedMsg = "";
@@ -284,19 +335,15 @@ export async function drinkForPayment(userId, drinksNeeded, tableData) {
             cssClass: "warning"
         }, [], userId);
 
-        try {
-            await tavernSocket.executeAsUser("showDrinkResult", userId, {
-                title: "Put It On The Tab",
-                tone: "warning",
-                message: `Con Save: ${d20} + ${conMod} = ${total} vs DC ${dc}<br><strong>Sloppy.</strong> Cut off.`
-            });
-        } catch (e) { }
+        await withWarning("Could not show drink result banner", () => tavernSocket.executeAsUser("showDrinkResult", userId, {
+            title: "Put It On The Tab",
+            tone: "warning",
+            message: `Con Save: ${d20} + ${conMod} = ${total} vs DC ${dc}<br><strong>Sloppy.</strong> Cut off.`
+        }));
 
-        try {
-            await tavernSocket.executeAsUser("showCutOffBanner", userId, {
-                message: "Barkeep slams the bar. You're done. Pay in gold."
-            });
-        } catch (e) { }
+        await withWarning("Could not show cut-off banner", () => tavernSocket.executeAsUser("showCutOffBanner", userId, {
+            message: "Barkeep slams the bar. You're done. Pay in gold."
+        }));
 
     } else {
         // Success - handled it like a champ
@@ -309,13 +356,11 @@ export async function drinkForPayment(userId, drinksNeeded, tableData) {
             cssClass: "success"
         }, [], userId);
 
-        try {
-            await tavernSocket.executeAsUser("showDrinkResult", userId, {
-                title: "Put It On The Tab",
-                tone: "success",
-                message: `Con Save: ${d20} + ${conMod} = ${total} vs DC ${dc}<br><strong>On the house.</strong>`
-            });
-        } catch (e) { }
+        await withWarning("Could not show drink result banner", () => tavernSocket.executeAsUser("showDrinkResult", userId, {
+            title: "Put It On The Tab",
+            tone: "success",
+            message: `Con Save: ${d20} + ${conMod} = ${total} vs DC ${dc}<br><strong>On the house.</strong>`
+        }));
 
     }
 
@@ -333,15 +378,12 @@ export async function drinkForPayment(userId, drinksNeeded, tableData) {
 }
 
 export function getNextActivePlayer(state, tableData) {
-    // V2.0: Use betting order if available (sorted by visible total), else use join order
     const order = tableData.bettingOrder ?? state.turnOrder;
     if (!order.length) return null;
 
     const currentIndex = tableData.currentPlayer
         ? order.indexOf(tableData.currentPlayer)
         : -1;
-
-    // V3.4: Find next player who hasn't held, busted, folded, or been caught
     for (let i = 1; i <= order.length; i++) {
         const nextIndex = (currentIndex + i) % order.length;
         const nextId = order[nextIndex];
@@ -353,22 +395,15 @@ export function getNextActivePlayer(state, tableData) {
 }
 
 export function allPlayersFinished(state, tableData) {
-    // V3.4: Use betting order if available, include folded and caught players
     const order = tableData.bettingOrder ?? state.turnOrder;
     return order.every((id) => tableData.holds[id] || tableData.busts[id] || tableData.folded?.[id] || tableData.caught?.[id]);
 }
 
 /**
- * V2.0: Sort players by visible total (ascending) for betting phase turn order
  * Lowest visible total goes first
  */
 export function calculateBettingOrder(state, tableData) {
-    const visibleTotals = tableData.visibleTotals ?? {};
-    return [...state.turnOrder].sort((a, b) => {
-        const totalA = visibleTotals[a] ?? 0;
-        const totalB = visibleTotals[b] ?? 0;
-        return totalA - totalB; // Ascending: lowest goes first
-    });
+    return calculateBettingOrderByVisibleTotals(state.turnOrder, tableData.visibleTotals ?? {});
 }
 
 // Check if all players have completed their opening rolls (2 dice each)
@@ -399,3 +434,5 @@ export function getNextOpeningPlayer(state, tableData) {
     }
     return null;
 }
+
+

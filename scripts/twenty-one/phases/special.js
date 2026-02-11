@@ -1,12 +1,13 @@
-import { MODULE_ID, getState, updateState, addHistoryEntry, addLogToAll, addPrivateLog } from "../../state.js"; // V5.8
+import { getState, updateState, addHistoryEntry, addLogToAll, addPrivateLog } from "../../state.js";
 import { deductFromActor, payOutWinners } from "../../wallet.js";
-// import { createChatCard } from "../../ui/chat.js"; // Removed
 import { tavernSocket } from "../../socket.js";
-import { getActorForUser, getActorName, getSafeActorName } from "../utils/actors.js"; // V5.9
-import { notifyUser } from "../utils/game-logic.js";
-import { emptyTableData, OPENING_ROLLS_REQUIRED } from "../constants.js";
+import { getActorName, getSafeActorName } from "../utils/actors.js";
+import { getAccusationCost, isActingAsHouse, notifyUser } from "../utils/game-logic.js";
+import { ACCUSATION_BOUNTY_MULTIPLIER, MODULE_ID, TIMING, emptyTableData, OPENING_ROLLS_REQUIRED } from "../constants.js";
 import { finishRound } from "./core.js";
 import { processSideBetPayouts } from "./side-bets.js";
+import { summarizeDuelRolls } from "../rules/duel-rules.js";
+import { delay, fireAndForget, withWarning } from "../utils/runtime.js";
 
 export async function useCut(userId, reroll = false) {
   const state = getState();
@@ -15,42 +16,46 @@ export async function useCut(userId, reroll = false) {
     return state;
   }
 
-  const tableData = state.tableData ?? emptyTableData();
+  let tableData = state.tableData ?? emptyTableData();
 
   if (tableData.phase !== "cut") {
     await notifyUser(userId, "You cannot use The Cut right now (Not in cut phase).");
     return state;
   }
 
-  // Debug logging to catch ID mismatches
   if (tableData.theCutPlayer !== userId) {
-    console.warn("Tavern | Cut ID Mismatch:", { expected: tableData.theCutPlayer, actual: userId });
-    // V4.8.18: If the user clicked the button, they likely ARE the cut player in their UI.
-    // Proceeding anyway but logging to debug why they don't match.
+    await notifyUser(userId, "Only the player with The Cut can do that.");
+    return state;
   }
-
-  // V5.9: Use getActorName
   const userName = getActorName(userId);
   const safeUserName = getSafeActorName(userId);
 
   if (reroll) {
-    const roll = await new Roll("1d10").evaluate();
-    const oldValue = tableData.rolls[userId][1].result;
-    tableData.rolls[userId][1].result = roll.total;
-    tableData.totals[userId] = tableData.totals[userId] - oldValue + roll.total;
-
-    try {
-      await tavernSocket.executeAsUser("showRoll", userId, {
-        formula: "1d10",
-        die: 10,
-        result: roll.total
-      });
-    } catch (e) {
-      console.warn("Tavern Twenty-One | Could not show dice to player:", e);
+    const playerRolls = tableData.rolls?.[userId] ?? [];
+    const holeRoll = playerRolls[1];
+    if (!holeRoll) {
+      await notifyUser(userId, "Your cut hand is missing a hole die.");
+      return state;
     }
 
-    // V4.6: Whisper actual values only to the cut player (no GM privilege)
-    // V4.9: Secret Private Feedback (Hidden from GM)
+    const roll = await new Roll("1d10").evaluate();
+    const oldValue = holeRoll.result;
+    const updatedPlayerRolls = [...playerRolls];
+    updatedPlayerRolls[1] = { ...holeRoll, result: roll.total };
+    tableData = {
+      ...tableData,
+      rolls: { ...tableData.rolls, [userId]: updatedPlayerRolls },
+      totals: {
+        ...tableData.totals,
+        [userId]: (tableData.totals?.[userId] ?? 0) - oldValue + roll.total,
+      },
+    };
+
+    await withWarning("Could not show dice to player", () => tavernSocket.executeAsUser("showRoll", userId, {
+      formula: "1d10",
+      die: 10,
+      result: roll.total
+    }));
     await addPrivateLog(userId, {
       title: "The Cut Result",
       message: `Hole Die: ${oldValue} → <strong>${roll.total}</strong><br>New Total: ${tableData.totals[userId]}`,
@@ -87,14 +92,12 @@ export async function useCut(userId, reroll = false) {
   tableData.currentPlayer = tableData.bettingOrder.find(id => !tableData.busts[id]) ?? null;
   tableData.sideBetRound = 1;
   tableData.sideBetRoundStart = tableData.currentPlayer;
-  // V3.5.2: Reset skill usage for first player after cut phase
   tableData.skillUsedThisTurn = false;
 
-  const ante = game.settings.get(MODULE_ID, "fixedAnte");
   const orderNames = tableData.bettingOrder
     .filter(id => !tableData.busts[id])
     .map(id => {
-      const safeName = getSafeActorName(id); // V5.9
+      const safeName = getSafeActorName(id);
       const vt = tableData.visibleTotals[id] ?? 0;
       return `${safeName} (${vt})`;
     })
@@ -135,7 +138,7 @@ export async function submitDuelRoll(userId) {
     return state;
   }
 
-  const userName = getActorName(userId); // V5.9
+  const userName = getActorName(userId);
   const safeUserName = getSafeActorName(userId);
 
   const playerRolls = tableData.rolls[userId] ?? [];
@@ -150,11 +153,9 @@ export async function submitDuelRoll(userId) {
   const total = roll.total;
 
   // Show 3D Dice safely
-  try {
-    if (game.dice3d) {
-      await game.dice3d.showForRoll(roll, game.users.get(userId), true);
-    }
-  } catch (e) { }
+  if (game.dice3d) {
+    await withWarning("Could not show duel dice", () => game.dice3d.showForRoll(roll, game.users.get(userId), true));
+  }
 
   // Log the Duel Roll
   await addLogToAll({
@@ -193,19 +194,14 @@ async function resolveDuel() {
     return state;
   }
 
-  let highestTotal = 0;
-  const results = [];
-
-  for (const [playerId, rollData] of Object.entries(duel.rolls)) {
-    const playerName = getActorName(playerId); // V5.9
-    const safePlayerName = getSafeActorName(playerId);
-    results.push({ playerId, playerName, safePlayerName, ...rollData });
-    if (rollData.total > highestTotal) {
-      highestTotal = rollData.total;
-    }
-  }
-
-  const winners = results.filter(r => r.total === highestTotal);
+  const duelSummary = summarizeDuelRolls(duel.rolls, {
+    getNameForUserId: (id) => getActorName(id),
+    getSafeNameForUserId: (id) => getSafeActorName(id)
+  });
+  const results = duelSummary.results;
+  const winners = duelSummary.winners;
+  const highestTotal = duelSummary.highestTotal;
+  if (winners.length === 0) return state;
 
   if (winners.length > 1) {
     const tiedNames = winners.map(w => w.playerName).join(" vs ");
@@ -263,9 +259,7 @@ async function resolveDuel() {
     round: duel.round,
     message: `${winner.playerName} wins the duel and ${potAmount}gp!`,
   });
-
-  // V4.8.61: Trigger Victory Fanfare for Duel Winner
-  tavernSocket.executeForEveryone("showVictoryFanfare", winner.playerId);
+  fireAndForget("Could not show duel victory fanfare", tavernSocket.executeForEveryone("showVictoryFanfare", winner.playerId));
 
   const sideBetWinnerIds = await processSideBetPayouts(winner.playerId);
   const sideBetWinners = {};
@@ -278,13 +272,12 @@ async function resolveDuel() {
 }
 
 /**
- * V4: Accuse a specific die of being cheated
  * @param {Object} payload - { targetId, dieIndex }
  * @param {string} userId - The accusing player
  */
 export async function accuse(payload, userId) {
   const state = getState();
-  if (state.status === "LOBBY" || state.status === "PAYOUT") {
+  if (!["PLAYING", "INSPECTION"].includes(state.status)) {
     await notifyUser(userId, "Accusations can only be made during an active round.");
     return state;
   }
@@ -293,18 +286,15 @@ export async function accuse(payload, userId) {
     return state;
   }
 
-  // V3.5: House cannot accuse, but GM-as-NPC can
-  const user = game.users.get(userId);
-  const playerData = state.players?.[userId];
-  const isHouse = user?.isGM && !playerData?.playingAsNpc;
-  if (isHouse) {
+  if (isActingAsHouse(userId, state)) {
     await notifyUser(userId, "The house observes but does not accuse.");
     return state;
   }
 
   const tableData = state.tableData ?? emptyTableData();
   const ante = game.settings.get(MODULE_ID, "fixedAnte");
-  const { targetId, dieIndex } = payload;
+  const { targetId, dieIndex } = payload ?? {};
+  const dieIndexNumber = Number(dieIndex);
 
   if (!targetId || !state.turnOrder.includes(targetId)) {
     await notifyUser(userId, "Invalid accusation target.");
@@ -316,10 +306,7 @@ export async function accuse(payload, userId) {
     return state;
   }
 
-  // V3.5: Can't accuse the house, but GM-as-NPC is a valid target
-  const targetUser = game.users.get(targetId);
-  const isTargetHouse = targetUser?.isGM && !state.players?.[targetId]?.playingAsNpc;
-  if (isTargetHouse) {
+  if (isActingAsHouse(targetId, state)) {
     await notifyUser(userId, "You can't accuse the house!");
     return state;
   }
@@ -333,59 +320,46 @@ export async function accuse(payload, userId) {
     await notifyUser(userId, "You busted - you can't make accusations!");
     return state;
   }
-
-  // V4: Validate die index
   const targetRolls = tableData.rolls?.[targetId] ?? [];
-  if (dieIndex === undefined || dieIndex < 0 || dieIndex >= targetRolls.length) {
+  if (!Number.isInteger(dieIndexNumber) || dieIndexNumber < 0 || dieIndexNumber >= targetRolls.length) {
     await notifyUser(userId, "Invalid die selection.");
     return state;
   }
 
-  const accusationCost = ante * 2;
-  const canAfford = await deductFromActor(userId, accusationCost);
-  if (!canAfford) {
-    await notifyUser(userId, `You need ${accusationCost}gp (2x ante) to make an accusation.`);
+  if (tableData.caught?.[targetId]) {
+    await notifyUser(userId, "That player has already been caught cheating!");
     return state;
   }
 
-  // V4.8.47: Accuse Cinematic Cut-In
-  state.suspectId = targetId; // Track for UI if needed
-  tavernSocket.executeForEveryone("showSkillCutIn", "ACCUSE", userId, targetId);
+  const accusationCost = getAccusationCost(ante);
+  const canAfford = await deductFromActor(userId, accusationCost);
+  if (!canAfford) {
+    await notifyUser(userId, `You need ${accusationCost}gp to make an accusation.`);
+    return state;
+  }
+  fireAndForget("Could not show accuse cut-in", tavernSocket.executeForEveryone("showSkillCutIn", "ACCUSE", userId, targetId));
 
   // Dramatic Pause
-  await new Promise(r => setTimeout(r, 2500));
-
-  // V5.9: Use getActorName
+  await delay(TIMING.STAREDOWN_DELAY);
   const accuserName = getActorName(userId);
   const targetName = getActorName(targetId);
   const safeAccuserName = getSafeActorName(userId);
   const safeTargetName = getSafeActorName(targetId);
-
-  // V4: Check if THIS SPECIFIC DIE was cheated
   const targetCheaterData = tableData.cheaters?.[targetId];
-  const cheatsOnDie = targetCheaterData?.cheats?.filter(c => c.dieIndex === dieIndex) ?? [];
-  const legacyCheatOnDie = targetCheaterData?.deceptionRolls?.filter(c => c.dieIndex === dieIndex) ?? [];
+  const cheatsOnDie = targetCheaterData?.cheats?.filter(c => c.dieIndex === dieIndexNumber) ?? [];
+  const legacyCheatOnDie = targetCheaterData?.deceptionRolls?.filter(c => c.dieIndex === dieIndexNumber) ?? [];
   const dieWasCheated = cheatsOnDie.length > 0 || legacyCheatOnDie.length > 0;
 
-  const alreadyCaught = tableData.caught?.[targetId];
-  const targetDie = targetRolls[dieIndex];
+  const targetDie = targetRolls[dieIndexNumber];
   const dieLabel = `d${targetDie.die}`;
 
-  // "You can't accuse a player who has already been caught."
-  if (alreadyCaught) {
-    await notifyUser(userId, "That player has already been caught cheating!");
-    await payOutWinners({ [userId]: accusationCost });
-    return state;
-  }
-
-  const updatedAccusedThisRound = { ...tableData.accusedThisRound, [userId]: { targetId, dieIndex } };
+  const updatedAccusedThisRound = { ...tableData.accusedThisRound, [userId]: { targetId, dieIndex: dieIndexNumber } };
   let updatedCaught = { ...tableData.caught };
   let newPot = state.pot;
 
   if (dieWasCheated) {
-    // V4: Correct accusation - specific die was cheated
     updatedCaught[targetId] = true;
-    const bounty = ante * 5;
+    const bounty = ante * ACCUSATION_BOUNTY_MULTIPLIER;
     let actualBounty = 0;
     if (bounty > 0) {
       const collected = await deductFromActor(targetId, bounty);
@@ -410,13 +384,12 @@ export async function accuse(payload, userId) {
       type: "cheat_caught",
       accuser: accuserName,
       caught: targetName,
-      dieIndex,
+      dieIndex: dieIndexNumber,
       reward: totalReward,
       message: `${accuserName} caught ${targetName} cheating on their ${dieLabel}!`,
     });
 
   } else {
-    // V4: Wrong accusation - even if they cheated on ANOTHER die, this specific one was clean
     newPot += accusationCost;
 
     await addLogToAll({
@@ -432,7 +405,7 @@ export async function accuse(payload, userId) {
       type: "accusation_failed",
       accuser: accuserName,
       target: targetName,
-      dieIndex,
+      dieIndex: dieIndexNumber,
       cost: accusationCost,
       message: `${accuserName} falsely accused ${targetName}'s ${dieLabel} and loses ${accusationCost}gp.`,
     });
@@ -455,3 +428,5 @@ export async function skipInspection() {
   }
   return finishRound();
 }
+
+

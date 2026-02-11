@@ -3,120 +3,49 @@ import { tavernSocket } from "../../socket.js";
 import { getActorName, getSafeActorName } from "../utils/actors.js";
 import { notifyUser } from "../utils/game-logic.js";
 import { revealDice } from "../phases/core.js";
-import { GOBLIN_STAGE_DICE } from "../constants.js";
 import { REVEAL_DURATION } from "../../ui/dice-reveal.js";
+import { delay, withWarning, fireAndForget } from "../utils/runtime.js";
+import {
+  computeGoblinStageAdvance,
+  getGoblinLeaders,
+  getGoblinNextStagePlayer,
+  getGoblinRollingPlayers,
+  getGoblinStageDie,
+  normalizeGoblinRemaining,
+  shouldOfferGoblinHoldOption,
+  shouldTriggerGoblinLastRollWin
+} from "../rules/goblin-rules.js";
 
 function getStageDie(tableData) {
-  if (tableData.goblinSuddenDeathActive) return 2;
-  if (Number.isFinite(tableData.goblinStageDie)) return tableData.goblinStageDie;
-  const index = Number.isInteger(tableData.goblinStageIndex) ? tableData.goblinStageIndex : 0;
-  return GOBLIN_STAGE_DICE[index] ?? 20;
-}
-
-function getOrder(state, tableData) {
-  return tableData.bettingOrder ?? state.turnOrder;
-}
-
-function getActivePlayers(state, tableData) {
-  return getOrder(state, tableData)
-    .filter(id => !tableData.busts?.[id] && !tableData.folded?.[id] && !tableData.caught?.[id]);
+  return getGoblinStageDie(tableData);
 }
 
 function getRollingPlayers(state, tableData) {
-  return getActivePlayers(state, tableData).filter(id => !tableData.holds?.[id]);
+  return getGoblinRollingPlayers(state.turnOrder, tableData);
 }
 
 function normalizeRemaining(state, tableData, remaining) {
-  const set = new Set(remaining);
-  return getOrder(state, tableData).filter(id => set.has(id));
+  return normalizeGoblinRemaining(state.turnOrder, tableData, remaining);
 }
 
 function getNextStagePlayer(state, tableData) {
-  const remaining = tableData.goblinStageRemaining ?? [];
-  if (!remaining.length) return null;
-  const order = getOrder(state, tableData);
-  const currentIndex = tableData.currentPlayer ? order.indexOf(tableData.currentPlayer) : -1;
-  for (let i = 1; i <= order.length; i++) {
-    const nextId = order[(currentIndex + i) % order.length];
-    if (remaining.includes(nextId)) return nextId;
-  }
-  return remaining[0];
+  return getGoblinNextStagePlayer(state.turnOrder, tableData);
 }
 
 function getLeaders(state, tableData) {
-  const active = getActivePlayers(state, tableData);
-  if (!active.length) return { max: -Infinity, leaders: [] };
-  const max = Math.max(...active.map(id => Number(tableData.totals?.[id] ?? 0)));
-  const leaders = active.filter(id => Number(tableData.totals?.[id] ?? 0) === max);
-  return { max, leaders };
+  return getGoblinLeaders(state.turnOrder, tableData);
 }
 
 function shouldTriggerLastRollWin(state, tableData, userId) {
-  const rollingPlayers = getRollingPlayers(state, tableData);
-  if (rollingPlayers.length !== 1 || rollingPlayers[0] !== userId) return false;
-  const { leaders } = getLeaders(state, tableData);
-  return leaders.length === 1 && leaders[0] === userId;
+  return shouldTriggerGoblinLastRollWin(state.turnOrder, tableData, userId);
 }
 
 function shouldOfferHoldOption(state, tableData, userId) {
-  if (tableData.holds?.[userId]) return false;
-  if (tableData.busts?.[userId] || tableData.folded?.[userId] || tableData.caught?.[userId]) return false;
-  const myRolls = tableData.rolls?.[userId] ?? [];
-  if (myRolls.length === 0) return false;
-  const { max } = getLeaders(state, tableData);
-  const myTotal = Number(tableData.totals?.[userId] ?? 0);
-  return myTotal >= max;
+  return shouldOfferGoblinHoldOption(state.turnOrder, tableData, userId);
 }
 
 async function advanceStageIfNeeded(state, tableData) {
-  let updatedTable = { ...tableData };
-  const remaining = updatedTable.goblinStageRemaining ?? [];
-
-  if (remaining.length > 0) {
-    updatedTable.currentPlayer = getNextStagePlayer(state, updatedTable);
-    return { tableData: updatedTable, action: null };
-  }
-
-  const rollingPlayers = getRollingPlayers(state, updatedTable);
-
-  if (updatedTable.goblinSuddenDeathActive) {
-    if (rollingPlayers.length === 0) return { tableData: updatedTable, action: "finish" };
-
-    const nextRemaining = normalizeRemaining(state, updatedTable, rollingPlayers);
-    updatedTable.goblinSuddenDeathParticipants = nextRemaining;
-    updatedTable.goblinSuddenDeathRemaining = nextRemaining;
-    updatedTable.goblinStageRemaining = nextRemaining;
-    updatedTable.currentPlayer = nextRemaining[0] ?? null;
-    return { tableData: updatedTable, action: "coin-continue" };
-  }
-
-  if (rollingPlayers.length === 0) {
-    return { tableData: updatedTable, action: "finish" };
-  }
-
-  const stageIndex = Number.isInteger(updatedTable.goblinStageIndex) ? updatedTable.goblinStageIndex : 0;
-  const stageDie = GOBLIN_STAGE_DICE[stageIndex] ?? 20;
-  if (stageDie === 4) {
-    const nextRemaining = normalizeRemaining(state, updatedTable, rollingPlayers);
-    updatedTable.goblinSuddenDeathActive = true;
-    updatedTable.goblinSuddenDeathParticipants = nextRemaining;
-    updatedTable.goblinSuddenDeathRemaining = nextRemaining;
-    updatedTable.goblinStageRemaining = nextRemaining;
-    updatedTable.goblinStageDie = 2;
-    updatedTable.currentPlayer = nextRemaining[0] ?? null;
-    return { tableData: updatedTable, action: "coin-start" };
-  }
-
-  const nextIndex = Math.min(stageIndex + 1, GOBLIN_STAGE_DICE.length - 1);
-  const nextDie = GOBLIN_STAGE_DICE[nextIndex];
-  const nextRemaining = normalizeRemaining(state, updatedTable, getRollingPlayers(state, updatedTable));
-
-  updatedTable.goblinStageIndex = nextIndex;
-  updatedTable.goblinStageDie = nextDie;
-  updatedTable.goblinStageRemaining = nextRemaining;
-  updatedTable.currentPlayer = nextRemaining[0] ?? null;
-
-  return { tableData: updatedTable, action: "stage-advance", nextDie };
+  return computeGoblinStageAdvance(state.turnOrder, tableData);
 }
 
 async function finalizeGoblinTurn(state, tableData) {
@@ -151,7 +80,7 @@ async function finalizeGoblinTurn(state, tableData) {
       icon: "fa-solid fa-bolt",
       type: "phase"
     });
-    tavernSocket.executeForEveryone("showSkillCutIn", "COIN_STAGE");
+    fireAndForget("Could not show coin stage cut-in", tavernSocket.executeForEveryone("showSkillCutIn", "COIN_STAGE"));
   } else if (progress.action === "coin-continue") {
     await addLogToAll({
       title: "The Coin Spins",
@@ -195,19 +124,15 @@ export async function submitGoblinRoll({ state, tableData, userId, die }) {
 
   const roll = await new Roll(`1d${stageDie}`).evaluate();
   const result = roll.total;
-
-  // V5.23: Fortune's Reveal — public cinematic reveal for goblin rolls
-  try {
-    const isCoinDeath = stageDie === 2 && result === 1;
-    const isBust = result === 1;
-    const isExplode = stageDie === 20 && result === 20;
-    tavernSocket.executeForEveryone("showDiceReveal", userId, stageDie, result, {
+  const isCoinDeath = stageDie === 2 && result === 1;
+  const isBust = result === 1;
+  const isExplode = stageDie === 20 && result === 20;
+  await withWarning("Dice reveal error", () => tavernSocket.executeForEveryone("showDiceReveal", userId, stageDie, result, {
       isCoinDeath,
       isBust,
       isExplode,
-    });
-    await new Promise(r => setTimeout(r, REVEAL_DURATION));
-  } catch (e) { console.warn("Tavern | Dice Reveal Error:", e); }
+    }));
+  await delay(REVEAL_DURATION);
 
   const rolls = { ...tableData.rolls };
   const existingRolls = rolls[userId] ?? [];
@@ -218,9 +143,7 @@ export async function submitGoblinRoll({ state, tableData, userId, die }) {
   }
 
   if (stageDie === 2) {
-    try {
-      await tavernSocket.executeForEveryone("showCoinFlip", userId, result, coinValue ?? 2);
-    } catch (e) { }
+    await withWarning("Could not show coin flip", () => tavernSocket.executeForEveryone("showCoinFlip", userId, result, coinValue ?? 2));
   }
   
   const totals = { ...tableData.totals };
@@ -259,9 +182,7 @@ export async function submitGoblinRoll({ state, tableData, userId, die }) {
     logType = "bust";
     cssClass = "failure";
 
-    try {
-      await tavernSocket.executeForEveryone("showBustFanfare", userId);
-    } catch (e) { }
+    await withWarning("Could not show bust fanfare", () => tavernSocket.executeForEveryone("showBustFanfare", userId));
   } else {
     if (stageDie === 2) {
       const bonus = coinValue ?? 2;
@@ -281,19 +202,15 @@ export async function submitGoblinRoll({ state, tableData, userId, die }) {
       message += ` Boot earned!`;
       logMessage += ` <strong>Boot earned!</strong>`;
       cssClass = "success";
-      try {
-        await tavernSocket.executeForEveryone("showSkillCutIn", "BOOT_EARNED", userId);
-      } catch (e) { }
+      await withWarning("Could not show boot-earned cut-in", () => tavernSocket.executeForEveryone("showSkillCutIn", "BOOT_EARNED", userId));
     }
 
-    try {
-      await tavernSocket.executeForEveryone("showScoreSurge", userId, {
-        from: previousTotal,
-        to: currentTotal,
-        delta: currentTotal - previousTotal,
-        multiplied: false
-      });
-    } catch (e) { }
+    await withWarning("Could not show score surge", () => tavernSocket.executeForEveryone("showScoreSurge", userId, {
+      from: previousTotal,
+      to: currentTotal,
+      delta: currentTotal - previousTotal,
+      multiplied: false
+    }));
   }
 
   await addLogToAll({
@@ -414,7 +331,7 @@ export async function holdGoblin({ state, tableData, userId }) {
       icon: "fa-solid fa-bolt",
       type: "phase"
     });
-    tavernSocket.executeForEveryone("showSkillCutIn", "COIN_STAGE");
+    fireAndForget("Could not show coin stage cut-in", tavernSocket.executeForEveryone("showSkillCutIn", "COIN_STAGE"));
   }
 
   if (progress.action === "finish") return revealDice();
@@ -502,9 +419,7 @@ export async function bootGoblin({ state, tableData, userId, targetId }) {
     type: "phase"
   });
 
-  try {
-    await tavernSocket.executeForEveryone("showSkillCutIn", "BOOT", userId, targetId);
-  } catch (e) { }
+  await withWarning("Could not show boot cut-in", () => tavernSocket.executeForEveryone("showSkillCutIn", "BOOT", userId, targetId));
 
   await addHistoryEntry({
     type: "phase",
@@ -514,3 +429,4 @@ export async function bootGoblin({ state, tableData, userId, targetId }) {
 
   return updateState({ tableData: updatedTable });
 }
+

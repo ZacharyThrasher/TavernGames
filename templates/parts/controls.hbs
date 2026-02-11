@@ -208,7 +208,8 @@
       <button type="button"
         class="btn-die-premium {{#if this.costLabel}}has-cost{{/if}} {{#if this.isCoin}}btn-die-coin{{/if}} {{#if this.isUsed}}is-used{{/if}}"
         data-action="roll" data-die="{{this.value}}" {{#if this.disabled}}disabled{{/if}}
-        title="{{this.label}} - {{this.strategy}}{{#if this.costLabel}} ({{this.costLabel}}){{/if}}">
+        title="{{this.label}} - {{this.strategy}}{{#if this.costLabel}} ({{this.costLabel}}){{/if}}"
+        aria-label="{{this.label}} {{this.strategy}} {{this.costLabel}}">
         {{#if this.hunchDirection}}
         <span class="hunch-indicator {{this.hunchDirection}}" title="Foresight: {{this.hunchDirection}}">
           <i class="fa-solid fa-arrow-{{this.hunchDirection}}"></i>
@@ -416,7 +417,7 @@
       <label>Who do you suspect?</label>
       <div class="accuse-portraits">
         {{#each accuseTargets}}
-        <div class="accuse-portrait" data-target-id="{{this.id}}" data-target-name="{{this.name}}" tabindex="0">
+        <div class="accuse-portrait" data-target-id="{{this.id}}" data-target-name="{{this.name}}" tabindex="0" role="button" aria-pressed="false" aria-label="{{this.name}}">
           <img src="{{this.img}}" alt="{{this.name}}" />
           <span class="portrait-name">{{this.name}}</span>
         </div>

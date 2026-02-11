@@ -1,4 +1,4 @@
-export * from "../constants.js";
+export * from "./constants.js";
 
 // Skills
 export * from "./skills/goad.js";

@@ -1,4 +1,6 @@
-import { MODULE_ID } from "../../state.js";
+import { ACCUSATION_BOUNTY_MULTIPLIER, ACCUSATION_COST_MULTIPLIER, MODULE_ID } from "../../twenty-one/constants.js";
+
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 const DICE_ICONS = {
   4: "d4",
@@ -9,18 +11,51 @@ const DICE_ICONS = {
   20: "d20",
 };
 
-export class AccuseDialog {
-  static async show(params) {
-    const { targetName, targetId, rolls, ante } = params;
-    const bounty = ante * 5; // Fixed rule
-    const cost = ante * 2; // Fixed rule
+export class AccuseDialog extends HandlebarsApplicationMixin(ApplicationV2) {
+  static DEFAULT_OPTIONS = {
+    id: "tavern-accuse-dialog",
+    tag: "div",
+    window: {
+      title: "Accuse",
+      icon: "fa-solid fa-hand-point-right",
+      resizable: false
+    },
+    position: {
+      width: 460,
+      height: "auto"
+    },
+    classes: ["tavern-dialog-window"]
+  };
 
-    // Prepare dice data
-    const dice = rolls.map((roll, idx) => {
+  static PARTS = {
+    form: {
+      template: `modules/${MODULE_ID}/templates/dialogs/accuse-dialog.hbs`
+    }
+  };
+
+  static async show(params) {
+    return new Promise((resolve) => {
+      new AccuseDialog({ resolve, ...params }).render(true);
+    });
+  }
+
+  constructor(options = {}) {
+    super(options);
+    this.params = options;
+    this.resolve = options.resolve;
+    this.selectedDieIndex = null;
+    this._resolved = false;
+  }
+
+  async _prepareContext() {
+    const { targetName, rolls, ante } = this.params;
+    const bounty = ante * ACCUSATION_BOUNTY_MULTIPLIER;
+    const cost = ante * ACCUSATION_COST_MULTIPLIER;
+
+    const dice = (rolls ?? []).map((roll, idx) => {
       const isBlind = roll.blind ?? false;
       const isHole = !(roll.public ?? true);
       const displayResult = isBlind ? "?" : (isHole ? "?" : roll.result);
-      // Simple logic for icon mapping
       const icon = DICE_ICONS[roll.die] || "d6";
 
       let label = `d${roll.die}`;
@@ -31,50 +66,58 @@ export class AccuseDialog {
       return { index: idx, icon, displayResult, label };
     });
 
-    const content = await foundry.applications.handlebars.renderTemplate(`modules/${MODULE_ID}/templates/dialogs/accuse-dialog.hbs`, {
-      targetName,
-      dice,
-      cost,
-      bounty
+    return { targetName, dice, cost, bounty };
+  }
+
+  _resolve(value) {
+    if (this._resolved) return;
+    this._resolved = true;
+    this.resolve?.(value);
+  }
+
+  _onRender(context, options) {
+    super._onRender(context, options);
+    const form = this.element.querySelector("form");
+    if (form) form.addEventListener("submit", this._onSubmit.bind(this));
+
+    const html = $(this.element);
+    const dieOptions = html.find(".die-option");
+    dieOptions.attr("aria-pressed", "false");
+    dieOptions.on("click", (event) => {
+      dieOptions.removeClass("selected").attr("aria-pressed", "false");
+      const current = $(event.currentTarget);
+      current.addClass("selected");
+      current.attr("aria-pressed", "true");
+      this.selectedDieIndex = parseInt(current.data("die-index"));
+    });
+    dieOptions.on("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        event.currentTarget.click();
+      }
     });
 
-    let selectedDieIndex = null;
-
-    return new Promise(resolve => {
-      const dialog = new Dialog({
-        title: `Accuse ${targetName}`,
-        content,
-        buttons: {
-          accuse: {
-            label: "Accuse!",
-            icon: '<i class="fa-solid fa-hand-point-right"></i>',
-            callback: () => resolve(selectedDieIndex !== null ? { targetId, dieIndex: selectedDieIndex } : null)
-          },
-          cancel: {
-            label: "Cancel",
-            icon: '<i class="fa-solid fa-times"></i>',
-            callback: () => resolve(null)
-          }
-        },
-        default: "accuse",
-        render: (html) => {
-          const dieOptions = html.find('.die-option');
-          dieOptions.on('click', function () {
-            dieOptions.removeClass('selected');
-            $(this).addClass('selected');
-            selectedDieIndex = parseInt($(this).data('die-index'));
-          });
-          dieOptions.on('keydown', function (e) {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              $(this).click();
-            }
-          });
-        },
-        close: () => resolve(null),
-        options: { classes: ["tavern-dialog-window"] }
+    const cancelBtn = this.element.querySelector("[data-action=\"cancel\"]");
+    if (cancelBtn) {
+      cancelBtn.addEventListener("click", async () => {
+        this._resolve(null);
+        await this.close();
       });
-      dialog.render(true);
+    }
+  }
+
+  async _onSubmit(event) {
+    event.preventDefault();
+    if (this.selectedDieIndex === null) return;
+    this._resolve({
+      targetId: this.params.targetId,
+      dieIndex: this.selectedDieIndex
     });
+    await this.close();
+  }
+
+  async close(options) {
+    if (!this._resolved) this._resolve(null);
+    return super.close(options);
   }
 }

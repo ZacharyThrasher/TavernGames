@@ -1,0 +1,16 @@
+{
+  "name": "tavern-dice-master",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "npm run test && npm run check:syntax && npm run check:quality && npm run check:manifest",
+    "test": "node ./tests/run-tests.mjs",
+    "lint": "eslint scripts --ext .js",
+    "check:syntax": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/dev/check-syntax.ps1",
+    "check:quality": "node ./scripts/dev/check-quality.mjs",
+    "check:manifest": "node ./scripts/dev/release-check.mjs --manifest-only"
+  },
+  "devDependencies": {
+    "eslint": "^9.38.0"
+  }
+}

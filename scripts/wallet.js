@@ -1,36 +1,33 @@
-import { MODULE_ID, getState, updateState } from "./state.js";
+import { getState, updateState } from "./state.js";
+import { MODULE_ID } from "./twenty-one/constants.js";
 import { tavernSocket } from "./socket.js";
 import { getActorForUser } from "./twenty-one/utils/actors.js";
 
-/**
- * V4: Check if a player is an NPC (GM playing as NPC)
- */
-function isNpcPlayer(userId) {
-  const state = getState();
+function isNpcPlayer(userId, stateOverride = null) {
+  const state = stateOverride ?? getState();
   const playerData = state?.players?.[userId];
   return playerData?.playingAsNpc ?? false;
 }
 
-/**
- * V4: Get NPC wallet balance from module state
- */
+async function showFloatingGold(userId, amount) {
+  try {
+    await tavernSocket.executeForEveryone("showFloatingText", userId, amount);
+  } catch (error) {
+    console.debug("Tavern Twenty-One | Failed to show floating gold text:", error);
+  }
+}
+
 export function getNpcWallet(userId) {
   const state = getState();
   return state.npcWallets?.[userId] ?? 0;
 }
 
-/**
- * V4: Set NPC wallet balance in module state
- */
 export async function setNpcWallet(userId, amount) {
   const state = getState();
   const npcWallets = { ...state.npcWallets, [userId]: amount };
   await updateState({ npcWallets });
 }
 
-/**
- * V4: Update NPC wallet by delta (positive for add, negative for deduct)
- */
 export async function updateNpcWallet(userId, delta) {
   const current = getNpcWallet(userId);
   const newAmount = Math.max(0, current + delta);
@@ -38,11 +35,9 @@ export async function updateNpcWallet(userId, delta) {
   return newAmount;
 }
 
-/**
- * V4: Get gold balance for a player (uses NPC wallet for NPCs, actor sheet for PCs)
- */
 export function getPlayerGold(userId) {
-  if (isNpcPlayer(userId)) {
+  const state = getState();
+  if (isNpcPlayer(userId, state)) {
     return getNpcWallet(userId);
   }
   const actor = getActorForUser(userId);
@@ -52,14 +47,10 @@ export function getPlayerGold(userId) {
 export function canAffordAnte(state, ante) {
   for (const userId of state.turnOrder) {
     const user = game.users.get(userId);
-
-    // V3.5: Only house doesn't pay - GM-as-NPC pays like regular players
     const playerData = state.players?.[userId];
     const isHouse = user?.isGM && !playerData?.playingAsNpc;
     if (isHouse) continue;
-
-    // V4: NPCs use module wallet, PCs use actor sheet
-    if (isNpcPlayer(userId)) {
+    if (isNpcPlayer(userId, state)) {
       const wallet = getNpcWallet(userId);
       if (wallet < ante) {
         const actor = getActorForUser(userId);
@@ -82,29 +73,25 @@ export function canAffordAnte(state, ante) {
 export async function deductAnteFromActors(state, ante) {
   for (const userId of state.turnOrder) {
     const user = game.users.get(userId);
-
-    // V3.5: Only house doesn't pay - GM-as-NPC pays like regular players
     const playerData = state.players?.[userId];
     const isHouse = user?.isGM && !playerData?.playingAsNpc;
     if (isHouse) continue;
-
-    // V4: NPCs use module wallet
-    if (isNpcPlayer(userId)) {
+    if (isNpcPlayer(userId, state)) {
       await updateNpcWallet(userId, -ante);
-      try { await tavernSocket.executeForEveryone("showFloatingText", userId, -ante); } catch (e) { }
+      await showFloatingGold(userId, -ante);
     } else {
       const actor = getActorForUser(userId);
       if (!actor) continue;
       const current = actor.system?.currency?.gp ?? 0;
       await actor.update({ "system.currency.gp": current - ante });
-      try { await tavernSocket.executeForEveryone("showFloatingText", userId, -ante); } catch (e) { }
+      await showFloatingGold(userId, -ante);
     }
   }
 }
 
 /**
  * Pay out winnings to winners.
- * @param {Object} payouts - Map of { oderId: amount } for variable payouts
+ * @param {Object} payouts - Map of { userId: amount } for variable payouts
  *                          OR array of winner userIds with flat share amount as second param (legacy support)
  * @param {number} [flatShare] - If payouts is an array, this is the flat amount each winner receives
  */
@@ -112,31 +99,30 @@ export async function payOutWinners(payouts, flatShare) {
   // Legacy support: if payouts is an array, convert to map with flat share
   if (Array.isArray(payouts)) {
     const payoutMap = {};
-    for (const oderId of payouts) {
-      payoutMap[oderId] = flatShare;
+    for (const userId of payouts) {
+      payoutMap[userId] = flatShare;
     }
     payouts = payoutMap;
   }
 
   const state = getState();
 
-  for (const [oderId, amount] of Object.entries(payouts)) {
-    const user = game.users.get(oderId);
+  for (const [userId, amount] of Object.entries(payouts)) {
+    const payoutAmount = Number(amount);
+    if (!Number.isFinite(payoutAmount) || payoutAmount <= 0) continue;
 
-    // V3.5: House doesn't receive gold payouts, but GM-as-NPC does
-    const isHouse = user?.isGM && !state?.players?.[oderId]?.playingAsNpc;
+    const user = game.users.get(userId);
+    const isHouse = user?.isGM && !state?.players?.[userId]?.playingAsNpc;
     if (isHouse) continue;
-
-    // V4: NPCs use module wallet
-    if (isNpcPlayer(oderId)) {
-      await updateNpcWallet(oderId, amount);
-      try { await tavernSocket.executeForEveryone("showFloatingText", oderId, amount); } catch (e) { }
+    if (isNpcPlayer(userId, state)) {
+      await updateNpcWallet(userId, payoutAmount);
+      await showFloatingGold(userId, payoutAmount);
     } else {
-      const actor = getActorForUser(oderId);
+      const actor = getActorForUser(userId);
       if (!actor) continue;
       const current = actor.system?.currency?.gp ?? 0;
-      await actor.update({ "system.currency.gp": current + amount });
-      try { await tavernSocket.executeForEveryone("showFloatingText", oderId, amount); } catch (e) { }
+      await actor.update({ "system.currency.gp": current + payoutAmount });
+      await showFloatingGold(userId, payoutAmount);
     }
   }
 }
@@ -146,25 +132,18 @@ export async function payOutWinners(payouts, flatShare) {
  * Returns true if successful, false if they can't afford it.
  */
 export async function deductFromActor(userId, amount, stateOverride = null) {
-  if (amount <= 0) return true;
+  const amountValue = Number(amount);
+  if (!Number.isFinite(amountValue) || amountValue <= 0) return true;
   const state = stateOverride ?? getState();
   const user = game.users.get(userId);
-
-  // V3.5: Only house doesn't pay - GM-as-NPC pays like regular players
   const playerData = state?.players?.[userId];
   const isHouse = user?.isGM && !playerData?.playingAsNpc;
   if (isHouse) return true;
-
-  // V4: NPCs use module wallet
-  if (isNpcPlayer(userId)) {
+  if (isNpcPlayer(userId, state)) {
     const wallet = getNpcWallet(userId);
-    if (wallet < amount) return false;
-    await updateNpcWallet(userId, -amount);
-
-    // V4.2: Floating Text
-    try {
-      await tavernSocket.executeForEveryone("showFloatingText", userId, -amount);
-    } catch (e) { }
+    if (wallet < amountValue) return false;
+    await updateNpcWallet(userId, -amountValue);
+    await showFloatingGold(userId, -amountValue);
 
     return true;
   }
@@ -173,26 +152,19 @@ export async function deductFromActor(userId, amount, stateOverride = null) {
   if (!actor) return false;
 
   const current = actor.system?.currency?.gp ?? 0;
-  if (current < amount) return false;
+  if (current < amountValue) return false;
 
-  await actor.update({ "system.currency.gp": current - amount });
-
-  // V4.2: Floating Text
-  try {
-    await tavernSocket.executeForEveryone("showFloatingText", userId, -amount);
-  } catch (e) { }
+  await actor.update({ "system.currency.gp": current - amountValue });
+  await showFloatingGold(userId, -amountValue);
 
   return true;
 }
 
-/**
- * V4: Generate NPC cash-out summary for GM
- */
 export function getNpcCashOutSummary(userId) {
   const state = getState();
   const playerData = state?.players?.[userId];
 
-  if (!isNpcPlayer(userId)) return null;
+  if (!isNpcPlayer(userId, state)) return null;
 
   const currentWallet = getNpcWallet(userId);
   const initialWallet = playerData?.initialWallet ?? 0;
@@ -206,3 +178,6 @@ export function getNpcCashOutSummary(userId) {
     netChangeDisplay: netChange >= 0 ? `+${netChange}` : `${netChange}`,
   };
 }
+
+
+
