@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.27.4] - 2026-02-11
+### Reel Animation Visibility Hotfix
+- **Fix**: Replaced wall-clock reel cutoff in `scripts/ui/dice-reveal.js` with a guaranteed multi-step spin sequence.
+- **Fix**: Reel now always renders visible number-cycling frames before lock-in, even when the main thread is briefly blocked by render/state churn.
+- **Fix**: Blind-roll glyph reel now uses deterministic stepped updates instead of an interval that could be starved under heavy rerenders.
+- **Impact**: Standard mode now reliably shows the slot-machine style reel phase (not just slam/ring/flash/particles).
+
 ## [5.27.3] - 2026-02-11
 ### Standard Roll Reveal Reliability Hotfix
 - **Fix**: Restored Standard-mode betting roll animation reliability by hardening end-of-turn reveal logic in `scripts/twenty-one/phases/turn.js`.

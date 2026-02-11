@@ -140,6 +140,29 @@ function _contextClass(ctx) {
   return "reveal-normal";
 }
 
+async function _spinNumberReel(numberEl, maxVal, finalValue, durationMs) {
+  const faces = Number(maxVal);
+  const totalDuration = Math.max(260, Number(durationMs) || 0);
+  const steps = Math.max(8, Math.round(totalDuration / 65));
+  const weights = [];
+  for (let i = 0; i < steps; i++) {
+    const progress = steps <= 1 ? 1 : (i / (steps - 1));
+    // Early fast ticks, later slow ticks.
+    weights.push(1 + (progress * progress * 3));
+  }
+  const weightSum = weights.reduce((sum, w) => sum + w, 0);
+
+  for (let i = 0; i < steps; i++) {
+    numberEl.textContent = Number.isFinite(faces) && faces > 1
+      ? String(Math.floor(Math.random() * faces) + 1)
+      : String(finalValue);
+    const frameDelay = Math.max(18, Math.round((weights[i] / weightSum) * totalDuration));
+    await _sleep(frameDelay);
+  }
+
+  numberEl.textContent = String(finalValue);
+}
+
 /* ============================================
    PERFORMANCE MODE (quick flash)
    ============================================ */
@@ -255,33 +278,16 @@ async function _performReveal(userId, dieType, result, context, compressed) {
   if (isBlind) {
     // Blind roll: show scrambled symbols then lock on "?"
     const glyphs = ["✦", "◆", "?", "◇", "★", "✧", "?", "◈"];
-    let gIdx = 0;
-    const blindInterval = setInterval(() => {
-      numberEl.textContent = glyphs[gIdx % glyphs.length];
-      gIdx++;
-    }, 60);
-    await _sleep(T.reel);
-    clearInterval(blindInterval);
+    const totalDuration = Math.max(260, Number(T.reel) || 0);
+    const steps = Math.max(8, Math.round(totalDuration / 55));
+    for (let i = 0; i < steps; i++) {
+      numberEl.textContent = glyphs[i % glyphs.length];
+      await _sleep(Math.max(16, Math.round(totalDuration / steps)));
+    }
     numberEl.textContent = "?";
   } else {
-    // Normal reel: decelerating cycle through die values
-    const reelStart = performance.now();
-    await new Promise((resolve) => {
-      function tick() {
-        const elapsed = performance.now() - reelStart;
-        if (elapsed >= T.reel) {
-          numberEl.textContent = displayValue;
-          resolve();
-          return;
-        }
-        // Quadratic deceleration: 30ms → ~150ms
-        const progress = elapsed / T.reel;
-        const interval = 30 + progress * progress * 120;
-        numberEl.textContent = Math.floor(Math.random() * maxVal) + 1;
-        setTimeout(tick, interval);
-      }
-      tick();
-    });
+    // Guaranteed multi-step reel cycle; robust against render-thread stalls.
+    await _spinNumberReel(numberEl, maxVal, displayValue, T.reel);
   }
 
   // ======================

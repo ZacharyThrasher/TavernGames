@@ -1,6 +1,5 @@
-### Standard Roll Reveal Reliability Hotfix
-- Restored Standard-mode betting roll animation reliability after the cheat window.
-- Hardened end-of-turn reveal selection in `scripts/twenty-one/phases/turn.js` to reveal the most recent unrevealed non-blind roll while `pendingAction` is `cheat_decision`.
-- Added table-area wait/retry logic in `scripts/ui/dice-reveal.js` so reveal FX survive transient Application rerenders.
-- Added safer app root fallback lookup in `scripts/ui/dice-reveal.js` for render timing edge cases.
-- Result: Goblin mode remains stable, and Standard mode now consistently plays the roll reveal animation.
+### Reel Animation Visibility Hotfix
+- Replaced wall-clock reel cutoff with a guaranteed multi-step spin sequence in `scripts/ui/dice-reveal.js`.
+- Reel now always shows visible slot-style number cycling before lock-in, even under brief render-thread stalls.
+- Updated blind-roll reel path to deterministic stepped glyph cycling for the same reliability.
+- Result: in Standard mode you should now see the actual slot-machine reel phase, not only slam/ring/flash.
