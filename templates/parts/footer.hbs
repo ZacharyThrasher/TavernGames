@@ -1,19 +1,21 @@
-<div aria-live="polite" aria-atomic="true" style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;">
-  {{status}}
-  {{#if currentPlayer}}{{currentPlayer.name}}{{/if}}
+<div class="tavern-footer-part">
+  <div aria-live="polite" aria-atomic="true" style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;">
+    {{status}}
+    {{#if currentPlayer}}{{currentPlayer.name}}{{/if}}
+  </div>
+  {{#if hasGM}}
+  <span class="gm-status online"><i class="fa-solid fa-circle"></i> GM Online</span>
+  {{else}}
+  <span class="gm-status offline"><i class="fa-solid fa-circle"></i> GM Required</span>
+  {{/if}}
+  {{#if atmosphereLine}}
+  <span class="atmosphere-line" title="{{status}}">{{atmosphereLine}}</span>
+  {{else}}
+  <span class="game-status">{{status}}</span>
+  {{/if}}
+  {{#if isGM}}
+  <button type="button" class="reset-btn" data-action="reset" title="Reset Table">
+    <i class="fa-solid fa-rotate-left"></i>
+  </button>
+  {{/if}}
 </div>
-{{#if hasGM}}
-<span class="gm-status online"><i class="fa-solid fa-circle"></i> GM Online</span>
-{{else}}
-<span class="gm-status offline"><i class="fa-solid fa-circle"></i> GM Required</span>
-{{/if}}
-{{#if atmosphereLine}}
-<span class="atmosphere-line" title="{{status}}">{{atmosphereLine}}</span>
-{{else}}
-<span class="game-status">{{status}}</span>
-{{/if}}
-{{#if isGM}}
-<button type="button" class="reset-btn" data-action="reset" title="Reset Table">
-  <i class="fa-solid fa-rotate-left"></i>
-</button>
-{{/if}}

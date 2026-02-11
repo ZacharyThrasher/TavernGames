@@ -1,5 +1,16 @@
 # Changelog
 
+## [5.27.1] - 2026-02-11
+### Foundry PARTS Rendering Hotfix
+- **Fix**: Resolved Foundry V13 ApplicationV2 PARTS render crash:
+  - `Template part "header" must render a single HTML element.`
+- **Fix**: Updated PART templates to comply with single-root requirement:
+  - `templates/parts/header.hbs` now renders one root wrapper.
+  - `templates/parts/footer.hbs` now renders one root wrapper.
+- **Style**: Added wrapper layout rules to preserve prior header/footer alignment:
+  - `styles/tavern.css` (`.tavern-header-part`, `.tavern-footer-part`).
+- **Impact**: `tavern-dice-master` renders reliably again with PARTS-based updates enabled.
+
 ## [5.27.0] - 2026-02-11
 ### Debt Reduction Closure + Architecture Stabilization
 - **Architecture**: Completed ApplicationV2 dialog migration with new `GMJoinDialog`, `GoblinHoldDialog`, `PrivateFeedbackDialog`, and shared `ConfirmDialog`; removed remaining legacy `Dialog.confirm` usage from client actions.

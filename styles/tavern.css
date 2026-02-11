@@ -271,6 +271,13 @@
   z-index: 2;
 }
 
+.tavern-header-part {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
 .tavern-title {
   display: flex;
   align-items: center;
@@ -1987,6 +1994,13 @@
   background: rgba(0, 0, 0, 0.3);
   border-top: 1px solid var(--tavern-wood-highlight);
   font-size: 11px;
+}
+
+.tavern-footer-part {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
 }
 
 .gm-status {

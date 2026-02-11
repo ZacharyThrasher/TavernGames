@@ -1,39 +1,42 @@
-<div class="tavern-title">
-  <div class="tavern-logo">
-    <i class="{{flavorIcon}}"></i>
+<div class="tavern-header-part">
+  <div class="tavern-title">
+    <div class="tavern-logo">
+      <i class="{{flavorIcon}}"></i>
+    </div>
+    <div class="tavern-title-text">
+      <h1>Twenty-One
+        <button type="button" class="help-icon-btn" data-action="help" title="Rules & Help" aria-label="Rules and help">
+          <i class="fa-solid fa-circle-question help-icon"></i>
+        </button>
+        <button type="button" class="help-icon-btn" data-action="toggleLogs" title="Open Private Log" aria-label="Open private log">
+          <i class="fa-solid fa-scroll help-icon"></i>
+          {{#if hasUnreadLogs}}
+          <span class="notification-badge"></span>
+          {{/if}}
+        </button>
+      </h1>
+      <span class="tavern-subtitle">{{flavorSubtitle}}</span>
+    </div>
   </div>
-  <div class="tavern-title-text">
-    <h1>Twenty-One
-      <button type="button" class="help-icon-btn" data-action="help" title="Rules & Help" aria-label="Rules and help">
-        <i class="fa-solid fa-circle-question help-icon"></i>
-      </button>
-      <button type="button" class="help-icon-btn" data-action="toggleLogs" title="Open Private Log" aria-label="Open private log">
-        <i class="fa-solid fa-scroll help-icon"></i>
-        {{#if hasUnreadLogs}}
-        <span class="notification-badge"></span>
-        {{/if}}
-      </button>
-    </h1>
-    <span class="tavern-subtitle">{{flavorSubtitle}}</span>
+
+  <div class="tavern-info">
+    {{#if isPlayingAsNpc}}
+    <div class="npc-wallet-display" title="NPC Table Wallet">
+      <i class="fa-solid fa-sack-dollar" style="color: #ffd700;"></i>
+      <span class="wallet-amount">{{npcWallet}} gp</span>
+    </div>
+    {{/if}}
+    {{#if isPlaying}}
+    <div class="pot-display">
+      <i class="fa-solid fa-coins"></i>
+      <span class="pot-amount {{#if pot}}pot-pulse{{/if}}">{{pot}} gp</span>
+      <span class="pot-label">in the pot</span>
+    </div>
+    {{else}}
+    <div class="ante-display">
+      <span class="ante-label">Ante:</span>
+      <span class="ante-amount">{{ante}} gp</span>
+    </div>
+    {{/if}}
   </div>
-</div>
-<div class="tavern-info">
-  {{#if isPlayingAsNpc}}
-  <div class="npc-wallet-display" title="NPC Table Wallet">
-    <i class="fa-solid fa-sack-dollar" style="color: #ffd700;"></i>
-    <span class="wallet-amount">{{npcWallet}} gp</span>
-  </div>
-  {{/if}}
-  {{#if isPlaying}}
-  <div class="pot-display">
-    <i class="fa-solid fa-coins"></i>
-    <span class="pot-amount {{#if pot}}pot-pulse{{/if}}">{{pot}} gp</span>
-    <span class="pot-label">in the pot</span>
-  </div>
-  {{else}}
-  <div class="ante-display">
-    <span class="ante-label">Ante:</span>
-    <span class="ante-amount">{{ante}} gp</span>
-  </div>
-  {{/if}}
 </div>
