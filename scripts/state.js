@@ -117,6 +117,7 @@ export async function preloadTemplates() {
     `modules/${MODULE_ID}/templates/parts/history.hbs`,
     `modules/${MODULE_ID}/templates/cinematic-overlay.hbs`,
     `modules/${MODULE_ID}/templates/dialogs/gm-join-dialog.hbs`,
+    `modules/${MODULE_ID}/templates/dialogs/ai-crew-window.hbs`,
     `modules/${MODULE_ID}/templates/dialogs/goblin-hold-dialog.hbs`,
     `modules/${MODULE_ID}/templates/dialogs/confirm-dialog.hbs`,
     `modules/${MODULE_ID}/templates/dialogs/payment-dialog.hbs`,

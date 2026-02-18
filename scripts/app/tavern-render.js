@@ -210,6 +210,17 @@ export function renderTavernApp(app, context) {
     await tavernSocket.executeAsGM("setAutoplayConfig", { playerId, ...patch });
   };
 
+  const openAiCrewButton = app.element.querySelector(".btn-open-ai-crew");
+  if (openAiCrewButton) {
+    openAiCrewButton.addEventListener("click", () => {
+      if (!game.user.isGM) {
+        ui.notifications.warn(t("TAVERN.Notifications.GMOnlyAutoplay", "Only the GM can manage autoplay."));
+        return;
+      }
+      game.tavernDiceMaster?.toggleAiCrew?.();
+    });
+  }
+
   const autoplayToggles = app.element.querySelectorAll(".autoplay-toggle");
   autoplayToggles.forEach((toggle) => {
     toggle.addEventListener("change", async (event) => {

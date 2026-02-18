@@ -1,5 +1,15 @@
 # Changelog
 
+## [5.28.1] - 2026-02-18
+### AI Crew Manager UX + Duel Autoplay Fix
+- **Fix**: Autoplay now handles `DUEL` status and automatically submits `duelRoll` for autoplay-enabled participants (with AI-seat preference when multiple autoplay duelists are pending).
+- **Feature**: Added a dedicated GM-only **AI Crew Manager** window to replace cramped sidebar controls:
+  - Searchable NPC selection (live name filtering)
+  - Full add/summon/remove seat management
+  - Per-seat autoplay strategy/difficulty controls in a spacious layout
+- **UI**: Sidebar AI section now acts as a compact launcher to open the manager window.
+- **Infrastructure**: Added new dialog/template wiring for the AI manager and integrated refresh behavior with the main Tavern app render loop.
+
 ## [5.28.0] - 2026-02-18
 ### AI Tavern Crew Expansion + Simulation Sandbox
 - **Feature**: Added a full GM-only AI Tavern Crew control panel with:

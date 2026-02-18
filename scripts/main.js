@@ -1,5 +1,6 @@
 import { TavernApp } from "./app/tavern-app.js";
 import { LogsWindow } from "./app/dialogs/logs-window.js";
+import { AICrewWindow } from "./app/dialogs/ai-crew-window.js";
 import { CinematicOverlay } from "./ui/cinematic-overlay.js";
 import { preloadTemplates, registerSettings, initializeState } from "./state.js";
 import { MODULE_ID } from "./twenty-one/constants.js";
@@ -95,6 +96,7 @@ Hooks.once("ready", async () => {
 
   const app = new TavernApp();
   const logs = new LogsWindow();
+  const aiCrew = new AICrewWindow();
   let renderScheduled = false;
   let refreshDeferrals = 0;
 
@@ -114,17 +116,23 @@ Hooks.once("ready", async () => {
         app.render();
       }
       if (logs.rendered) logs.render();
+      if (aiCrew.rendered) aiCrew.render();
     }, 0);
   };
 
   game.tavernDiceMaster = {
     app,
     logsWindow: logs,
+    aiCrewWindow: aiCrew,
     open: () => app.render(true),
     close: () => app.close(),
     toggleLogs: () => { // Helper for button
       if (logs.rendered) logs.close();
       else logs.render(true);
+    },
+    toggleAiCrew: () => {
+      if (aiCrew.rendered) aiCrew.close();
+      else aiCrew.render(true);
     },
     runDiagnostics
   };

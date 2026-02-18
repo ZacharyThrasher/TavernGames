@@ -104,113 +104,13 @@
   {{#if isGM}}
   <div class="control-section house-rules autoplay-section">
     <h3><i class="fa-solid fa-robot"></i> AI Tavern Crew (GM Only)</h3>
-
-    <div class="autoplay-quick-add">
-      <div class="autoplay-add-grid">
-        <label class="autoplay-field">
-          <span>NPC</span>
-          <select class="ai-actor-select" {{#unless hasNpcActorOptions}}disabled{{/unless}}>
-            <option value="">Random NPC</option>
-            {{#each npcActorOptions}}
-            <option value="{{this.id}}">{{this.name}}</option>
-            {{/each}}
-          </select>
-        </label>
-
-        <label class="autoplay-field">
-          <span>Name</span>
-          <input type="text" class="ai-name-input" maxlength="40" placeholder="Optional override name">
-        </label>
-
-        <label class="autoplay-field">
-          <span>Playstyle</span>
-          <select class="autoplay-default-strategy">
-            <option value="balanced">Balanced</option>
-            <option value="aggressive">Aggressive</option>
-            <option value="conservative">Conservative</option>
-            <option value="duelist">Duelist</option>
-            <option value="tactician">Tactician</option>
-            <option value="bully">Bully</option>
-            <option value="chaotic">Chaotic</option>
-          </select>
-        </label>
-
-        <label class="autoplay-field">
-          <span>Difficulty</span>
-          <select class="autoplay-default-difficulty">
-            <option value="easy">Easy</option>
-            <option value="normal" selected>Normal</option>
-            <option value="hard">Hard</option>
-            <option value="legendary">Legendary</option>
-          </select>
-        </label>
-
-        <label class="autoplay-field">
-          <span>Wallet</span>
-          <input type="number" class="ai-wallet-input" min="{{ante}}" step="{{ante}}" value="{{defaultAiWallet}}">
-        </label>
-
-        <button type="button" class="btn btn-secondary btn-small btn-add-ai-seat" {{#unless canManageAiSeats}}disabled{{/unless}}>
-          <i class="fa-solid fa-user-plus"></i> Add AI NPC
-        </button>
-      </div>
-
-      <div class="autoplay-party-row">
-        <label class="autoplay-field inline">
-          <span>Party Size</span>
-          <input type="number" class="ai-party-count" min="1" max="8" value="3">
-        </label>
-        <label class="autoplay-field inline">
-          <span>Party Style</span>
-          <select class="ai-party-style">
-            <option value="mixed" selected>Mixed</option>
-            <option value="fixed">Use Playstyle Above</option>
-          </select>
-        </label>
-        <button type="button" class="btn btn-secondary btn-small btn-summon-ai-party" {{#unless canManageAiSeats}}disabled{{/unless}}>
-          <i class="fa-solid fa-dragon"></i> Summon AI Party
-        </button>
-      </div>
-    </div>
-
-    {{#if hasPlayers}}
-    <div class="autoplay-list">
-      {{#each autoplayRows}}
-      <div class="autoplay-row {{#if this.isAi}}is-ai{{/if}}">
-        <span class="autoplay-name">{{this.name}}</span>
-        <label class="autoplay-toggle-label">
-          <input type="checkbox" class="autoplay-toggle" data-player-id="{{this.id}}" {{#if this.enabled}}checked{{/if}}>
-          <span>Auto</span>
-        </label>
-        <select class="autoplay-strategy" data-player-id="{{this.id}}" {{#unless this.enabled}}disabled{{/unless}}>
-          <option value="balanced" {{#if (eq this.strategy "balanced")}}selected{{/if}}>Balanced</option>
-          <option value="aggressive" {{#if (eq this.strategy "aggressive")}}selected{{/if}}>Aggressive</option>
-          <option value="conservative" {{#if (eq this.strategy "conservative")}}selected{{/if}}>Conservative</option>
-          <option value="duelist" {{#if (eq this.strategy "duelist")}}selected{{/if}}>Duelist</option>
-          <option value="tactician" {{#if (eq this.strategy "tactician")}}selected{{/if}}>Tactician</option>
-          <option value="bully" {{#if (eq this.strategy "bully")}}selected{{/if}}>Bully</option>
-          <option value="chaotic" {{#if (eq this.strategy "chaotic")}}selected{{/if}}>Chaotic</option>
-        </select>
-        <select class="autoplay-difficulty" data-player-id="{{this.id}}" {{#unless this.enabled}}disabled{{/unless}}>
-          <option value="easy" {{#if (eq this.difficulty "easy")}}selected{{/if}}>Easy</option>
-          <option value="normal" {{#if (eq this.difficulty "normal")}}selected{{/if}}>Normal</option>
-          <option value="hard" {{#if (eq this.difficulty "hard")}}selected{{/if}}>Hard</option>
-          <option value="legendary" {{#if (eq this.difficulty "legendary")}}selected{{/if}}>Legendary</option>
-        </select>
-        {{#if this.isAi}}
-        <button type="button" class="btn btn-secondary btn-small btn-remove-ai-seat" data-player-id="{{this.id}}" {{#unless this.canRemove}}disabled{{/unless}}>
-          <i class="fa-solid fa-user-xmark"></i>
-        </button>
-        {{else}}
-        <span class="autoplay-seat-tag">Player</span>
-        {{/if}}
-      </div>
-      {{/each}}
-    </div>
+    <button type="button" class="btn btn-secondary btn-small btn-open-ai-crew">
+      <i class="fa-solid fa-up-right-from-square"></i> Open AI Crew Manager
+    </button>
     <p class="hint">{{aiSeatCount}} AI seat(s). {{autoplayEnabledCount}} seat(s) on autoplay.</p>
-    {{else}}
-    <p class="hint">Players must join before autoplay can be assigned.</p>
-    {{/if}}
+    {{#unless canManageAiSeats}}
+    <p class="hint">Add/remove AI seats is available in Lobby or Payout.</p>
+    {{/unless}}
   </div>
   {{/if}}
 

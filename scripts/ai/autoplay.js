@@ -106,9 +106,21 @@ function chanceWithChaosBias(baseChance, difficulty) {
 function getActionDelayMsForState(state) {
   const tableData = getTableData(state);
   const currentId = tableData.currentPlayer;
-  if (!currentId) return DEFAULT_ACTION_DELAY_MS;
-  const { difficulty } = getAutoplayConfig(state, currentId);
-  return getDifficultyProfile(difficulty).delayMs;
+  if (currentId) {
+    const { difficulty } = getAutoplayConfig(state, currentId);
+    return getDifficultyProfile(difficulty).delayMs;
+  }
+
+  if (state?.status === "DUEL") {
+    const pendingRolls = tableData.duel?.pendingRolls ?? [];
+    const duelUserId = pendingRolls.find((id) => isAutoplayEnabled(state, id));
+    if (duelUserId) {
+      const { difficulty } = getAutoplayConfig(state, duelUserId);
+      return getDifficultyProfile(difficulty).delayMs;
+    }
+  }
+
+  return DEFAULT_ACTION_DELAY_MS;
 }
 
 function getAutoplayConfig(state, userId) {
@@ -764,6 +776,21 @@ async function runSingleStep() {
 
   const state = getState();
   const tableData = getTableData(state);
+
+  if (state.status === "DUEL") {
+    const duel = tableData.duel;
+    if (!duel?.active) return false;
+    const pendingRolls = Array.isArray(duel.pendingRolls) ? duel.pendingRolls : [];
+    if (!pendingRolls.length) return false;
+
+    const autoplayPending = pendingRolls.filter((id) => isAutoplayEnabled(state, id));
+    if (!autoplayPending.length) return false;
+
+    const nextDuelRoller = autoplayPending.find((id) => state.players?.[id]?.isAi) ?? autoplayPending[0];
+    if (!nextDuelRoller) return false;
+
+    return runAction("duelRoll", {}, nextDuelRoller);
+  }
 
   if (state.status === "INSPECTION") {
     const nonHousePlayers = state.turnOrder.filter((id) => !isActingAsHouse(id, state));
