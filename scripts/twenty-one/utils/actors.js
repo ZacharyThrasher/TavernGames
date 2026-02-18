@@ -21,13 +21,14 @@ function escapeHtml(value) {
  * Get actor for a user (for skill checks)
  */
 export function getActorForUser(userId) {
-    const user = game.users.get(userId);
-    if (!user) return null;
     const state = getState();
     const playerData = state?.players?.[userId];
     if (playerData?.playingAsNpc && playerData?.npcActorId) {
         return game.actors.get(playerData.npcActorId) ?? null;
     }
+
+    const user = game.users.get(userId);
+    if (!user) return null;
 
     // Regular behavior - use assigned character
     const actorId = user.character?.id;
@@ -37,7 +38,8 @@ export function getActorForUser(userId) {
 
 export function getActorName(userId) {
     const actor = getActorForUser(userId);
-    return actor?.name ?? game.users.get(userId)?.name ?? "Unknown";
+    const state = getState();
+    return actor?.name ?? state?.players?.[userId]?.name ?? game.users.get(userId)?.name ?? "Unknown";
 }
 
 export function getSafeActorName(userId) {

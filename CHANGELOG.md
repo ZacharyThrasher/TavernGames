@@ -1,5 +1,25 @@
 # Changelog
 
+## [5.28.0] - 2026-02-18
+### AI Tavern Crew Expansion + Simulation Sandbox
+- **Feature**: Added a full GM-only AI Tavern Crew control panel with:
+  - Add single AI NPC seats (actor pick, name override, wallet, playstyle, difficulty)
+  - Summon multi-seat AI parties in one click (including mixed-style parties)
+  - Per-seat autoplay toggle, playstyle, difficulty, and AI seat removal
+- **Feature**: Added server-side AI seat orchestration and validation:
+  - New socket handlers: `setAutoplayConfig`, `addAiSeat`, `summonAiParty`, `removeAiSeat`
+  - Lobby/Payout-only AI seat management guardrails
+  - AI seat cleanup now removes autoplay + wallet state safely
+- **Feature**: Expanded autoplay behavior depth:
+  - New playstyles: `duelist`, `tactician`, `bully`
+  - Difficulty tiers: `easy`, `normal`, `hard`, `legendary`
+  - Difficulty now affects pacing, risk thresholds, skill usage frequency, boot usage, cut choices, and cheat behavior
+- **Feature**: Added AI-seat compatibility path for pseudo-user IDs:
+  - Actor/name resolution now supports non-Foundry AI seat IDs
+  - Dice display/public roll attribution now gracefully falls back for AI seats
+- **UI**: Added AI metadata badges on seats (`AI <style> / <difficulty>`) and improved autoplay roster context (AI counts + enabled counts).
+- **Tooling**: Added a headless simulation sandbox under `simulations/` for strategy iteration, stress testing, and fun-score analysis outside Foundry.
+
 ## [5.27.5] - 2026-02-11
 ### Standard Reveal Rerender Guard Hotfix
 - **Fix**: Moved Standard-mode betting reveal execution ahead of log/history writes in `scripts/twenty-one/phases/turn.js` so reveal animations are not interrupted by state-write rerenders.

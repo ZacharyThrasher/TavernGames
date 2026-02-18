@@ -33,12 +33,21 @@
             <i class="fa-solid fa-eye"></i>
           </div>
           {{/if}}
+
+          {{#if this.isAutoplayEnabled}}
+          <div class="status-badge autoplay" title="Autoplay: {{this.autoplayStrategy}} ({{this.autoplayDifficulty}})">
+            <i class="fa-solid fa-robot"></i>
+          </div>
+          {{/if}}
         </div>
       </div>
 
       {{!-- Player info --}}
       <div class="player-info">
         <span class="player-name" title="{{this.userName}}">{{this.name}}</span>
+        {{#if this.isAi}}
+        <span class="player-ai-meta">AI {{this.autoplayStrategy}} / {{this.autoplayDifficulty}}</span>
+        {{/if}}
         {{#if this.isSideBetWinner}}
         <span class="sidebet-laurel" title="Side Bet Winner"><i class="fa-solid fa-leaf"></i></span>
         {{/if}}

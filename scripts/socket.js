@@ -1,5 +1,16 @@
 import { MODULE_ID } from "./twenty-one/constants.js";
-import { handleJoinTable, handleLeaveTable, handleStartRound, handlePlayerAction, handleResetTable, handleMarkLogsAsSeen } from "./tavern-actions.js";
+import {
+  handleJoinTable,
+  handleLeaveTable,
+  handleStartRound,
+  handlePlayerAction,
+  handleResetTable,
+  handleMarkLogsAsSeen,
+  handleSetAutoplayConfig,
+  handleAddAiSeat,
+  handleSummonAiParty,
+  handleRemoveAiSeat
+} from "./tavern-actions.js";
 import { showRollToUser, showPublicRollFromData } from "./dice.js";
 import { showVictoryFanfare, showBustFanfare, showCoinFlip, playBumpEffect, showFloatingText, showSkillCutIn, showSkillResult, showPrivateFeedback, showImpactRing, showFullSetBurst, showCheatResult, showSkillBanner, showDrinkResult, showCutOffBanner, showScoreSurge, showPotPulse, showJackpotInlay, showVignetteFlash } from "./ui/fx.js";
 import { queueDiceReveal } from "./ui/dice-reveal.js";
@@ -19,6 +30,10 @@ export function setupSockets() {
   tavernSocket.register("playerAction", handlePlayerAction);
   tavernSocket.register("resetTable", handleResetTable);
   tavernSocket.register("markLogsAsSeen", handleMarkLogsAsSeen);
+  tavernSocket.register("setAutoplayConfig", handleSetAutoplayConfig);
+  tavernSocket.register("addAiSeat", handleAddAiSeat);
+  tavernSocket.register("summonAiParty", handleSummonAiParty);
+  tavernSocket.register("removeAiSeat", handleRemoveAiSeat);
 
   // Register client-side function for showing dice rolls
   tavernSocket.register("showRoll", showRollToUser);

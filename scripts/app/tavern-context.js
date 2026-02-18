@@ -149,8 +149,24 @@ export async function prepareTavernContext(app, appClass) {
     .filter(([id]) => !tableData.busts?.[id] && !tableData.folded?.[id] && !tableData.caught?.[id])
     .map(([, t]) => Number(t ?? 0));
   const maxActiveTotal = activeTotals.length ? Math.max(...activeTotals) : 0;
+  const autoplayState = state.autoplay ?? {};
+  const strategySet = new Set(["balanced", "aggressive", "conservative", "chaotic", "duelist", "tactician", "bully"]);
+  const difficultySet = new Set(["easy", "normal", "hard", "legendary"]);
+  const defaultStrategy = "balanced";
+  const defaultDifficulty = "normal";
+  const canManageAiSeats = isGM && (state.status === "LOBBY" || state.status === "PAYOUT");
+  const defaultAiWallet = Math.max(ante, ante * 20);
+  const npcActorOptions = game.actors
+    .filter((actor) => actor?.type === "npc")
+    .map((actor) => ({ id: actor.id, name: actor.name, img: actor.img }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   const playerSeats = players.map((player) => {
+    const rawAutoplay = autoplayState[player.id] ?? {};
+    const isAutoplayEnabled = rawAutoplay.enabled === true;
+    const autoplayStrategy = strategySet.has(rawAutoplay.strategy) ? rawAutoplay.strategy : defaultStrategy;
+    const autoplayDifficulty = difficultySet.has(rawAutoplay.difficulty) ? rawAutoplay.difficulty : defaultDifficulty;
+    const isAi = player.isAi === true;
     const rolls = tableData.rolls?.[player.id] ?? [];
     const total = tableData.totals?.[player.id] ?? 0;
     const isHolding = tableData.holds?.[player.id] ?? false;
@@ -304,9 +320,32 @@ export async function prepareTavernContext(app, appClass) {
       isDared: tableData.dared?.[player.id] ?? false,
       isBumpLocked: tableData.pendingBumpRetaliation?.attackerId === player.id,
       isProfiled: (tableData.profiledBy?.[player.id] ?? []).length > 0,
+      isAi,
+      isAutoplayEnabled,
+      autoplayStrategy,
+      autoplayDifficulty,
       isSideBetWinner,
     };
   });
+
+  const autoplayRows = players.map((player) => {
+    const raw = autoplayState[player.id] ?? {};
+    return {
+      id: player.id,
+      name: player.name ?? player.userName ?? "Unknown",
+      enabled: raw.enabled === true,
+      strategy: strategySet.has(raw.strategy) ? raw.strategy : defaultStrategy,
+      difficulty: difficultySet.has(raw.difficulty) ? raw.difficulty : defaultDifficulty,
+      isAi: player.isAi === true,
+      canRemove: player.isAi === true && canManageAiSeats
+    };
+  });
+  autoplayRows.sort((a, b) => {
+    if (a.isAi !== b.isAi) return a.isAi ? -1 : 1;
+    return String(a.name).localeCompare(String(b.name));
+  });
+  const autoplayEnabledCount = autoplayRows.filter((row) => row.enabled).length;
+  const aiSeatCount = autoplayRows.filter((row) => row.isAi).length;
 
   const currentPlayer = players.find(p => p.id === tableData.currentPlayer);
   const myTurn = tableData.currentPlayer === userId;
@@ -326,7 +365,7 @@ export async function prepareTavernContext(app, appClass) {
   const theCutPlayer = tableData.theCutPlayer;
   const isTheCutPlayer = theCutPlayer === userId;
   const theCutPlayerName = theCutPlayer
-    ? (game.users.get(theCutPlayer)?.character?.name ?? game.users.get(theCutPlayer)?.name ?? "Unknown")
+    ? (state.players?.[theCutPlayer]?.name ?? game.users.get(theCutPlayer)?.character?.name ?? game.users.get(theCutPlayer)?.name ?? "Unknown")
     : null;
 
   const myRolls = tableData.rolls?.[userId] ?? [];
@@ -545,7 +584,7 @@ export async function prepareTavernContext(app, appClass) {
     isMyDuel: (tableData.duel?.pendingRolls ?? []).includes(userId),
     duelParticipants: (tableData.duel?.participants ?? []).map(id => ({
       id,
-      name: game.users.get(id)?.character?.name ?? game.users.get(id)?.name ?? "Unknown",
+      name: state.players?.[id]?.name ?? game.users.get(id)?.character?.name ?? game.users.get(id)?.name ?? "Unknown",
       hasRolled: !!tableData.duel?.rolls?.[id],
       roll: tableData.duel?.rolls?.[id]?.total ?? null,
     })),
@@ -562,6 +601,13 @@ export async function prepareTavernContext(app, appClass) {
     profileTargets,
     isDared: tableData.dared?.[userId] ?? false,
     startingHeat: tableData.houseRules?.startingHeat ?? 10,
+    autoplayRows,
+    autoplayEnabledCount,
+    aiSeatCount,
+    canManageAiSeats,
+    npcActorOptions,
+    hasNpcActorOptions: npcActorOptions.length > 0,
+    defaultAiWallet,
     uiLocked: appClass.uiLocked,
     tableTheme: currentTheme,
 

@@ -136,6 +136,7 @@ export function defaultState() {
     turnOrder: [],
     turnIndex: 0,
     players: {},
+    autoplay: {}, // { [userId]: { enabled: boolean, strategy: string, difficulty: "easy"|"normal"|"hard"|"legendary" } }
     tableData: emptyTableData(),
     history: [],
     npcWallets: {},
@@ -442,6 +443,7 @@ export function getState() {
   if (!Number.isInteger(next.revision)) next.revision = 0;
   if (!next.updatedAt) next.updatedAt = null;
   if (!next.updatedBy) next.updatedBy = null;
+  if (!isPlainObject(next.autoplay)) next.autoplay = {};
 
   // Normalize only when tableData shape is missing grouped sections.
   if (!hasGroupedTableSections(next.tableData)) {
@@ -501,6 +503,9 @@ export async function updateState(patchOrFn) {
       privateLogs: patch.privateLogs !== undefined
         ? { ...patch.privateLogs }
         : current.privateLogs,
+      autoplay: patch.autoplay !== undefined
+        ? { ...coercePlainObject(patch.autoplay) }
+        : coercePlainObject(current.autoplay),
     };
 
     next.tableData = normalizeTableData(next.tableData);

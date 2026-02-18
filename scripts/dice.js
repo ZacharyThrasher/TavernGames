@@ -22,6 +22,10 @@ export async function showRollToUser(rollData) {
   await game.dice3d.showForRoll(roll, game.user, false, [game.user.id]);
 }
 
+function resolveRollUser(userId) {
+  return game.users.get(userId) ?? game.users.activeGM ?? game.user ?? null;
+}
+
 /**
  * Show a roll publicly to everyone using Dice So Nice.
  * @param {Roll} roll - Foundry Roll object
@@ -29,7 +33,7 @@ export async function showRollToUser(rollData) {
  */
 export async function showPublicRoll(roll, userId) {
   if (!game.dice3d) return;
-  const user = game.users.get(userId);
+  const user = resolveRollUser(userId);
   if (!user) return;
   await game.dice3d.showForRoll(roll, user, true);
 }
@@ -43,7 +47,7 @@ export async function showPublicRoll(roll, userId) {
  */
 export async function showPublicRollFromData(die, result, userId) {
   if (!game.dice3d) return;
-  const user = game.users.get(userId);
+  const user = resolveRollUser(userId);
   if (!user) return;
 
   const roll = new Roll(`1d${die}`);

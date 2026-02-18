@@ -1,4 +1,5 @@
 import { getState, updateState } from "../state.js";
+import { tavernSocket } from "../socket.js";
 import { applyJuicePress, showClickBurst, isPerformanceMode, showTurnStinger } from "../ui/fx.js";
 import { getRandomStinger } from "../ui/theme-flavor.js";
 import { initPremiumEffects, teardownPremiumEffects, refreshPremiumEffects, GoldOdometer } from "../ui/premium-fx.js";
@@ -6,6 +7,16 @@ import { MODULE_ID } from "../twenty-one/constants.js";
 import { localizeOrFallback } from "../twenty-one/utils/i18n.js";
 
 const t = (key, fallback, data = {}) => localizeOrFallback(key, fallback, data);
+const AUTOPLAY_STRATEGIES = new Set(["balanced", "aggressive", "conservative", "duelist", "tactician", "bully", "chaotic"]);
+const normalizeAutoplayStrategy = (value) => (AUTOPLAY_STRATEGIES.has(value) ? value : "balanced");
+const AUTOPLAY_DIFFICULTIES = new Set(["easy", "normal", "hard", "legendary"]);
+const normalizeAutoplayDifficulty = (value) => (AUTOPLAY_DIFFICULTIES.has(value) ? value : "normal");
+
+function parseIntegerInRange(value, fallback, min, max) {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(min, Math.min(max, parsed));
+}
 
 export function renderTavernApp(app, context) {
   if (app._diceHoverHandlers) {
@@ -192,6 +203,183 @@ export function renderTavernApp(app, context) {
       );
     });
   }
+
+  const setAutoplayConfig = async (playerId, patch) => {
+    if (!playerId) return;
+    if (!tavernSocket) return;
+    await tavernSocket.executeAsGM("setAutoplayConfig", { playerId, ...patch });
+  };
+
+  const autoplayToggles = app.element.querySelectorAll(".autoplay-toggle");
+  autoplayToggles.forEach((toggle) => {
+    toggle.addEventListener("change", async (event) => {
+      const target = event.currentTarget;
+      const playerId = target?.dataset?.playerId;
+      if (!playerId) return;
+
+      if (!game.user.isGM) {
+        ui.notifications.warn(t("TAVERN.Notifications.GMOnlyAutoplay", "Only the GM can manage autoplay."));
+        target.checked = !target.checked;
+        return;
+      }
+
+      const row = target.closest(".autoplay-row");
+      const strategy = normalizeAutoplayStrategy(row?.querySelector(".autoplay-strategy")?.value);
+      const difficulty = normalizeAutoplayDifficulty(row?.querySelector(".autoplay-difficulty")?.value);
+      const enabled = target.checked === true;
+
+      const strategyField = row?.querySelector(".autoplay-strategy");
+      const difficultyField = row?.querySelector(".autoplay-difficulty");
+      if (strategyField) strategyField.disabled = !enabled;
+      if (difficultyField) difficultyField.disabled = !enabled;
+
+      try {
+        await setAutoplayConfig(playerId, { enabled, strategy, difficulty });
+      } catch (error) {
+        target.checked = !enabled;
+        if (strategyField) strategyField.disabled = enabled;
+        if (difficultyField) difficultyField.disabled = enabled;
+        console.warn("Tavern Twenty-One | Failed to set autoplay toggle:", error);
+      }
+    });
+  });
+
+  const autoplayStrategySelects = app.element.querySelectorAll(".autoplay-strategy");
+  autoplayStrategySelects.forEach((select) => {
+    select.addEventListener("change", async (event) => {
+      const target = event.currentTarget;
+      const playerId = target?.dataset?.playerId;
+      if (!playerId) return;
+
+      if (!game.user.isGM) {
+        ui.notifications.warn(t("TAVERN.Notifications.GMOnlyAutoplay", "Only the GM can manage autoplay."));
+        return;
+      }
+
+      const row = target.closest(".autoplay-row");
+      const toggle = row?.querySelector(".autoplay-toggle");
+      const enabled = toggle?.checked === true;
+      const strategy = normalizeAutoplayStrategy(target.value);
+      const difficulty = normalizeAutoplayDifficulty(row?.querySelector(".autoplay-difficulty")?.value);
+
+      try {
+        await setAutoplayConfig(playerId, { enabled, strategy, difficulty });
+      } catch (error) {
+        console.warn("Tavern Twenty-One | Failed to set autoplay strategy:", error);
+      }
+    });
+  });
+
+  const autoplayDifficultySelects = app.element.querySelectorAll(".autoplay-difficulty");
+  autoplayDifficultySelects.forEach((select) => {
+    select.addEventListener("change", async (event) => {
+      const target = event.currentTarget;
+      const playerId = target?.dataset?.playerId;
+      if (!playerId) return;
+
+      if (!game.user.isGM) {
+        ui.notifications.warn(t("TAVERN.Notifications.GMOnlyAutoplay", "Only the GM can manage autoplay."));
+        return;
+      }
+
+      const row = target.closest(".autoplay-row");
+      const toggle = row?.querySelector(".autoplay-toggle");
+      const enabled = toggle?.checked === true;
+      const strategy = normalizeAutoplayStrategy(row?.querySelector(".autoplay-strategy")?.value);
+      const difficulty = normalizeAutoplayDifficulty(target.value);
+
+      try {
+        await setAutoplayConfig(playerId, { enabled, strategy, difficulty });
+      } catch (error) {
+        console.warn("Tavern Twenty-One | Failed to set autoplay difficulty:", error);
+      }
+    });
+  });
+
+  const addAiSeatButton = app.element.querySelector(".btn-add-ai-seat");
+  if (addAiSeatButton) {
+    addAiSeatButton.addEventListener("click", async () => {
+      if (!game.user.isGM) {
+        ui.notifications.warn(t("TAVERN.Notifications.GMOnlyAutoplay", "Only the GM can manage autoplay."));
+        return;
+      }
+
+      const actorId = app.element.querySelector(".ai-actor-select")?.value?.trim() || null;
+      const name = app.element.querySelector(".ai-name-input")?.value?.trim() || null;
+      const strategy = normalizeAutoplayStrategy(app.element.querySelector(".autoplay-default-strategy")?.value);
+      const difficulty = normalizeAutoplayDifficulty(app.element.querySelector(".autoplay-default-difficulty")?.value);
+      const walletRaw = app.element.querySelector(".ai-wallet-input")?.value;
+      const initialWallet = parseIntegerInRange(walletRaw, game.settings.get(MODULE_ID, "fixedAnte") * 20, 1, 999999);
+      if (!tavernSocket) return;
+
+      try {
+        await tavernSocket.executeAsGM("addAiSeat", {
+          actorId,
+          name,
+          strategy,
+          difficulty,
+          initialWallet,
+          enabled: true
+        });
+        const nameInput = app.element.querySelector(".ai-name-input");
+        if (nameInput) nameInput.value = "";
+      } catch (error) {
+        console.warn("Tavern Twenty-One | Failed to add AI seat:", error);
+      }
+    });
+  }
+
+  const summonAiPartyButton = app.element.querySelector(".btn-summon-ai-party");
+  if (summonAiPartyButton) {
+    summonAiPartyButton.addEventListener("click", async () => {
+      if (!game.user.isGM) {
+        ui.notifications.warn(t("TAVERN.Notifications.GMOnlyAutoplay", "Only the GM can manage autoplay."));
+        return;
+      }
+
+      const countRaw = app.element.querySelector(".ai-party-count")?.value;
+      const count = parseIntegerInRange(countRaw, 3, 1, 8);
+      const styleMode = app.element.querySelector(".ai-party-style")?.value;
+      const strategy = styleMode === "mixed"
+        ? "mixed"
+        : normalizeAutoplayStrategy(app.element.querySelector(".autoplay-default-strategy")?.value);
+      const difficulty = normalizeAutoplayDifficulty(app.element.querySelector(".autoplay-default-difficulty")?.value);
+      const walletRaw = app.element.querySelector(".ai-wallet-input")?.value;
+      const initialWallet = parseIntegerInRange(walletRaw, game.settings.get(MODULE_ID, "fixedAnte") * 20, 1, 999999);
+      if (!tavernSocket) return;
+
+      try {
+        await tavernSocket.executeAsGM("summonAiParty", {
+          count,
+          strategy,
+          difficulty,
+          initialWallet,
+          enabled: true
+        });
+      } catch (error) {
+        console.warn("Tavern Twenty-One | Failed to summon AI party:", error);
+      }
+    });
+  }
+
+  const removeAiSeatButtons = app.element.querySelectorAll(".btn-remove-ai-seat");
+  removeAiSeatButtons.forEach((button) => {
+    button.addEventListener("click", async (event) => {
+      if (!game.user.isGM) {
+        ui.notifications.warn(t("TAVERN.Notifications.GMOnlyAutoplay", "Only the GM can manage autoplay."));
+        return;
+      }
+      const playerId = event.currentTarget?.dataset?.playerId;
+      if (!playerId) return;
+      if (!tavernSocket) return;
+
+      try {
+        await tavernSocket.executeAsGM("removeAiSeat", playerId);
+      } catch (error) {
+        console.warn("Tavern Twenty-One | Failed to remove AI seat:", error);
+      }
+    });
+  });
 
   if (app._premiumEffectsRoot !== app.element) {
     if (app._premiumEffectsRoot) {

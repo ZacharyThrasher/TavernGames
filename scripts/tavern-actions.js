@@ -28,6 +28,83 @@ function toId(value) {
   return typeof value === "string" && value.trim().length > 0 ? value : null;
 }
 
+const AUTOPLAY_STRATEGIES = new Set([
+  "balanced",
+  "aggressive",
+  "conservative",
+  "chaotic",
+  "duelist",
+  "tactician",
+  "bully"
+]);
+
+const AUTOPLAY_DIFFICULTIES = new Set([
+  "easy",
+  "normal",
+  "hard",
+  "legendary"
+]);
+
+function normalizeAutoplayStrategy(value) {
+  return AUTOPLAY_STRATEGIES.has(value) ? value : "balanced";
+}
+
+function normalizeAutoplayDifficulty(value) {
+  return AUTOPLAY_DIFFICULTIES.has(value) ? value : "normal";
+}
+
+function sanitizeSeatName(value, fallback = "AI Adventurer") {
+  if (typeof value !== "string") return fallback;
+  const trimmed = value.trim();
+  if (!trimmed) return fallback;
+  return trimmed.slice(0, 40);
+}
+
+function clampWallet(value, ante) {
+  const parsed = Number(value);
+  const fallback = Math.max(ante, ante * 20);
+  if (!Number.isFinite(parsed)) return fallback;
+  const asInt = Math.floor(parsed);
+  return Math.max(ante, Math.min(asInt, 999999));
+}
+
+function canManageSeats(state) {
+  return state.status === "LOBBY" || state.status === "PAYOUT";
+}
+
+function getNpcActors() {
+  return game.actors.filter((actor) => actor?.type === "npc");
+}
+
+function makeUniqueSeatName(playersMap, baseName) {
+  const existing = new Set(Object.values(playersMap ?? {}).map((p) => String(p?.name ?? "").toLowerCase()));
+  let candidate = baseName;
+  let suffix = 2;
+  while (existing.has(candidate.toLowerCase())) {
+    candidate = `${baseName} ${suffix}`;
+    suffix += 1;
+  }
+  return candidate;
+}
+
+function nextAiSeatId(playersMap) {
+  let seatId = `ai_${foundry.utils.randomID(8)}`;
+  while (playersMap?.[seatId]) {
+    seatId = `ai_${foundry.utils.randomID(8)}`;
+  }
+  return seatId;
+}
+
+function resolveAiActor(actorId, fallbackPool = []) {
+  const id = toId(actorId);
+  if (id) {
+    const actor = game.actors.get(id);
+    if (actor?.type === "npc") return actor;
+  }
+  if (fallbackPool.length > 0) return fallbackPool[Math.floor(Math.random() * fallbackPool.length)];
+  return null;
+}
+
 function sanitizeActionPayload(action, payload, state) {
   const data = normalizePayload(payload);
   const gameMode = state?.tableData?.gameMode ?? "standard";
@@ -206,15 +283,179 @@ export async function handleLeaveTable(userId) {
 
   const players = { ...state.players };
   delete players[userId];
+  const autoplay = { ...(state.autoplay ?? {}) };
+  delete autoplay[userId];
+  const npcWallets = { ...(state.npcWallets ?? {}) };
+  delete npcWallets[userId];
   const turnOrder = state.turnOrder.filter((id) => id !== userId);
   const turnIndex = Math.min(state.turnIndex, Math.max(0, turnOrder.length - 1));
 
-  return updateState({ players, turnOrder, turnIndex });
+  return updateState({ players, turnOrder, turnIndex, autoplay, npcWallets });
 }
 
 export async function handleStartRound(startingHeat) {
   ensureGM();
   return startRound(startingHeat);
+}
+
+export async function handleSetAutoplayConfig(payload = {}) {
+  ensureGM();
+  const state = getState();
+  const data = normalizePayload(payload);
+  const playerId = toId(data.playerId);
+
+  if (!playerId || !state.players?.[playerId]) {
+    ui.notifications.warn("Invalid autoplay target.");
+    return state;
+  }
+
+  const autoplay = { ...(state.autoplay ?? {}) };
+  const current = autoplay[playerId] ?? {};
+  const enabled = data.enabled === undefined ? current.enabled === true : toBool(data.enabled);
+  const strategy = normalizeAutoplayStrategy(data.strategy ?? current.strategy);
+  const difficulty = normalizeAutoplayDifficulty(data.difficulty ?? current.difficulty);
+
+  autoplay[playerId] = {
+    ...current,
+    enabled,
+    strategy,
+    difficulty
+  };
+
+  return updateState({ autoplay });
+}
+
+export async function handleAddAiSeat(payload = {}) {
+  ensureGM();
+  const state = getState();
+
+  if (!canManageSeats(state)) {
+    ui.notifications.warn("AI seats can only be added in Lobby or Payout.");
+    return state;
+  }
+
+  const data = normalizePayload(payload);
+  const ante = game.settings.get(MODULE_ID, "fixedAnte");
+  const npcActors = getNpcActors();
+  const actor = resolveAiActor(data.actorId, npcActors);
+  const wallet = clampWallet(data.initialWallet, ante);
+  const strategy = normalizeAutoplayStrategy(data.strategy);
+  const difficulty = normalizeAutoplayDifficulty(data.difficulty);
+  const enabled = data.enabled === undefined ? true : toBool(data.enabled);
+
+  const players = { ...(state.players ?? {}) };
+  const turnOrder = [...(state.turnOrder ?? [])];
+  const autoplay = { ...(state.autoplay ?? {}) };
+  const npcWallets = { ...(state.npcWallets ?? {}) };
+
+  const seatId = nextAiSeatId(players);
+  const baseName = sanitizeSeatName(data.name, actor?.name ?? "AI Adventurer");
+  const seatName = makeUniqueSeatName(players, baseName);
+
+  players[seatId] = {
+    id: seatId,
+    name: seatName,
+    userName: "AI",
+    avatar: actor?.img || "icons/svg/mystery-man.svg",
+    playingAsNpc: true,
+    npcActorId: actor?.id ?? null,
+    npcName: seatName,
+    initialWallet: wallet,
+    isAi: true
+  };
+
+  turnOrder.push(seatId);
+  autoplay[seatId] = { enabled, strategy, difficulty };
+  npcWallets[seatId] = wallet;
+
+  ui.notifications.info(`Added AI seat: ${seatName} (${strategy}, ${difficulty}).`);
+  return updateState({ players, turnOrder, autoplay, npcWallets });
+}
+
+export async function handleSummonAiParty(payload = {}) {
+  ensureGM();
+  const state = getState();
+
+  if (!canManageSeats(state)) {
+    ui.notifications.warn("AI seats can only be added in Lobby or Payout.");
+    return state;
+  }
+
+  const data = normalizePayload(payload);
+  const countRaw = toInt(data.count) ?? 3;
+  const count = Math.max(1, Math.min(countRaw, 8));
+  const ante = game.settings.get(MODULE_ID, "fixedAnte");
+  const npcActors = getNpcActors();
+  const fixedStrategy = data.strategy === "mixed" ? null : normalizeAutoplayStrategy(data.strategy);
+  const fixedDifficulty = normalizeAutoplayDifficulty(data.difficulty);
+  const enabled = data.enabled === undefined ? true : toBool(data.enabled);
+  const wallet = clampWallet(data.initialWallet, ante);
+
+  const styleCycle = ["balanced", "aggressive", "conservative", "duelist", "tactician", "bully", "chaotic"];
+
+  const players = { ...(state.players ?? {}) };
+  const turnOrder = [...(state.turnOrder ?? [])];
+  const autoplay = { ...(state.autoplay ?? {}) };
+  const npcWallets = { ...(state.npcWallets ?? {}) };
+
+  for (let i = 0; i < count; i++) {
+    const actor = resolveAiActor(null, npcActors);
+    const seatId = nextAiSeatId(players);
+    const baseName = sanitizeSeatName(null, actor?.name ?? "AI Adventurer");
+    const seatName = makeUniqueSeatName(players, baseName);
+    const strategy = fixedStrategy ?? styleCycle[i % styleCycle.length];
+
+    players[seatId] = {
+      id: seatId,
+      name: seatName,
+      userName: "AI",
+      avatar: actor?.img || "icons/svg/mystery-man.svg",
+      playingAsNpc: true,
+      npcActorId: actor?.id ?? null,
+      npcName: seatName,
+      initialWallet: wallet,
+      isAi: true
+    };
+
+    turnOrder.push(seatId);
+    autoplay[seatId] = { enabled, strategy, difficulty: fixedDifficulty };
+    npcWallets[seatId] = wallet;
+  }
+
+  ui.notifications.info(`Summoned ${count} AI seat${count === 1 ? "" : "s"}.`);
+  return updateState({ players, turnOrder, autoplay, npcWallets });
+}
+
+export async function handleRemoveAiSeat(aiSeatId) {
+  ensureGM();
+  const state = getState();
+
+  if (!canManageSeats(state)) {
+    ui.notifications.warn("AI seats can only be removed in Lobby or Payout.");
+    return state;
+  }
+
+  const seatId = toId(aiSeatId);
+  const seat = seatId ? state.players?.[seatId] : null;
+  if (!seat?.isAi) {
+    ui.notifications.warn("Invalid AI seat.");
+    return state;
+  }
+
+  const players = { ...(state.players ?? {}) };
+  delete players[seatId];
+
+  const autoplay = { ...(state.autoplay ?? {}) };
+  delete autoplay[seatId];
+
+  const npcWallets = { ...(state.npcWallets ?? {}) };
+  delete npcWallets[seatId];
+
+  const turnOrder = (state.turnOrder ?? []).filter((id) => id !== seatId);
+  const turnIndex = Math.min(state.turnIndex ?? 0, Math.max(0, turnOrder.length - 1));
+
+  ui.notifications.info(`Removed AI seat: ${seat.name}.`);
+  return updateState({ players, autoplay, npcWallets, turnOrder, turnIndex });
 }
 
 export async function handlePlayerAction(action, payload, userId) {
@@ -301,6 +542,8 @@ export async function handleResetTable() {
     pot: 0,
     turnOrder: [],
     players: {},
+    npcWallets: {},
+    autoplay: {},
     tableData: { ...emptyTableData(), gameMode },
     history: [],
   });

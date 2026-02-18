@@ -85,25 +85,12 @@ export async function finishTurn(userId) {
   const lastRollIndex = rolls.length - 1;
   const lastRoll = rolls[lastRollIndex];
   const awaitingCheatDecision = tableData.pendingAction === "cheat_decision";
-
-  const hiddenRevealIndex = (() => {
-    for (let i = rolls.length - 1; i >= 0; i--) {
-      const roll = rolls[i];
-      if (!roll) continue;
-      if ((roll.public ?? true) || roll.blind) continue;
-      return i;
-    }
-    return -1;
-  })();
-
-  const revealIndex = hiddenRevealIndex >= 0
-    ? hiddenRevealIndex
-    : (awaitingCheatDecision && lastRoll && !lastRoll.blind ? lastRollIndex : -1);
-  const revealRoll = revealIndex >= 0 ? rolls[revealIndex] : null;
+  const revealRoll = lastRoll ?? null;
   const shouldRevealStandardRoll =
     Boolean(revealRoll)
     && awaitingCheatDecision
     && tableData.phase === "betting"
+    && !(revealRoll.public ?? false)
     && !revealRoll.blind
     && (tableData.gameMode ?? "standard") !== "goblin";
 
@@ -115,7 +102,7 @@ export async function finishTurn(userId) {
 
     if (wasHidden) {
       const updatedRolls = [...rolls];
-      updatedRolls[revealIndex] = { ...revealRoll, public: true };
+      updatedRolls[lastRollIndex] = { ...revealRoll, public: true };
       updatedVisibleTotals[userId] = (updatedVisibleTotals[userId] ?? 0) + revealRoll.result;
       tableData.rolls = { ...tableData.rolls, [userId]: updatedRolls };
       tableData.visibleTotals = updatedVisibleTotals;

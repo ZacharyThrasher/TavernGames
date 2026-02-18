@@ -5,6 +5,7 @@ import { preloadTemplates, registerSettings, initializeState } from "./state.js"
 import { MODULE_ID } from "./twenty-one/constants.js";
 import { setupSockets } from "./socket.js";
 import { runDiagnostics } from "./diagnostics.js";
+import { requestAutoplayTick } from "./ai/autoplay.js";
 import {
   showVictoryFanfare,
   showBustFanfare,
@@ -89,6 +90,7 @@ Hooks.once("ready", async () => {
 
   if (game.user.isGM) {
     await initializeState();
+    requestAutoplayTick(250);
   }
 
   const app = new TavernApp();
@@ -145,6 +147,7 @@ Hooks.once("ready", async () => {
   Hooks.on("updateSetting", (setting) => {
     if (setting.key === `${MODULE_ID}.gameState`) {
       scheduleUiRefresh();
+      requestAutoplayTick();
     }
   });
 });
